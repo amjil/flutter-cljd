@@ -1,1 +1,32 @@
-(ns flutter-cljd.core-test)
+(ns flutter-cljd.core-test
+  (:require [clojure.test :refer [deftest is testing]]
+            [flutter-cljd.core :as f] 
+            ["package:flutter/material.dart" :as m]))
+
+(deftest test-cross-axis-alignment
+  (testing "Valid cross-axis alignments"
+    (is (= (f/cross-axis-alignment :center) m/CrossAxisAlignment.center))
+    (is (= (f/cross-axis-alignment :start) m/CrossAxisAlignment.start))
+    (is (= (f/cross-axis-alignment :end) m/CrossAxisAlignment.end))
+    (is (= (f/cross-axis-alignment :stretch) m/CrossAxisAlignment.stretch))
+    (is (= (f/cross-axis-alignment :baseline) m/CrossAxisAlignment.baseline)))
+
+  (testing "Passing an instance of CrossAxisAlignment"
+    (is (= (f/cross-axis-alignment m/CrossAxisAlignment.start) m/CrossAxisAlignment.start)))
+
+  (testing "Invalid cross-axis alignment"
+    (is (thrown? Exception (f/cross-axis-alignment :invalid)))))
+
+(deftest test-main-axis-alignment
+  (testing "Valid main-axis alignments"
+    (is (= (f/main-axis-alignment :center) m/MainAxisAlignment.center))
+    (is (= (f/main-axis-alignment :start) m/MainAxisAlignment.start))
+    (is (= (f/main-axis-alignment :end) m/MainAxisAlignment.end))
+    (is (= (f/main-axis-alignment :space-between) m/MainAxisAlignment.spaceBetween))
+    (is (= (f/main-axis-alignment :space-around) m/MainAxisAlignment.spaceAround)))
+
+  (testing "Passing an instance of MainAxisAlignment"
+    (is (= (f/main-axis-alignment m/MainAxisAlignment.spaceBetween) m/MainAxisAlignment.spaceBetween)))
+
+  (testing "Invalid main-axis alignment"
+    (is (thrown? Exception (f/main-axis-alignment :invalid)))))
