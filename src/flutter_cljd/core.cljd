@@ -3,6 +3,130 @@
    ["package:flutter/material.dart" :as m]
    ["dart:core" :as c]))
 
+;; -------------------------
+;; MARK: Enums
+;; -------------------------
+
+(defn axis 
+  "Returns the `Axis` enum value for the specified axis.
+   
+   The two cardinal directions in two dimensions.
+
+   The axis is always relative to the current coordinate space.
+   This means, for example, that a horizontal axis might actually be diagonally from top right to bottom left, due to some local Transform applied to the scene.
+
+   Possible values:
+   - instance of Axis
+   - `:horizontal` or `:h`
+   - `:vertical` or `:v`
+   
+   [Flutter docs](https://api.flutter.dev/flutter/painting/Axis.html)"
+  [axis]
+  (if (instance? m/Axis axis)
+    axis
+    (case axis
+      :horizontal m/Axis.horizontal
+      :vertical m/Axis.vertical
+      :h m/Axis.horizontal
+      :v m/Axis.vertical
+      (throw (Exception. (str "Invalid axis: " axis))))))
+
+(defn axis-direction
+  "Returns the `AxisDirection` enum value for the specified axis direction.
+   
+  A direction along either the horizontal or vertical axis in which the origin, or zero position, is determined.
+
+   This value relates to the direction in which the scroll offset increases from the origin.
+   This value does not represent the direction of user input that may be modifying the scroll offset, such as from a drag.
+   For the active scrolling direction, see scroll-direction.
+
+   Possible values:
+   - instance of `AxisDirection`
+   - `:up` or `:u`
+   - `:down` or `:d`
+   - `:left` or `:l`
+   - `:right` or `:r`
+   
+   [Flutter docs](https://api.flutter.dev/flutter/painting/AxisDirection.html)"
+  [direction]
+  (if (instance? m/AxisDirection direction)
+    direction
+    (case direction
+      :up m/AxisDirection.up
+      :u m/AxisDirection.up
+      :down m/AxisDirection.down
+      :d m/AxisDirection.down
+      :left m/AxisDirection.left
+      :l m/AxisDirection.left
+      :right m/AxisDirection.right
+      :r m/AxisDirection.right
+      (throw (Exception. (str "Invalid axis-direction: " direction))))))
+
+(defn blend-mode
+  "Returns the `BlendMode` enum value for the specified blend mode.
+   
+   Algorithms to use when painting on the canvas.
+
+   When drawing a shape or image onto a canvas, different algorithms can be used to blend the pixels.
+   The different values of `BlendMode` specify different such algorithms.
+   
+   [Flutter docs](https://api.flutter.dev/flutter/dart-ui/BlendMode.html)"
+  [mode]
+  (if (instance? m/BlendMode mode)
+    mode
+    (case mode
+      :clear m/BlendMode.clear
+      :src m/BlendMode.src
+      :dst m/BlendMode.dst
+      :src-over m/BlendMode.srcOver
+      :dst-over m/BlendMode.dstOver
+      :src-in m/BlendMode.srcIn
+      :dst-in m/BlendMode.dstIn
+      :src-out m/BlendMode.srcOut
+      :dst-out m/BlendMode.dstOut
+      :src-atop m/BlendMode.srcATop
+      :dst-atop m/BlendMode.dstATop
+      :xor m/BlendMode.xor
+      :plus m/BlendMode.plus
+      :modulate m/BlendMode.modulate
+      :screen m/BlendMode.screen
+      :overlay m/BlendMode.overlay
+      :darken m/BlendMode.darken
+      :lighten m/BlendMode.lighten
+      :color-dodge m/BlendMode.colorDodge
+      :color-burn m/BlendMode.colorBurn
+      :hard-light m/BlendMode.hardLight
+      :soft-light m/BlendMode.softLight
+      :difference m/BlendMode.difference
+      :exclusion m/BlendMode.exclusion
+      :multiply m/BlendMode.multiply
+      :hue m/BlendMode.hue
+      :saturation m/BlendMode.saturation
+      :color m/BlendMode.color
+      :luminosity m/BlendMode.luminosity
+      (throw (Exception. (str "Invalid blend-mode: " mode))))))
+
+(defn blur-style
+  "Styles to use for blurs in MaskFilter objects.
+   
+   Possible values:
+    - instance of `BlurStyle`
+    - `:normal` Fuzzy inside and outside. This is useful for painting shadows that are offset from the shape that ostensibly is casting the shadow.
+    - `:solid` Solid inside, fuzzy outside. This corresponds to drawing the shape, and additionally drawing the blur. This can make objects appear brighter, maybe even as if they were fluorescent.
+    - `:outer` Nothing inside, fuzzy outside. This is useful for painting shadows for partially transparent shapes, when they are painted separately but without an offset, so that the shadow doesn't paint below the shape.
+    - `:inner` Fuzzy inside, nothing outside. This can make shapes appear to be lit from within. 
+
+   [Flutter docs](https://api.flutter.dev/flutter/dart-ui/BlurStyle-class.html)"
+  [style]
+  (if (instance? m/BlurStyle style)
+    style
+    (case style
+      :normal m/BlurStyle.normal
+      :solid m/BlurStyle.solid
+      :outer m/BlurStyle.outer
+      :inner m/BlurStyle.inner
+      (throw (Exception. (str "Invalid blur-style: " style))))))
+
 (defn cross-axis-alignment [alignment]
   (if (instance? m/CrossAxisAlignment alignment)
     alignment

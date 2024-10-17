@@ -1,4 +1,4 @@
-# flutter-clj
+# flutter-cljd
 
 ![Alpha Status](https://img.shields.io/badge/status-alpha-red)
 
