@@ -4,4 +4,4 @@
          :sha "e203b0fc7767e94a42270fe2d4a3b6b6c6f10cdf"}}
  :aliases {:cljd {:main-opts ["-m" "cljd.build"]}}
  :cljd/opts {:kind :flutter
-             :main acme.main}}
+             :main flutter_cljd.core}}

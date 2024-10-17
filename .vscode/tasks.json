@@ -1,0 +1,42 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Build",
+      "type": "shell",
+      "command": "clj",
+      "args": [
+        "-M:cljd", 
+        "compile"
+      ],
+      "group": {
+        "kind": "build",
+        "isDefault": true
+      },
+      "presentation": {
+        "echo": true,
+        "reveal": "always",
+        "focus": false,
+        "panel": "shared",
+        "showReuseMessage": true,
+        "clear": false
+      },
+      "problemMatcher": [
+        {
+          "owner": "clojure",
+          "pattern": [
+            {
+              "regexp": "^⛔️ (.+) at line: (\\d+), column: (\\d+), file: (.+)$",
+              "message": 1,
+              "line": 2,
+              "column": 3,
+              "file": 4
+            }
+          ],
+          "severity": "error",
+          "fileLocation": ["relative", "${workspaceFolder}/src/"]
+        }
+      ]
+    }
+  ]
+}
