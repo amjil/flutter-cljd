@@ -4,8 +4,6 @@
 
 ClojureDart wrapper for Flutter Material widgets, designed to simplify and compact Flutter development in ClojureDart. It provides concise, Clojure-like syntax to work with Flutter’s Material components and types, making code more readable and expressive for Clojure developers building Flutter apps.
 
-Here’s a refined version of your library’s main goals for the README:
-
 ## Main Goals
 
 ### Provide a more concise and readable UI syntax
