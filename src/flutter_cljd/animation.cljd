@@ -27,16 +27,54 @@
    
    Possible values:
    - instance of `AnimationBehavior`
-   - `:normal`
-   - `:preserve`
+   - `:normal` The `AnimationController` will reduce its duration when `AccessibilityFeatures.disableAnimations` is true.
+   - `:preserve` The `AnimationController` will preserve its behavior.
+
+   This is the default for repeating animations in order to prevent them from flashing rapidly on the screen if the widget does not take the `AccessibilityFeatures.disableAnimations` flag into account.
    
    [Flutter docs](https://api.flutter.dev/flutter/animation/AnimationBehavior.html)"
   [behavior]
-  (if (instance? a.AnimationBehavior behavior)
+  (if (instance? a/AnimationBehavior behavior)
     behavior
     (case behavior
       :normal a/AnimationBehavior.normal
       :preserve a/AnimationBehavior.preserve
       (throw (Exception. (str "Invalid animation behavior: " behavior))))))
 
+(defn animation-status 
+  "Returns the `AnimationStatus` enum value for the specified animation status.
+   
+   The status of an animation.
 
+   Possible values:
+   - instance of `AnimationStatus`
+   - `:dismissed` The animation is stopped at the beginning.
+   - `:forward` The animation is running from beginning to end.
+   - `:reverse` The animation is running in the reverse direction.
+   - `:completed` The animation is stopped at the end.
+   
+   [Flutter docs](https://api.flutter.dev/flutter/animation/AnimationStatus.html)"
+  [status]
+  (if (instance? a/AnimationStatus status)
+    status
+    (case status
+      :dismissed a/AnimationStatus.dismissed
+      :forward a/AnimationStatus.forward
+      :reverse a/AnimationStatus.reverse
+      :completed a/AnimationStatus.completed
+      (throw (Exception. (str "Invalid animation status: " status))))))
+
+;; -------------------------
+;; MARK: Classes
+;; -------------------------
+
+(defn always-stopped-animation
+  "An animation that is always stopped at a given value.
+
+   The status is always AnimationStatus.forward.
+
+   [Flutter docs](https://api.flutter.dev/flutter/animation/AlwaysStoppedAnimation-class.html)"
+  [value]
+  (if (instance? a/AlwaysStoppedAnimation value) 
+    value 
+    (a/AlwaysStoppedAnimation. value)))
