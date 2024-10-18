@@ -1,0 +1,102 @@
+(ns flutter-cljd.widgets-test
+  (:require [clojure.test :refer [deftest is testing]]
+            [flutter-cljd.widgets :as f] 
+            ["package:flutter/material.dart" :as m]))
+
+(deftest test-absorb-pointer
+  (testing "Absorb pointer with absorbing set to true"
+    (let [child (m/Text "Child widget")
+          widget (f/absorb-pointer true child)]
+      (is (= (.-absorbing widget) true))
+      (is (instance? m/Text (.-child widget)))))
+
+  (testing "Absorb pointer with absorbing set to false"
+    (let [child (m/Text "Child widget")
+          widget (f/absorb-pointer false child)]
+      (is (= (.-absorbing widget) false))
+      (is (instance? m/Text (.-child widget)))))
+
+  (testing "Absorb pointer defaulting to true"
+    (let [child (m/Text "Child widget")
+          widget (f/absorb-pointer child)]
+      (is (= (.-absorbing widget) true))
+      (is (instance? m/Text (.-child widget))))))
+
+(deftest test-ignore-pointer
+  (testing "Ignore pointer with ignoring set to true"
+    (let [child (m/Text "Child widget")
+          widget (f/ignore-pointer true child)]
+      (is (= (.-ignoring widget) true))
+      (is (instance? m/Text (.-child widget)))))
+
+  (testing "Ignore pointer with ignoring set to false"
+    (let [child (m/Text "Child widget")
+          widget (f/ignore-pointer false child)]
+      (is (= (.-ignoring widget) false))
+      (is (instance? m/Text (.-child widget)))))
+
+  (testing "Ignore pointer defaulting to true"
+    (let [child (m/Text "Child widget")
+          widget (f/ignore-pointer child)]
+      (is (= (.-ignoring widget) true))
+      (is (instance? m/Text (.-child widget))))))
+
+(deftest test-align
+  (testing "Align with a keyword alignment"
+    (let [child (m/Text "Child widget")
+          widget (f/align {:alignment :bottom-right} child)]
+      (is (= (.-alignment widget) m/Alignment.bottomRight))
+      (is (instance? m/Text (.-child widget)))))
+
+  (testing "Align with width and height factors"
+    (let [child (m/Text "Child widget")
+          widget (f/align {:alignment :center :width-factor 0.5 :height-factor 0.3} child)]
+      (is (= (.-alignment widget) m/Alignment.center))
+      (is (= (.-widthFactor widget) 0.5))
+      (is (= (.-heightFactor widget) 0.3))
+      (is (instance? m/Text (.-child widget)))))
+
+  (testing "Align with animated alignment options"
+    (let [child (m/Text "Child widget")
+          widget (f/align {:alignment :top-right
+                         :animation {:duration 0.5 :curve :ease-in}} child)]
+      (is (= (.-alignment widget) m/Alignment.topRight))
+      (is (= (.-inMilliseconds (.-duration widget)) 500))
+      (is (= (.-curve widget) m/Curves.easeIn))
+      (is (instance? m/Text (.-child widget)))))
+
+  (testing "Align with animated transition"
+    (let [animation (m/AlwaysStoppedAnimation m/Alignment.center)
+          child (m/Text "Child widget")
+          widget (f/align {:alignment animation} child)]
+      (is (instance? m/AlignTransition widget))
+      (is (= (.-alignment widget) animation))
+      (is (instance? m/Text (.-child widget))))))
+
+(deftest test-cross-axis-alignment
+  (testing "Valid cross-axis alignments"
+    (is (= (f/cross-axis-alignment :center) m/CrossAxisAlignment.center))
+    (is (= (f/cross-axis-alignment :start) m/CrossAxisAlignment.start))
+    (is (= (f/cross-axis-alignment :end) m/CrossAxisAlignment.end))
+    (is (= (f/cross-axis-alignment :stretch) m/CrossAxisAlignment.stretch))
+    (is (= (f/cross-axis-alignment :baseline) m/CrossAxisAlignment.baseline)))
+
+  (testing "Passing an instance of CrossAxisAlignment"
+    (is (= (f/cross-axis-alignment m/CrossAxisAlignment.start) m/CrossAxisAlignment.start)))
+
+  (testing "Invalid cross-axis alignment"
+    (is (thrown? Exception (f/cross-axis-alignment :invalid)))))
+
+(deftest test-main-axis-alignment
+  (testing "Valid main-axis alignments"
+    (is (= (f/main-axis-alignment :center) m/MainAxisAlignment.center))
+    (is (= (f/main-axis-alignment :start) m/MainAxisAlignment.start))
+    (is (= (f/main-axis-alignment :end) m/MainAxisAlignment.end))
+    (is (= (f/main-axis-alignment :space-between) m/MainAxisAlignment.spaceBetween))
+    (is (= (f/main-axis-alignment :space-around) m/MainAxisAlignment.spaceAround)))
+
+  (testing "Passing an instance of MainAxisAlignment"
+    (is (= (f/main-axis-alignment m/MainAxisAlignment.spaceBetween) m/MainAxisAlignment.spaceBetween)))
+
+  (testing "Invalid main-axis alignment"
+    (is (thrown? Exception (f/main-axis-alignment :invalid)))))

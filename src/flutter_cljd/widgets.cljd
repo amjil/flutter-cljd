@@ -1,7 +1,9 @@
-(ns flutter-cljd.core
+(ns flutter-cljd.widgets
+  "The Flutter widgets framework. [Docs](https://api.flutter.dev/flutter/widgets/widgets-library.html)"
   (:require
    ["package:flutter/material.dart" :as m]
-   ["dart:core" :as c]))
+   ["dart:core" :as c]
+   [flutter-cljd.animation :as a]))
 
 ;; -------------------------
 ;; MARK: Enums
@@ -180,6 +182,10 @@
       :alphabetic m/TextBaseline.alphabetic
       :ideographic m/TextBaseline.ideographic
       (throw (Exception. (str "Invalid text-baseline: " baseline))))))
+
+;; -------------------------
+;; MARK: Classes
+;; -------------------------
 
 (defn alignment-geometry [alignment]
   (cond
@@ -523,15 +529,16 @@
 (defn duration [value]
   (cond
     (instance? c/Duration value) value
-    (number? value) (c/Duration .seconds value)
+    (int? value) (c/Duration .seconds value)
+    (number? value) (c/Duration .microseconds (int (* value 1000000.0)))
     (map? value) (c/Duration
-                  .days (get value :days 0)
-                  .hours (get value :hours 0)
-                  .minutes (get value :minutes 0)
-                  .seconds (get value :seconds 0)
-                  .milliseconds (get value :milliseconds 0)
-                  .microseconds (get value :microseconds 0))
-    (nil? value) (c/Duration .seconds 0.25)
+                  .days (int (get value :days 0))
+                  .hours (int (get value :hours 0))
+                  .minutes (int (get value :minutes 0))
+                  .seconds (int (get value :seconds 0))
+                  .milliseconds (int (get value :milliseconds 0))
+                  .microseconds (int (get value :microseconds 0)))
+    (nil? value) (c/Duration .milliseconds 250)
     :else (throw (Exception. (str "Invalid duration: " value)))))
 
 (defn curve [curve]
@@ -623,6 +630,98 @@
     (nil? key) nil
     (instance? m/Key key) key
     :else (m/ValueKey key)))
+
+;; -------------------------
+;; MARK: Widget
+;; -------------------------
+
+(defn absorb-pointer 
+  "A widget that absorbs pointers during hit testing. 
+   It makes the widget and any underlying widgets impossible to interact with.
+   If you want to disable the widget but keep the underlying widgets interactive, use `ignore-pointer`.
+
+   When absorbing is true, this widget prevents its subtree from receiving pointer events by terminating hit testing at itself.
+   It still consumes space during layout and paints its child as usual.
+   It just prevents its children from being the target of located events, because it returns true from RenderBox.hitTest.
+   
+   [Flutter docs](https://api.flutter.dev/flutter/widgets/AbsorbPointer-class.html)"
+  ([absorbing child]
+   (m/AbsorbPointer .absorbing (true? absorbing) .child child))
+  ([child] (absorb-pointer true child)))
+
+(defn ignore-pointer
+  "A widget that is invisible during hit testing.
+
+   When ignoring is true, this widget (and its subtree) is invisible to hit testing.
+   It still consumes space during layout and paints its child as usual.
+   It just cannot be the target of located events, because it returns false from RenderBox.hitTest.
+  
+   [Flutter docs](https://api.flutter.dev/flutter/widgets/IgnorePointer-class.html)"
+  ([ignoring child]
+   (m/IgnorePointer .ignoring (true? ignoring) .child child))
+  ([child] (ignore-pointer true child)))
+
+(defn align 
+  "A widget that aligns its child within itself and optionally sizes itself based on the child's size.
+
+   For example, to align a box at the bottom right, you would pass this box a tight constraint that is bigger than the child's natural size, with an alignment of `Alignment.bottomRight`.
+   
+   Args:
+   - args: A map of arguments or an alignment or `Animation<AlignmentGeometry>`.
+     - `:key` An identifier for the align widget.
+     - `:alignment` (keyword or `Alignment` or `Animation<AlignmentGeometry>`, default: `Alignment.center`): The alignment of the child within the container.
+        Possible keywords: `:top`, `:center`, `:bottom`, `:left`, `:right`, `:start`, `:end` and their combinations like `:top-left`.
+     - `:width-factor` (number, default: nil): The width factor of the child.
+     - `:height-factor` (number, default: nil): The height factor of the child.
+     - `:animation` (map or number of seconds, default: nil): The animation options for the align widget.
+       - `:duration` (number of seconds or map or Duration, default: 0.25): The duration of the animation.
+       - `:curve` (keyword or Curve, default: :ease-in-out): The curve of the animation.
+       - `:on-end` (function, default: nil): The callback function to be called when the animation ends.
+   - child: The child widget to be aligned.
+
+   ```clojure
+   (align {:alignment :top-right :width-factor 0.4} (text \"Hello, World!\"))
+   (align :top-right (text \"Hello, World!\"))
+   ```
+
+   [Flutter docs](https://api.flutter.dev/flutter/widgets/Align-class.html)
+
+   [Animated flutter docs](https://api.flutter.dev/flutter/widgets/AnimatedAlign-class.html)
+   
+   [Transition flutter docs](https://api.flutter.dev/flutter/widgets/AlignTransition-class.html)"
+  [args child]
+  (let [args (if (map? args) args {:alignment args})
+        align-value (get args :alignment m/Alignment.center)
+        alignment (if (instance? m/Animation align-value) align-value (alignment-geometry align-value))
+        key (widget-key (args :key))]
+    (cond 
+      (instance? m/Animation alignment)
+      (m/AlignTransition
+       .key key
+       .alignment alignment
+       .widthFactor (args :width-factor)
+       .heightFactor (args :height-factor)
+       .child child) 
+      
+      (contains? args :animation)
+      (let [animation (animation-options (args :animation))]
+        (m/AnimatedAlign
+         .key key
+         .alignment alignment
+         .child child
+         .heightFactor (args :height-factor)
+         .widthFactor (args :width-factor)
+         .duration (animation :duration)
+         .curve (animation :curve)
+         .onEnd (animation :on-end)))
+      
+      :else
+      (m/Align
+       .key key
+       .alignment alignment
+       .widthFactor (args :width-factor)
+       .heightFactor (args :height-factor)
+       .child child))))
 
 (defn column
   "Creates a column widget with the specified arguments and children.
@@ -826,27 +925,6 @@
    (m/Padding
     .padding (insets value)
     .child child)))
-
-(defn align [args child]
-  (let [args (if (map? args) args {:alignment args})
-        alignment (alignment-geometry (get args :alignment m/Alignment.center))]
-    (if (contains? args :animation)
-      (let [animation (animation-options (args :animation))]
-        (m/AnimatedAlign
-         .key (widget-key (args :key))
-         .alignment alignment
-         .child child
-         .heightFactor (args :height-factor)
-         .widthFactor (args :width-factor)
-         .duration (animation :duration)
-         .curve (animation :curve)
-         .onEnd (animation :on-end)))
-      (m/Align
-       .key (some-> (args :key) widget-key)
-       .alignment alignment
-       .widthFactor (args :width-factor)
-       .heightFactor (args :height-factor)
-       .child child))))
 
 (defn text-align [align]
   (if (instance? m/TextAlign align)
