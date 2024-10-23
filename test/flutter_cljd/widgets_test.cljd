@@ -72,6 +72,108 @@
       (is (instance? m/AlignTransition widget))
       (is (= (.-alignment widget) animation))
       (is (instance? m/Text (.-child widget))))))
+(deftest test-aspect-ratio
+  (testing "Aspect ratio widget"
+    (let [child (m/Text "Child widget")
+          widget (f/aspect-ratio 16/9 child)]
+      (is (= (.-aspectRatio widget) (/ 16.0 9.0)))
+      (is (instance? m/Text (.-child widget))))))
+
+(deftest test-action-listener
+  (testing "Action listener widget"
+    (let [listener #(println "Action triggered")
+          action (m/Action ...)
+          child (m/Text "Child widget")
+          widget (f/action-listener listener action child)]
+      (is (= (.-listener widget) listener))
+      (is (= (.-action widget) action))
+      (is (instance? m/Text (.-child widget))))))
+
+(deftest test-with-autocomplete-highlighted-index
+  (testing "Autocomplete highlighted option widget"
+    (let [option 2
+          child (m/Text "Child widget")
+          widget (f/with-autocomplete-highlighted-index option child)]
+      (is (= (.-highlightIndexNotifier widget) option))
+      (is (instance? m/Text (.-child widget))))))
+
+(deftest test-autofill-group
+  (testing "Autofill group widget"
+    (let [child (m/Text "Child widget")
+          widget (f/autofill-group child)]
+      (is (= (.-child widget) child))
+      (is (= (.-onDisposeAction widget) m/AutofillContextAction.commit))))
+
+  (testing "Autofill group with custom action"
+    (let [action m/AutofillContextAction.commit
+          child (m/Text "Child widget")
+          widget (f/autofill-group action child)]
+      (is (= (.-child widget) child))
+      (is (= (.-onDisposeAction widget) action)))))
+
+(deftest test-keep-alive
+  (testing "Keep alive widget with auto"
+    (let [child (m/Text "Child widget")
+          widget (f/keep-alive :auto child)]
+      (is (instance? m/AutomaticKeepAlive (.-child widget)))
+      (is (instance? m/Text (.-child widget)))))
+
+  (testing "Keep alive widget with true"
+    (let [child (m/Text "Child widget")
+          widget (f/keep-alive true child)]
+      (is (= (.-keepAlive widget) true))
+      (is (instance? m/Text (.-child widget)))))
+
+  (testing "Keep alive widget with false"
+    (let [child (m/Text "Child widget")
+          widget (f/keep-alive false child)]
+      (is (= (.-keepAlive widget) false))
+      (is (instance? m/Text (.-child widget))))))
+
+(deftest test-on-back-button
+  (testing "On back button widget"
+    (let [action #(println "Back button pressed")
+          child (m/Text "Child widget")
+          widget (f/on-back-button action child)]
+      (is (= (.-onBackButtonPressed widget) action))
+      (is (instance? m/Text (.-child widget))))))
+
+(deftest test-banner
+  (testing "Banner widget"
+    (let [args {:text "Banner message"}
+          child (m/Text "Child widget")
+          widget (f/banner args child)]
+      (is (= (.-message widget) "Banner message"))
+      (is (instance? m/Text (.-child widget)))))
+
+  (testing "Banner widget with key"
+    (let [args {:text "Banner message" :key "banner-key"}
+          child (m/Text "Child widget")
+          widget (f/banner args child)]
+      (is (= (widget-key (.-key widget)) "banner-key"))
+      (is (= (.-message widget) "Banner message"))
+      (is (instance? m/Text (.-child widget))))))
+
+(deftest test-baseline
+  (testing "Baseline widget"
+    (let [child (m/Text "Child widget")
+          widget (f/baseline 20 m/TextBaseline.alphabetic child)]
+      (is (= (.-baseline widget) 20.0))
+      (is (= (.-baselineType widget) m/TextBaseline.alphabetic))
+      (is (instance? m/Text (.-child widget))))))
+
+(deftest test-block-semantics
+  (testing "Block semantics widget"
+    (let [child (m/Text "Child widget")
+          widget (f/block-semantics true child)]
+      (is (= (.-blocking widget) true))
+      (is (instance? m/Text (.-child widget)))))
+
+  (testing "Block semantics widget default"
+    (let [child (m/Text "Child widget")
+          widget (f/block-semantics child)]
+      (is (= (.-blocking widget) true))
+      (is (instance? m/Text (.-child widget))))))
 
 (deftest test-cross-axis-alignment
   (testing "Valid cross-axis alignments"
@@ -100,3 +202,7 @@
 
   (testing "Invalid main-axis alignment"
     (is (thrown? Exception (f/main-axis-alignment :invalid)))))
+
+(defn tt []
+  (m/widget->>
+   :let [child (m/Text "Child widget")]))

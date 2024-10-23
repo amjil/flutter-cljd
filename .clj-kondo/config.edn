@@ -1,0 +1,4 @@
+{:hooks
+ {:analyze-call
+  {flutter-cljd/widget->> hooks.hooks/widget->>-hook}}
+ :linters {:flutter-cljd/widget->> {:level :error}}}

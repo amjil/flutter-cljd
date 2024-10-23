@@ -3,7 +3,56 @@
   (:require
    ["package:flutter/material.dart" :as m]
    ["dart:core" :as c]
-   [flutter-cljd.animation :as a]))
+   ["dart:ui" :as ui]
+   ["dart:math" :as math]
+   [cljd.flutter :as f :refer [widget]]))
+
+;; -------------------------
+;; MARK: Macros
+;; -------------------------
+
+(defmacro widget->>
+  "Like `widget`, but threads the forms in the body using `->>`.
+   While `widget` can thread forms with `.child`, `widget->>` threads pure clojure functions with last form as the child.
+   If you don't need any `widget`'s directives, you can use native `->>` instead of `widget->>`, because most IDEs will recognize the `->>` macro.
+   And if you don't need any threading, you can use `widget` instead of `widget->>`.
+   The macro extracts the keyword-based directives (e.g., :let, :padding) and
+   applies `->>` threading to the remaining forms.
+
+   Example:
+   ```clojure
+   (f/widget->>
+    :let [title \"Let's get coding!\"]
+    (f/text title)
+    (f/with-text-style {:color :red :font-size 32.0})
+    (f/padding 8)
+    (f/container {:h 40 :alignment :top}))
+   ```
+    The above code is equivalent to:
+   ```clojure
+   (widget
+     :let [title \"Let's get coding!\"]
+     (->>
+      (f/text title)
+      (f/with-text-style {:color :red :font-size 32.0})
+      (f/padding 8)
+      (f/container {:h 40 :alignment :top})))
+   ```
+   That is equivalent to:
+   ```clojure
+   (widget
+      :let [title \"Let's get coding!\"]
+      (f/container
+        {:h 40 :alignment :top}
+        (f/padding 8
+        (f/with-text-style {:color :red :font-size 32.0}
+          (f/text title)))))
+   ```
+   "
+  [& body]
+  (let [directives (take-while #(keyword? (first %)) (partition 2 body))
+        body-forms (drop (* 2 (count directives)) body)]
+    `(widget ~@(apply concat directives) (->> ~@body-forms))))
 
 ;; -------------------------
 ;; MARK: Enums
@@ -183,6 +232,33 @@
       :ideographic m/TextBaseline.ideographic
       (throw (Exception. (str "Invalid text-baseline: " baseline))))))
 
+(defn autofill-context-action 
+  "Predefined autofill context clean up actions.
+   
+   Can be `:commit`, `:cancel` or an `AutofillContextAction`.
+   
+   Returns an `AutofillContextAction`"
+  [action]
+  (cond
+    (instance? m/AutofillContextAction action) action
+    (= action :commit) m/AutofillContextAction.commit
+    (= action :cancel) m/AutofillContextAction.cancel
+    :else (throw (Exception. (str "Invalid autofill-context-action: " action)))))
+
+(defn banner-location [location]
+  (if (instance? m/BannerLocation location)
+    location
+    (case location
+      :top-start m/BannerLocation.topStart
+      :start-top m/BannerLocation.topStart
+      :top-end m/BannerLocation.topEnd
+      :end-top m/BannerLocation.topEnd
+      :bottom-start m/BannerLocation.bottomStart
+      :start-bottom m/BannerLocation.bottomStart
+      :bottom-end m/BannerLocation.bottomEnd
+      :end-bottom m/BannerLocation.bottomEnd
+      (throw (Exception. (str "Invalid banner-location: " location))))))
+
 ;; -------------------------
 ;; MARK: Classes
 ;; -------------------------
@@ -313,618 +389,6 @@
    The insets can be specified as a number or a map of edge names to numbers or a STEB sequence."
   [& value]
   (reduce #(.add %1 %2) (m/EdgeInsets.zero) (map insets value)))
-
-(defn color
-  ([r g b] (m/Color.fromRGBO r g b 1.0))
-  ([r g b o] (m/Color.fromRGBO r g b o))
-  ([value]
-   (cond
-     (instance? m/Color value) value
-     (number? value) (m/Color value)
-     (keyword? value) (case value
-                        :blue m/Colors.blue
-                        :red m/Colors.red
-                        :green m/Colors.green
-                        :yellow m/Colors.yellow
-                        :orange m/Colors.orange
-                        :purple m/Colors.purple
-                        :pink m/Colors.pink
-                        :cyan m/Colors.cyan
-                        :teal m/Colors.teal
-                        :amber m/Colors.amber
-                        :lime m/Colors.lime
-                        :light-blue m/Colors.lightBlue
-                        :light-green m/Colors.lightGreen
-                        :deep-orange m/Colors.deepOrange
-                        :deep-purple m/Colors.deepPurple
-                        :indigo m/Colors.indigo
-                        :blue-grey m/Colors.blueGrey
-                        :grey m/Colors.grey
-                        :black m/Colors.black
-                        :white m/Colors.white
-                        :transparent m/Colors.transparent
-                        (m/Color value))
-     :else (m/Color value))))
-
-(defn shape [shape]
-  (cond
-    (instance? m/BoxShape shape) shape
-    (instance? m/ShapeBorder shape) shape
-
-    :else
-    (case shape
-      :circle m/BoxShape.circle
-      :rectangle m/BoxShape.rectangle
-      :rect m/BoxShape.rectangle
-      m/BoxShape.rectangle)))
-
-(defn radius
-  "Creates a Radius object from the specified radius.
-   The radius can be specified as a number, a map of x and y, or a XY sequence.
-   Examples:
-   ```clojure
-   (radius 4) ;; Radius.circular(4)
-   (radius {:x 4 :y 8}) ;; Radius.elliptical(4, 8)
-   (radius [4 8]) ;; Radius.elliptical(4, 8)
-   ```"
-  [radius]
-  (cond
-    (instance? m/Radius radius) radius
-    (number? radius) (m/Radius.circular radius)
-    (or (seq? radius) (vector? radius)) (m/Radius.elliptical (get radius 0 0) (get radius 1 0))
-    (map? radius) (m/Radius.elliptical (get radius :x 0) (get radius :y 0))
-    :else (throw (Exception. (str "Invalid radius: " radius)))))
-
-(defn border-radius
-  "Creates a BorderRadius object from the specified radius.
-   The radius can be specified as a radius. or a map of corner names to a radius.
-   Each corner can be specified separately using the keys `:top-left`, `:top-right`, `:bottom-left`, `:bottom-right`, `:left-top`, `:right-top`, `:left-bottom`, `:right-bottom`, `:left`, `:right`, `:top`, `:bottom`, `:start`, `:end`, `:t`, `:b`, `:l`, `:r`, `:s`, `:e`, `:all`.
-   Each radius can be specified as a number or a map of x and y or a XY sequence.
-   Examples:
-   ```clojure
-   (border-radius 4) ;; BorderRadius.all(Radius.circular(4))
-   (border-radius {:top-left 4 :top-right 8}) ;; BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(8))
-   (border-radius {:l 4 :r 8}) ;; BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(8))
-   (border-radius {:x 4 :y 8}) ;; BorderRadius.all(Radius.elliptical(4, 8))
-   (border-radius [4 8]) ;; BorderRadius.all(Radius.elliptical(4, 8))
-   (border-radius {:top-left 4 :all 8}) ;; BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(8), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8))
-   ```"
-  [value]
-  (cond
-    (instance? m/BorderRadiusGeometry value) value
-    (or (number? value) (instance? m/Radius value) (seq? value) (vector? value)) (m/BorderRadius.all (radius value))
-
-    (map? value)
-    (cond
-      (some value [:x :y]) (m/BorderRadius.all (radius value))
-
-      (some value [:l :r :left :right :top-left :top-right :bottom-left :bottom-right :left-top :right-top :left-bottom :right-bottom])
-      (m/BorderRadius.only
-       .topLeft (radius (or (some value [:top-left :left-top :top :left :l :t :all]) 0))
-       .topRight (radius (or (some value [:top-right :right-top :top :right :r :t :all]) 0))
-       .bottomLeft (radius (or (some value [:bottom-left :left-bottom :bottom :left :l :b :all]) 0))
-       .bottomRight (radius (or (some value [:bottom-right :right-bottom :bottom :right :r :b :all]) 0)))
-
-      :else
-      (m/BorderRadiusDirectional.only
-       .topStart (radius (or (some value [:top-start :start-top :top :start :s :t :all]) 0))
-       .topEnd (radius (or (some value [:top-end :end-top :top :end :e :t :all]) 0))
-       .bottomStart (radius (or (some value [:bottom-start :start-bottom :bottom :start :s :b :all]) 0))
-       .bottomEnd (radius (or (some value [:bottom-end :end-bottom :bottom :end :e :b :all]) 0))))
-
-    :else (throw (Exception. (str "Invalid radius: " value)))))
-
-(defn decoration
-  [args]
-  (let [shape (shape (args :shape))]
-    (cond
-      (instance? m/Decoration args) args
-
-      (instance? m/ShapeBorder shape)
-      (m/ShapeDecoration
-       .color (some-> (args :color) color)
-       .image (args :image)
-       .gradient (some-> (args :gradient) gradient)
-       .shadows (some args [:box-shadow :shadows :shadow])
-       .shape shape)
-
-      (instance? m/BoxShape shape)
-      (m/BoxDecoration
-       .color (some-> (args :color) color)
-       .image (args :image)
-       .border (args :border)
-       .borderRadius (some-> (args :border-radius) border-radius)
-       .boxShadow (some args [:box-shadow :shadows :shadow])
-       .gradient (some-> (args :gradient) gradient)
-       .backgroundBlendMode (args :background-blend-mode)
-       .shape shape)
-
-      :else (throw (Exception. (str "Invalid decoration: " args))))))
-
-(defn tile-mode [mode]
-  (if (instance? m/TileMode mode)
-    mode
-    (case mode
-      :clamp m/TileMode.clamp
-      :repeated m/TileMode.repeated
-      :mirror m/TileMode.mirror
-      :decal m/TileMode.decal
-      (throw (Exception. (str "Invalid tile-mode: " mode))))))
-
-(defn- gradient-colors [colors]
-  (cond
-    (nil? colors) [:transparent :transparent]
-
-    (or (vector? colors) (seq? colors))
-    (map color
-         (case (count colors)
-           0 [:transparent :transparent]
-           1 [(colors 0) (colors 0)]
-           colors))
-
-    :else
-    (map color [colors colors])))
-
-(defn linear-gradient
-  "Creates a LinearGradient object from the specified arguments.
-   The arguments can be specified as a map with the following keys:
-   - :begin (alignment, default: Alignment.centerStart): The alignment of the gradient's start point.
-   - :end (alignment, default: Alignment.centerEnd): The alignment of the gradient's end point.
-   - :colors (list of colors, default: [:transparent :transparent]): The colors of the gradient.
-   - :stops (list of numbers, default: nil): The stops of the gradient.
-   - :tile-mode (tile-mode, default: nil): The tile mode of the gradient.
-   "
-  [args]
-  (m/LinearGradient
-   .begin (alignment-geometry (args :begin m/AlignmentDirectional.centerStart))
-   .end (alignment-geometry (args :end m/AlignmentDirectional.centerEnd))
-   .colors (gradient-colors (args :colors))
-   .stops (args :stops)
-   .tileMode (some-> (args :tile-mode :clamp) tile-mode)))
-
-(defn sweep-gradient
-  "Creates a SweepGradient object from the specified arguments.
-   The arguments can be specified as a map with the following keys:
-   - :center (alignment, default: Alignment.center): The alignment of the gradient's center point.
-   - :start-angle (number, default: 0): The start angle of the gradient.
-   - :end-angle (number, default: 2 * Math/PI): The end angle of the gradient.
-   - :colors (list of colors, default: [:transparent :transparent]): The colors of the gradient.
-   - :stops (list of numbers, default: nil): The stops of the gradient.
-   - :tile-mode (tile-mode, default: nil): The tile mode of the gradient.
-   "
-  [args]
-  (m/SweepGradient
-   .center (alignment-geometry (args :center m/Alignment.center))
-   .startAngle (args :start-angle 0)
-   .endAngle (args :end-angle 2 * (.pi double))
-   .colors (gradient-colors (args :colors))
-   .stops (args :stops)
-   .tileMode (some-> (args :tile-mode) tile-mode)))
-
-(defn radial-gradient
-  "Creates a RadialGradient object from the specified arguments.
-   The arguments can be specified as a map with the following keys:
-   - :center (alignment, default: Alignment.center): The alignment of the gradient's center point.
-   - :radius (number, default: 0.5): The radius of the gradient.
-   - :colors (list of colors, default: [:transparent :transparent]): The colors of the gradient.
-   - :stops (list of numbers, default: nil): The stops of the gradient.
-   - :tile-mode (tile-mode, default: nil): The tile mode of the gradient.
-   "
-  [args]
-  (m/RadialGradient
-   .center (alignment-geometry (args :center m/Alignment.center))
-   .radius (args :radius 0.5)
-   .colors (gradient-colors (args :colors))
-   .stops (args :stops)
-   .tileMode (some-> (args :tile-mode) tile-mode)))
-
-(defn gradient [gradient]
-  (cond
-    (instance? m/Gradient gradient) gradient
-    (some #(contains? gradient %) [:begin :end]) (linear-gradient gradient)
-    (some #(contains? gradient %) [:start-angle :end-angle]) (sweep-gradient gradient)
-    (some #(contains? gradient %) [:radius]) (radial-gradient gradient)
-    :else (throw (Exception. (str "Unknown gradient: " gradient)))))
-
-(defn duration [value]
-  (cond
-    (instance? c/Duration value) value
-    (int? value) (c/Duration .seconds value)
-    (number? value) (c/Duration .microseconds (int (* value 1000000.0)))
-    (map? value) (c/Duration
-                  .days (int (get value :days 0))
-                  .hours (int (get value :hours 0))
-                  .minutes (int (get value :minutes 0))
-                  .seconds (int (get value :seconds 0))
-                  .milliseconds (int (get value :milliseconds 0))
-                  .microseconds (int (get value :microseconds 0)))
-    (nil? value) (c/Duration .milliseconds 250)
-    :else (throw (Exception. (str "Invalid duration: " value)))))
-
-(defn curve [curve]
-  (cond
-    (instance? m/Curve curve) curve
-
-    (keyword? curve)
-    (case curve
-      :linear m/Curves.linear
-      :bounce-in m/Curves.bounceIn
-      :bounce-in-out m/Curves.bounceInOut
-      :bounce-out m/Curves.bounceOut
-      :decelerate m/Curves.decelerate
-      :ease m/Curves.ease
-      :ease-in m/Curves.easeIn
-      :ease-in-back m/Curves.easeInBack
-      :ease-in-circ m/Curves.easeInCirc
-      :ease-in-cubic m/Curves.easeInCubic
-      :ease-in-expo m/Curves.easeInExpo
-      :ease-in-out m/Curves.easeInOut
-      :ease-in-out-back m/Curves.easeInOutBack
-      :ease-in-out-circ m/Curves.easeInOutCirc
-      :ease-in-out-cubic m/Curves.easeInOutCubic
-      :ease-in-out-cubic-emphasized m/Curves.easeInOutCubicEmphasized
-      :ease-in-out-expo m/Curves.easeInOutExpo
-      :ease-in-out-quad m/Curves.easeInOutQuad
-      :ease-in-out-quart m/Curves.easeInOutQuart
-      :ease-in-out-quint m/Curves.easeInOutQuint
-      :ease-in-out-sine m/Curves.easeInOutSine
-      :ease-in-quad m/Curves.easeInQuad
-      :ease-in-quart m/Curves.easeInQuart
-      :ease-in-quint m/Curves.easeInQuint
-      :ease-in-sine m/Curves.easeInSine
-      :ease-in-to-linear m/Curves.easeInToLinear
-      :ease-out m/Curves.easeOut
-      :ease-out-back m/Curves.easeOutBack
-      :ease-out-circ m/Curves.easeOutCirc
-      :ease-out-cubic m/Curves.easeOutCubic
-      :ease-out-expo m/Curves.easeOutExpo
-      :ease-out-quad m/Curves.easeOutQuad
-      :ease-out-quart m/Curves.easeOutQuart
-      :ease-out-quint m/Curves.easeOutQuint
-      :ease-out-sine m/Curves.easeOutSine
-      :elastic-in m/Curves.elasticIn
-      :elastic-in-out m/Curves.elasticInOut
-      :elastic-out m/Curves.elasticOut
-      :fast-ease-in-to-slow-ease-out m/Curves.fastEaseInToSlowEaseOut
-      :fast-linear-to-slow-ease-in m/Curves.fastLinearToSlowEaseIn
-      :fast-out-slow-in m/Curves.fastOutSlowIn
-      :slow-middle m/Curves.slowMiddle
-      (throw (Exception. (str "Unknown curve: " curve))))
-
-    :else
-    (throw (Exception. (str "Invalid curve: " curve)))))
-
-(defn animation-options
-  "Creates an animation options object from the specified value.
-   The value can be specified as a map with the following keys:
-   - :duration (number, map, default: 0.25): The duration of the animation.
-   - :curve (keyword, default: :easeInOut): The curve of the animation.
-   - :on-end (function, default: nil): The callback function to be called when the animation ends.
-   The value can also be specified as a vector with the following elements:
-   - The duration of the animation.
-   - The curve of the animation.
-   - The callback function to be called when the animation ends.
-   The value can also be specified as a number, in which case it is used as the duration of the animation."
-  [value]
-  (cond
-    (map? value)
-    (let [duration (duration (value :duration))
-          curve (curve (get value :curve m/Curves.easeInOut))
-          on-end (value :on-end)]
-      {:duration duration :curve curve :on-end on-end})
-
-    (number? value)
-    {:duration (duration value) :curve m/Curves.easeInOut}
-
-    (or (vector? value) (seq? value))
-    (let [duration (duration (get value 0))
-          curve (curve (get value 1 m/Curves.easeInOut))
-          on-end (get value 2)]
-      {:duration duration :curve curve :on-end on-end})
-
-    :else
-    (throw (Exception. (str "Invalid animation options: " value)))))
-
-(defn widget-key [key]
-  (cond
-    (nil? key) nil
-    (instance? m/Key key) key
-    :else (m/ValueKey key)))
-
-;; -------------------------
-;; MARK: Widget
-;; -------------------------
-
-(defn absorb-pointer 
-  "A widget that absorbs pointers during hit testing. 
-   It makes the widget and any underlying widgets impossible to interact with.
-   If you want to disable the widget but keep the underlying widgets interactive, use `ignore-pointer`.
-
-   When absorbing is true, this widget prevents its subtree from receiving pointer events by terminating hit testing at itself.
-   It still consumes space during layout and paints its child as usual.
-   It just prevents its children from being the target of located events, because it returns true from RenderBox.hitTest.
-   
-   [Flutter docs](https://api.flutter.dev/flutter/widgets/AbsorbPointer-class.html)"
-  ([absorbing child]
-   (m/AbsorbPointer .absorbing (true? absorbing) .child child))
-  ([child] (absorb-pointer true child)))
-
-(defn ignore-pointer
-  "A widget that is invisible during hit testing.
-
-   When ignoring is true, this widget (and its subtree) is invisible to hit testing.
-   It still consumes space during layout and paints its child as usual.
-   It just cannot be the target of located events, because it returns false from RenderBox.hitTest.
-  
-   [Flutter docs](https://api.flutter.dev/flutter/widgets/IgnorePointer-class.html)"
-  ([ignoring child]
-   (m/IgnorePointer .ignoring (true? ignoring) .child child))
-  ([child] (ignore-pointer true child)))
-
-(defn align 
-  "A widget that aligns its child within itself and optionally sizes itself based on the child's size.
-
-   For example, to align a box at the bottom right, you would pass this box a tight constraint that is bigger than the child's natural size, with an alignment of `Alignment.bottomRight`.
-   
-   Args:
-   - args: A map of arguments or an alignment or `Animation<AlignmentGeometry>`.
-     - `:key` An identifier for the align widget.
-     - `:alignment` (keyword or `Alignment` or `Animation<AlignmentGeometry>`, default: `Alignment.center`): The alignment of the child within the container.
-        Possible keywords: `:top`, `:center`, `:bottom`, `:left`, `:right`, `:start`, `:end` and their combinations like `:top-left`.
-     - `:width-factor` (number, default: nil): The width factor of the child.
-     - `:height-factor` (number, default: nil): The height factor of the child.
-     - `:animation` (map or number of seconds, default: nil): The animation options for the align widget.
-       - `:duration` (number of seconds or map or Duration, default: 0.25): The duration of the animation.
-       - `:curve` (keyword or Curve, default: :ease-in-out): The curve of the animation.
-       - `:on-end` (function, default: nil): The callback function to be called when the animation ends.
-   - child: The child widget to be aligned.
-
-   ```clojure
-   (align {:alignment :top-right :width-factor 0.4} (text \"Hello, World!\"))
-   (align :top-right (text \"Hello, World!\"))
-   ```
-
-   [Flutter docs](https://api.flutter.dev/flutter/widgets/Align-class.html)
-
-   [Animated flutter docs](https://api.flutter.dev/flutter/widgets/AnimatedAlign-class.html)
-   
-   [Transition flutter docs](https://api.flutter.dev/flutter/widgets/AlignTransition-class.html)"
-  [args child]
-  (let [args (if (map? args) args {:alignment args})
-        align-value (get args :alignment m/Alignment.center)
-        alignment (if (instance? m/Animation align-value) align-value (alignment-geometry align-value))
-        key (widget-key (args :key))]
-    (cond 
-      (instance? m/Animation alignment)
-      (m/AlignTransition
-       .key key
-       .alignment alignment
-       .widthFactor (args :width-factor)
-       .heightFactor (args :height-factor)
-       .child child) 
-      
-      (contains? args :animation)
-      (let [animation (animation-options (args :animation))]
-        (m/AnimatedAlign
-         .key key
-         .alignment alignment
-         .child child
-         .heightFactor (args :height-factor)
-         .widthFactor (args :width-factor)
-         .duration (animation :duration)
-         .curve (animation :curve)
-         .onEnd (animation :on-end)))
-      
-      :else
-      (m/Align
-       .key key
-       .alignment alignment
-       .widthFactor (args :width-factor)
-       .heightFactor (args :height-factor)
-       .child child))))
-
-(defn column
-  "Creates a column widget with the specified arguments and children.
-
-  Args:
-  - args?: A map of arguments for the column widget.
-    - :key An identifier for the column. 
-    - :main-axis-alignment (keyword, default: :start): The alignment of the children along the main axis.
-      Possible values: :center, :start, :end, :space-between, :space-around.
-    - :main-axis-size (keyword, default: :min): The size of the column in the main axis.
-      Possible values: :max, :min.
-    - :cross-axis-alignment (keyword, default: :center): The alignment of the children along the cross axis.
-      Possible values: :center, :start, :end, :stretch, :baseline.
-    - :text-direction (keyword, default: :ltr): The direction of the text.
-      Possible values: :ltr, :rtl.
-    - :text-baseline (keyword, default: :alphabetic): The baseline alignment for the text.
-      Possible values: :alphabetic, :ideographic.
-    - :vertical-direction (keyword, default: :down): The direction in which the children are placed vertically.
-      Possible values: :top, :down.
-    - :spacing (number, default: 0): The spacing between each child widget.
-
-  - children: The child widgets to be placed in the column.
-
-  Returns:
-  A column widget with the specified arguments and children."
-  [args? & children]
-  (let [children (if (map? args?) (flatten children) (flatten [[args?] children]))
-        args (if (map? args?) args? {})
-        spacing (get args :spacing 0)]
-    (m/Column
-     .key (widget-key (args :key))
-     .mainAxisAlignment (main-axis-alignment (get args :main-axis-alignment :start))
-     .mainAxisSize (main-axis-size (get args :main-axis-size :min))
-     .crossAxisAlignment (cross-axis-alignment (get args :cross-axis-alignment :center))
-     .textDirection (text-direction (get args :text-direction :ltr))
-     .textBaseline (text-baseline (get args :text-baseline :alphabetic))
-     .verticalDirection (vertical-direction (get args :vertical-direction :down))
-     .children
-     (if (> spacing 0)
-       (interpose (m/SizedBox .height spacing) children)
-       children))))
-
-(defn stack [& children]
-  (let [children (if (map? (first children)) (flatten (rest children)) (flatten children))
-        params (if (map? (first children)) (first children) {})]
-    (m/Stack
-     .key (widget-key (params :key))
-     .alignment (alignment-geometry (get params :alignment m/AlignmentDirectional.topStart))
-     .fit (stack-fit (get params :fit m/StackFit.loose))
-     .children children)))
-
-(defn container
-  ([] (container {} nil))
-  ([child] (if (instance? m/Widget child) (container {} child) (container child nil)))
-  ([args child]
-   (let [key (widget-key (args :key))
-         alignment (alignment-geometry (get args :alignment m/Alignment.center))
-         padding (insets (get args :padding 0))
-         color (some-> (get args :color) color)
-         decoration (some-> (get args :decoration) decoration)
-         foregroundDecoration (some-> (get args :foreground-decoration) decoration)
-         width (some args [:width :w :size])
-         height (some args [:height :h :size])
-         constraints (get args :constraints)
-         margin (insets (get args :margin 0))
-         transform (get args :transform)
-         transformAlignment (alignment-geometry (get args :transform-alignment m/Alignment.center))
-         clipBehavior (get args :clip (get args :clip-behavior m/Clip.none))
-         container (if
-                    (contains? args :animation)
-                     (let [animation (animation-options (get args :animation {}))]
-                       (m/AnimatedContainer
-                        .key key
-                        .alignment alignment
-                        .padding padding
-                        .color color
-                        .decoration decoration
-                        .foregroundDecoration foregroundDecoration
-                        .width width
-                        .height height
-                        .constraints constraints
-                        .margin margin
-                        .transform transform
-                        .transformAlignment transformAlignment
-                        .clipBehavior clipBehavior
-                        .child child
-                        .duration (animation :duration)
-                        .curve (animation :curve)
-                        .onEnd (animation :onEnd)))
-
-                     (m/Container
-                      .key key
-                      .alignment alignment
-                      .padding padding
-                      .color color
-                      .decoration decoration
-                      .foregroundDecoration foregroundDecoration
-                      .width width
-                      .height height
-                      .constraints constraints
-                      .margin margin
-                      .transform transform
-                      .transformAlignment transformAlignment
-                      .clipBehavior clipBehavior
-                      .child child))]
-     (cond
-       (every? #(= % :hug) [width height])
-       (m/IntrinsicWidth .child (m/IntrinsicHeight .child container))
-
-       (= width :hug)
-       (m/IntrinsicWidth .child container)
-
-       (= height :hug)
-       (m/IntrinsicHeight .child container)
-       :else container))))
-
-(defn opacity
-  ([opacity args child]
-   (if (contains? args :animation)
-     (let [animation (animation-options (args :animation))]
-       (m/AnimatedOpacity
-        .key (widget-key (args :key))
-        .opacity opacity
-        .child child
-        .duration (animation :duration)
-        .curve (animation :curve)
-        .onEnd (animation :on-end)
-        .alwaysIncludeSemantics (get args :always-include-semantics false)))
-     (m/Opacity
-      .key (widget-key (args :key))
-      .opacity opacity
-      .alwaysIncludeSemantics (get args :always-include-semantics false)
-      .child child)))
-  ([opacity child]
-   (m/Opacity
-    .opacity opacity
-    .child child)))
-
-(defn decorated [with-decoration child]
-  (m/DecoratedBox
-   .decoration (decoration with-decoration)
-   .child child))
-
-(defn sized
-  "Creates a SizedBox widget with the specified size and child.
-   The size can be specified as a number, a map of width and height, or two numbers.
-   Examples:
-   ```clojure
-   (sized 100) ;; SizedBox(width: 100, height: 100)
-   (sized {:width 100 :height 200}) ;; SizedBox(width: 100, height: 200)
-   (sized 100 200) ;; SizedBox(width: 100, height: 200)
-   (sized {:w 100 :h 200}) ;; SizedBox(width: 100, height: 200)
-   (sized :expand) ;; SizedBox.expand
-   (sized :shrink) ;; SizedBox.shrink
-   (sized [100 200]) ;; SizedBox(width: 100, height: 200)
-   ```
-   If the size argument is a map, the keys :width and :height are used to specify the width and height.
-   If the size argument is a vector of two numbers, the first number is used for the width and the second number is used for the height."
-  ([value]
-   (if (instance? m/Widget value)
-     (sized nil nil value)
-     (sized value nil)))
-  ([value child]
-   (cond
-     (number? child) (sized value child nil)
-     (= value :expand) (m/SizedBox.expand .child child)
-     (= value :shrink) (m/SizedBox.shrink .child child)
-     (number? value) (sized value value child)
-     (map? value) (sized
-                   (some value [:width :w])
-                   (some value [:height :h])
-                   child)
-     (= (count value) 2) (sized (get value 0) (get value 1) child)
-     :else (throw (Exception. (str "Invalid size: " value)))))
-  ([width height child]
-   (m/SizedBox
-    .width width
-    .height height
-    .child child)))
-
-(defn colored
-  ([value] (if (instance? m/Widget value) (colored m/Colors.transparent value) (colored value nil)))
-  ([clr child]
-   (m/ColoredBox .color (color clr) .child child)))
-
-(defn keyed [key child]
-  (m/KeyedSubtree
-   .key (widget-key key)
-   .child child))
-
-(defn padding
-  ([value args child]
-   (let [animation (animation-options (get args :animation {}))]
-     (m/AnimatedPadding
-      .padding (insets value)
-      .child child
-      .duration (animation :duration)
-      .curve (animation :curve)
-      .onEnd (animation :on-end))))
-  ([value child]
-   (m/Padding
-    .padding (insets value)
-    .child child)))
 
 (defn text-align [align]
   (if (instance? m/TextAlign align)
@@ -1136,6 +600,895 @@
     .style (some-> args :style text-style)
     .child child)))
 
+(defn tile-mode [mode]
+  (if (instance? m/TileMode mode)
+    mode
+    (case mode
+      :clamp m/TileMode.clamp
+      :repeated m/TileMode.repeated
+      :mirror m/TileMode.mirror
+      :decal m/TileMode.decal
+      (throw (Exception. (str "Invalid tile-mode: " mode))))))
+
+(defn color
+  ([r g b] (m/Color.fromRGBO r g b 1.0))
+  ([r g b o] (m/Color.fromRGBO r g b o))
+  ([value]
+   (cond
+     (instance? m/Color value) value
+     (number? value) (m/Color value)
+     (keyword? value) (case value
+                        :blue m/Colors.blue
+                        :red m/Colors.red
+                        :green m/Colors.green
+                        :yellow m/Colors.yellow
+                        :orange m/Colors.orange
+                        :purple m/Colors.purple
+                        :pink m/Colors.pink
+                        :cyan m/Colors.cyan
+                        :teal m/Colors.teal
+                        :amber m/Colors.amber
+                        :lime m/Colors.lime
+                        :light-blue m/Colors.lightBlue
+                        :light-green m/Colors.lightGreen
+                        :deep-orange m/Colors.deepOrange
+                        :deep-purple m/Colors.deepPurple
+                        :indigo m/Colors.indigo
+                        :blue-grey m/Colors.blueGrey
+                        :grey m/Colors.grey
+                        :black m/Colors.black
+                        :white m/Colors.white
+                        :transparent m/Colors.transparent
+                        (m/Color value))
+     :else (m/Color value))))
+
+(defn- gradient-colors [colors]
+  (cond
+    (nil? colors) [:transparent :transparent]
+
+    (or (vector? colors) (seq? colors))
+    (map color
+         (case (count colors)
+           0 [:transparent :transparent]
+           1 [(colors 0) (colors 0)]
+           colors))
+
+    :else
+    (map color [colors colors])))
+
+(defn linear-gradient
+  "Creates a LinearGradient object from the specified arguments.
+   The arguments can be specified as a map with the following keys:
+   - :begin (alignment, default: Alignment.centerStart): The alignment of the gradient's start point.
+   - :end (alignment, default: Alignment.centerEnd): The alignment of the gradient's end point.
+   - :colors (list of colors, default: [:transparent :transparent]): The colors of the gradient.
+   - :stops (list of numbers, default: nil): The stops of the gradient.
+   - :tile-mode (tile-mode, default: nil): The tile mode of the gradient.
+   "
+  [args]
+  (m/LinearGradient
+   .begin (alignment-geometry (args :begin m/AlignmentDirectional.centerStart))
+   .end (alignment-geometry (args :end m/AlignmentDirectional.centerEnd))
+   .colors (gradient-colors (args :colors))
+   .stops (args :stops)
+   .tileMode (some-> (args :tile-mode :clamp) tile-mode)))
+
+(defn sweep-gradient
+  "Creates a SweepGradient object from the specified arguments.
+   The arguments can be specified as a map with the following keys:
+   - :center (alignment, default: Alignment.center): The alignment of the gradient's center point.
+   - :start-angle (number, default: 0): The start angle of the gradient.
+   - :end-angle (number, default: 2 * Math/PI): The end angle of the gradient.
+   - :colors (list of colors, default: [:transparent :transparent]): The colors of the gradient.
+   - :stops (list of numbers, default: nil): The stops of the gradient.
+   - :tile-mode (tile-mode, default: nil): The tile mode of the gradient.
+   "
+  [args]
+  (m/SweepGradient
+   .center (alignment-geometry (args :center m/Alignment.center))
+   .startAngle (args :start-angle 0)
+   .endAngle (args :end-angle 2 * (.pi double))
+   .colors (gradient-colors (args :colors))
+   .stops (args :stops)
+   .tileMode (some-> (args :tile-mode) tile-mode)))
+
+(defn radial-gradient
+  "Creates a RadialGradient object from the specified arguments.
+   The arguments can be specified as a map with the following keys:
+   - :center (alignment, default: Alignment.center): The alignment of the gradient's center point.
+   - :radius (number, default: 0.5): The radius of the gradient.
+   - :colors (list of colors, default: [:transparent :transparent]): The colors of the gradient.
+   - :stops (list of numbers, default: nil): The stops of the gradient.
+   - :tile-mode (tile-mode, default: nil): The tile mode of the gradient.
+   "
+  [args]
+  (m/RadialGradient
+   .center (alignment-geometry (args :center m/Alignment.center))
+   .radius (args :radius 0.5)
+   .colors (gradient-colors (args :colors))
+   .stops (args :stops)
+   .tileMode (some-> (args :tile-mode) tile-mode)))
+
+(defn gradient [gradient]
+  (cond
+    (instance? m/Gradient gradient) gradient
+    (some #(contains? gradient %) [:begin :end]) (linear-gradient gradient)
+    (some #(contains? gradient %) [:start-angle :end-angle]) (sweep-gradient gradient)
+    (some #(contains? gradient %) [:radius]) (radial-gradient gradient)
+    :else (throw (Exception. (str "Unknown gradient: " gradient)))))
+
+(defn shape [shape]
+  (cond
+    (instance? m/BoxShape shape) shape
+    (instance? m/ShapeBorder shape) shape
+
+    :else
+    (case shape
+      :circle m/BoxShape.circle
+      :rectangle m/BoxShape.rectangle
+      :rect m/BoxShape.rectangle
+      m/BoxShape.rectangle)))
+
+(defn radius
+  "Creates a Radius object from the specified radius.
+   The radius can be specified as a number, a map of x and y, or a XY sequence.
+   Examples:
+   ```clojure
+   (radius 4) ;; Radius.circular(4)
+   (radius {:x 4 :y 8}) ;; Radius.elliptical(4, 8)
+   (radius [4 8]) ;; Radius.elliptical(4, 8)
+   ```"
+  [radius]
+  (cond
+    (instance? m/Radius radius) radius
+    (number? radius) (m/Radius.circular radius)
+    (or (seq? radius) (vector? radius)) (m/Radius.elliptical (get radius 0 0) (get radius 1 0))
+    (map? radius) (m/Radius.elliptical (get radius :x 0) (get radius :y 0))
+    :else (throw (Exception. (str "Invalid radius: " radius)))))
+
+(defn border-radius
+  "Creates a BorderRadius object from the specified radius.
+   The radius can be specified as a radius. or a map of corner names to a radius.
+   Each corner can be specified separately using the keys `:top-left`, `:top-right`, `:bottom-left`, `:bottom-right`, `:left-top`, `:right-top`, `:left-bottom`, `:right-bottom`, `:left`, `:right`, `:top`, `:bottom`, `:start`, `:end`, `:t`, `:b`, `:l`, `:r`, `:s`, `:e`, `:all`.
+   Each radius can be specified as a number or a map of x and y or a XY sequence.
+   Examples:
+   ```clojure
+   (border-radius 4) ;; BorderRadius.all(Radius.circular(4))
+   (border-radius {:top-left 4 :top-right 8}) ;; BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(8))
+   (border-radius {:l 4 :r 8}) ;; BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(8))
+   (border-radius {:x 4 :y 8}) ;; BorderRadius.all(Radius.elliptical(4, 8))
+   (border-radius [4 8]) ;; BorderRadius.all(Radius.elliptical(4, 8))
+   (border-radius {:top-left 4 :all 8}) ;; BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(8), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8))
+   ```"
+  [value]
+  (cond
+    (instance? m/BorderRadiusGeometry value) value
+    (or (number? value) (instance? m/Radius value) (seq? value) (vector? value)) (m/BorderRadius.all (radius value))
+
+    (map? value)
+    (cond
+      (some value [:x :y]) (m/BorderRadius.all (radius value))
+
+      (some value [:l :r :left :right :top-left :top-right :bottom-left :bottom-right :left-top :right-top :left-bottom :right-bottom])
+      (m/BorderRadius.only
+       .topLeft (radius (or (some value [:top-left :left-top :top :left :l :t :all]) 0))
+       .topRight (radius (or (some value [:top-right :right-top :top :right :r :t :all]) 0))
+       .bottomLeft (radius (or (some value [:bottom-left :left-bottom :bottom :left :l :b :all]) 0))
+       .bottomRight (radius (or (some value [:bottom-right :right-bottom :bottom :right :r :b :all]) 0)))
+
+      :else
+      (m/BorderRadiusDirectional.only
+       .topStart (radius (or (some value [:top-start :start-top :top :start :s :t :all]) 0))
+       .topEnd (radius (or (some value [:top-end :end-top :top :end :e :t :all]) 0))
+       .bottomStart (radius (or (some value [:bottom-start :start-bottom :bottom :start :s :b :all]) 0))
+       .bottomEnd (radius (or (some value [:bottom-end :end-bottom :bottom :end :e :b :all]) 0))))
+
+    :else (throw (Exception. (str "Invalid radius: " value)))))
+
+(defn decoration
+  [args]
+  (let [shape (shape (args :shape))]
+    (cond
+      (instance? m/Decoration args) args
+
+      (instance? m/ShapeBorder shape)
+      (m/ShapeDecoration
+       .color (some-> (args :color) color)
+       .image (args :image)
+       .gradient (some-> (args :gradient) gradient)
+       .shadows (some args [:box-shadow :shadows :shadow])
+       .shape shape)
+
+      (instance? m/BoxShape shape)
+      (m/BoxDecoration
+       .color (some-> (args :color) color)
+       .image (args :image)
+       .border (args :border)
+       .borderRadius (some-> (args :border-radius) border-radius)
+       .boxShadow (some args [:box-shadow :shadows :shadow])
+       .gradient (some-> (args :gradient) gradient)
+       .backgroundBlendMode (args :background-blend-mode)
+       .shape shape)
+
+      :else (throw (Exception. (str "Invalid decoration: " args))))))
+
+(defn duration [value]
+  (cond
+    (instance? c/Duration value) value
+    (int? value) (c/Duration .seconds value)
+    (number? value) (c/Duration .microseconds (int (* value 1000000.0)))
+    (map? value) (c/Duration
+                  .days (int (get value :days 0))
+                  .hours (int (get value :hours 0))
+                  .minutes (int (get value :minutes 0))
+                  .seconds (int (get value :seconds 0))
+                  .milliseconds (int (get value :milliseconds 0))
+                  .microseconds (int (get value :microseconds 0)))
+    (nil? value) (c/Duration .milliseconds 250)
+    :else (throw (Exception. (str "Invalid duration: " value)))))
+
+(defn curve [curve]
+  (cond
+    (instance? m/Curve curve) curve
+
+    (keyword? curve)
+    (case curve
+      :linear m/Curves.linear
+      :bounce-in m/Curves.bounceIn
+      :bounce-in-out m/Curves.bounceInOut
+      :bounce-out m/Curves.bounceOut
+      :decelerate m/Curves.decelerate
+      :ease m/Curves.ease
+      :ease-in m/Curves.easeIn
+      :ease-in-back m/Curves.easeInBack
+      :ease-in-circ m/Curves.easeInCirc
+      :ease-in-cubic m/Curves.easeInCubic
+      :ease-in-expo m/Curves.easeInExpo
+      :ease-in-out m/Curves.easeInOut
+      :ease-in-out-back m/Curves.easeInOutBack
+      :ease-in-out-circ m/Curves.easeInOutCirc
+      :ease-in-out-cubic m/Curves.easeInOutCubic
+      :ease-in-out-cubic-emphasized m/Curves.easeInOutCubicEmphasized
+      :ease-in-out-expo m/Curves.easeInOutExpo
+      :ease-in-out-quad m/Curves.easeInOutQuad
+      :ease-in-out-quart m/Curves.easeInOutQuart
+      :ease-in-out-quint m/Curves.easeInOutQuint
+      :ease-in-out-sine m/Curves.easeInOutSine
+      :ease-in-quad m/Curves.easeInQuad
+      :ease-in-quart m/Curves.easeInQuart
+      :ease-in-quint m/Curves.easeInQuint
+      :ease-in-sine m/Curves.easeInSine
+      :ease-in-to-linear m/Curves.easeInToLinear
+      :ease-out m/Curves.easeOut
+      :ease-out-back m/Curves.easeOutBack
+      :ease-out-circ m/Curves.easeOutCirc
+      :ease-out-cubic m/Curves.easeOutCubic
+      :ease-out-expo m/Curves.easeOutExpo
+      :ease-out-quad m/Curves.easeOutQuad
+      :ease-out-quart m/Curves.easeOutQuart
+      :ease-out-quint m/Curves.easeOutQuint
+      :ease-out-sine m/Curves.easeOutSine
+      :elastic-in m/Curves.elasticIn
+      :elastic-in-out m/Curves.elasticInOut
+      :elastic-out m/Curves.elasticOut
+      :fast-ease-in-to-slow-ease-out m/Curves.fastEaseInToSlowEaseOut
+      :fast-linear-to-slow-ease-in m/Curves.fastLinearToSlowEaseIn
+      :fast-out-slow-in m/Curves.fastOutSlowIn
+      :slow-middle m/Curves.slowMiddle
+      (throw (Exception. (str "Unknown curve: " curve))))
+
+    :else
+    (throw (Exception. (str "Invalid curve: " curve)))))
+
+(def ^:dynamic *anim-ctx* {:animation {:duration (c/Duration .milliseconds 250) :curve m/Curves.easeInOut}
+                           :animate #(%)
+                           :is-animated? false})
+
+(defn animation-options
+  "Creates an animation options object from the specified value.
+   The value can be specified as a map with the following keys:
+   - :duration (number, map, default: 0.25): The duration of the animation.
+   - :curve (keyword, default: :easeInOut): The curve of the animation.
+   - :on-end (function, default: nil): The callback function to be called when the animation ends.
+   The value can also be specified as a vector with the following elements:
+   - The duration of the animation.
+   - The curve of the animation.
+   - The callback function to be called when the animation ends.
+   The value can also be specified as a number, in which case it is used as the duration of the animation."
+  [value]
+  (let [def-curve (get-in *anim-ctx* [:animation :curve] m/Curves.easeInOut)]
+    (cond
+      (map? value)
+      (let [duration (duration (get value :duration (get-in *anim-ctx* [:animation :duration])))
+            curve (curve (get value :curve def-curve))
+            on-end (value :on-end)]
+        {:duration duration :curve curve :on-end on-end})
+
+      (number? value)
+      {:duration (duration value) :curve def-curve}
+
+      (or (vector? value) (seq? value))
+      (let [duration (duration (get value 0))
+            curve (curve (get value 1 def-curve))
+            on-end (get value 2)]
+        {:duration duration :curve curve :on-end on-end})
+
+      :else
+      (throw (Exception. (str "Invalid animation options: " value))))))
+
+(defn widget-key [key]
+  (cond
+    (nil? key) nil
+    (instance? m/Key key) key
+    :else (m/ValueKey key)))
+
+(defn size
+  "Creates a new `Size` object with the given width and height.
+
+  Arity:
+  1. [w h] - Creates a `Size` object with the specified width and height.
+  2. [value] - Creates a `Size` object based on the provided value. The value can be:
+     - An instance of `Size`, in which case the same `Size` object is returned.
+     - A number, in which case a square `Size` object is created with the value as both width and height.
+     - A map, in which case the width and height are extracted from the map using the keys `:w`, `:width`, or `:size` for width, and `:h`, `:height`, or `:size` for height.
+     - A vector or seq, in which case the first and second elements are used as width and height respectively.
+     - An instance of `Offset` or `Point`, in which case the x/dx and y/dy values are used as width and height respectively.
+   ```clojure
+   (size 100 200) ;; Size(100.0, 200.0)
+   (size 100) ;; Size(100.0, 100.0)
+   (size {:w 100 :h 200}) ;; Size(100.0, 200.0)
+   ```"
+  ([w h] (m/Size (double w) (double h)))
+  ([value]
+   (cond
+     (instance? m/Size value) value
+     (number? value) (size value value)
+     (map? value) (size (or (some value [:w :width :size]) 0) (or (some value [:h :height :size]) 0))
+     (or (vector? value) (seq? value)) (size (get value 0 0) (get value 1 0))
+     (instance? m/Offset value) (size (.-dx value) (.-dy value))
+     (instance? math/Point value) (size (.-x value) (.-y value))
+     :else (throw (Exception. (str "Invalid size: " value))))))
+
+(defn offset
+  "Creates a new `Offset` object with the given dx and dy.
+   
+   Arity:
+   1. [dx dy] - Creates an `Offset` object with the specified dx and dy.
+   2. [value] - Creates an `Offset` object based on the provided value. The value can be:
+      - An instance of `Offset`, in which case the same `Offset` object is returned.
+      - A number, in which case a square `Offset` object is created with the value as both dx and dy
+      - A map, in which case the dx and dy are extracted from the map using the keys `:dx`, `:x`, or `:offset` for dx, and `:dy`, `:y`, or `:offset` for dy.
+      - A vector or seq, in which case the first and second elements are used as dx and dy respectively.
+      - An instance of `Point`, in which case the x and y values are used as dx and dy respectively.
+      - An instance of `Size`, in which case the width and height are used as dx and dy respectively.
+   ```clojure
+   (offset 100 200) ;; Offset(100.0, 200.0)
+   (offset {:dx 100 :dy 200}) ;; Offset(100.0, 200.0)
+    ```
+   "
+  ([dx dy] (m/Offset (double dx) (double dy)))
+  ([value]
+   (cond
+     (instance? m/Offset value) value
+     (number? value) (offset value value)
+     (map? value) (offset (or (some value [:dx :x :offset]) 0) (or (some value [:dy :y :offset]) 0))
+     (or (vector? value) (seq? value)) (offset (get value 0 0) (get value 1 0))
+     (instance? math/Point value) (offset (.-x value) (.-y value))
+     (instance? m/Size value) (offset (.-width value) (.-height value))
+     :else (throw (Exception. (str "Invalid offset: " value))))))
+
+(defn point
+  "Creates a new `Point` object with the given dx and dy.
+   
+   Arity:
+   1. [x y] - Creates an `Point` object with the specified x and y.
+   2. [value] - Creates an `Point` object based on the provided value. The value can be:
+      - An instance of `Point`, in which case the same `Point` object is returned.
+      - A number, in which case a square `Point` object is created with the value as both x and y
+      - A map, in which case the dx and dy are extracted from the map using the keys `:x`, `:dx` or `:offset` for dx, and `:y`, `:dy` or `:offset` for y.
+      - A vector or seq, in which case the first and second elements are used as x and y respectively.
+      - An instance of `Offset`, in which case the dx and dy values are used as x and y respectively.
+      - An instance of `Size`, in which case the width and height are used as dx and dy respectively.
+   ```clojure
+   (point 100 200) ;; Point(100.0, 200.0)
+   (point {:dx 100 :dy 200}) ;; Point(100.0, 200.0)
+    ```
+   "
+  ([x y] (math/Point (double x) (double y)))
+  ([value]
+   (cond
+     (instance? math/Point value) value
+     (number? value) (point value value)
+     (map? value) (point (or (some value [:x :dx :offset]) 0) (or (some value [:y :dy :offset]) 0))
+     (or (vector? value) (seq? value)) (point (get value 0 0) (get value 1 0))
+     (instance? m/Offset value) (point (.-dx value) (.-dy value))
+     (instance? m/Size value) (point (.-width value) (.-height value))
+     :else (throw (Exception. (str "Invalid point: " value))))))
+
+(defn rect
+  "Creates a new `Rect` object with the given center or offset and size.
+
+     Arity:
+     1. [center size] - Creates a `Rect` object with the specified center and size.
+     2. [l t w h] - Creates a `Rect` object with the specified left, top, width, and height.
+     3. [value] - Creates a `Rect` object based on the provided value. The value can be:
+        - An instance of `Rect`, in which case the same `Rect` object is returned.
+        - A map, in which case the center and size are extracted from the map using the keys `:center` or `:x`/`:y` , and `:size` or `:w`/`:h`/`:width`/`:height` respectively.
+          Or the left, top, width, and height are extracted using the keys `:left`/`:l`, `:top`/`:t`, `:width`/`:w`, and `:height`/`:h` respectively.
+          Also `:offset` key can be used to specify the left and top values instead of the center.
+     ```clojure
+     (rect {:center [100 200] :size [300 400]}) ;; Rect.fromCenter(center: Point(100.0, 200.0), width: 300.0, height: 400.0)
+     (rect {:offset [100 200] :size [300 400]}) ;; Rect.fromLTWH(100.0, 200.0, 300.0, 400.0)
+     (rect [100 200] [300 400]) ;; Rect.fromCenter(center: Point(100.0, 200.0), width: 300.0, height: 400.0)
+     (rect [100 200 300 400]) ;; Rect.fromLTWH(100.0, 200.0, 300.0, 400.0)
+     (rect (offset 100 200) (size 300 400)) ;; Rect.fromCenter(center: Point(100.0, 200.0), width: 300.0, height: 400.0)
+     (rect {:x 100 :y 200} {:w 300 :h 400}) ;; Rect.fromCenter(center: Point(100.0, 200.0), width: 300.0, height: 400.0)
+     (rect {:x 100 :y 200 :w 300 :h 400}) ;; Rect.fromCenter(center: Point(100.0, 200.0), width: 300.0, height: 400.0)
+     ```
+     "
+  ([center size] (let [size (flutter-cljd.widgets/size size)]
+                   (ui/Rect.fromCenter .center (offset center) .width (.-width size) .height (.-height size))))
+  ([l t w h] (ui/Rect.fromLTWH (double l) (double t) (double w) (double h)))
+  ([value]
+   (cond
+     (instance? ui/Rect value) value
+
+     (map? value)
+     (let [size (get value :size value)
+           point (offset (or (some value [:center :offset]) value))]
+       (if (contains? value :offset)
+         (rect (.-dx point) (.-dy point) (.-width size) (.-height size))
+         (rect point size)))
+     
+     (or (vector? value) (seq? value))
+     (rect (offset (get value 0 [0 0])) (size (get value 1 [0 0])))
+
+     :else (throw (Exception. (str "Invalid rect: " value))))))
+
+;; -------------------------
+;; MARK: Widgets
+;; -------------------------
+
+(defn absorb-pointer 
+  "A widget that absorbs pointers during hit testing. 
+   It makes the widget and any underlying widgets impossible to interact with.
+   If you want to disable the widget but keep the underlying widgets interactive, use `ignore-pointer`.
+
+   When absorbing is true, this widget prevents its subtree from receiving pointer events by terminating hit testing at itself.
+   It still consumes space during layout and paints its child as usual.
+   It just prevents its children from being the target of located events, because it returns true from RenderBox.hitTest.
+   
+   [Flutter docs](https://api.flutter.dev/flutter/widgets/AbsorbPointer-class.html)"
+  ([absorbing child]
+   (m/AbsorbPointer .absorbing (true? absorbing) .child child))
+  ([child] (absorb-pointer true child)))
+
+(defn ignore-pointer
+  "A widget that is invisible during hit testing.
+
+   When ignoring is true, this widget (and its subtree) is invisible to hit testing.
+   It still consumes space during layout and paints its child as usual.
+   It just cannot be the target of located events, because it returns false from RenderBox.hitTest.
+  
+   [Flutter docs](https://api.flutter.dev/flutter/widgets/IgnorePointer-class.html)"
+  ([ignoring child]
+   (m/IgnorePointer .ignoring (true? ignoring) .child child))
+  ([child] (ignore-pointer true child)))
+
+(defn align 
+  "A widget that aligns its child within itself and optionally sizes itself based on the child's size.
+
+   For example, to align a box at the bottom right, you would pass this box a tight constraint that is bigger than the child's natural size, with an alignment of `Alignment.bottomRight`.
+   
+   Args:
+   - args: A map of arguments or an alignment or `Animation<AlignmentGeometry>`.
+     - `:key` An identifier for the align widget.
+     - `:alignment` (keyword or `Alignment` or `Animation<AlignmentGeometry>`, default: `Alignment.center`): The alignment of the child within the container.
+        Possible keywords: `:top`, `:center`, `:bottom`, `:left`, `:right`, `:start`, `:end` and their combinations like `:top-left`.
+     - `:width-factor` (number, default: nil): The width factor of the child.
+     - `:height-factor` (number, default: nil): The height factor of the child.
+     - `:animation` (map or number of seconds, default: nil): The animation options for the align widget.
+       - `:duration` (number of seconds or map or Duration, default: 0.25): The duration of the animation.
+       - `:curve` (keyword or Curve, default: :ease-in-out): The curve of the animation.
+       - `:on-end` (function, default: nil): The callback function to be called when the animation ends.
+   - child: The child widget to be aligned.
+
+   ```clojure
+   (align {:alignment :top-right :width-factor 0.4} (text \"Hello, World!\"))
+   (align :top-right (text \"Hello, World!\"))
+   ```
+
+   [Flutter docs](https://api.flutter.dev/flutter/widgets/Align-class.html)
+
+   [Animated flutter docs](https://api.flutter.dev/flutter/widgets/AnimatedAlign-class.html)
+   
+   [Transition flutter docs](https://api.flutter.dev/flutter/widgets/AlignTransition-class.html)"
+  [args child]
+  (let [args (if (map? args) args {:alignment args})
+        align-value (get args :alignment m/Alignment.center)
+        alignment (if (instance? m/Animation align-value) align-value (alignment-geometry align-value))
+        key (widget-key (args :key))]
+    (cond
+      (instance? m/Animation alignment)
+      (m/AlignTransition
+       .key key
+       .alignment alignment
+       .widthFactor (args :width-factor)
+       .heightFactor (args :height-factor)
+       .child child)
+      
+      (contains? args :animation)
+      (let [animation (animation-options (args :animation))]
+        (m/AnimatedAlign
+         .key key
+         .alignment alignment
+         .child child
+         .heightFactor (args :height-factor)
+         .widthFactor (args :width-factor)
+         .duration (animation :duration)
+         .curve (animation :curve)
+         .onEnd (animation :on-end)))
+      
+      :else
+      (m/Align
+       .key key
+       .alignment alignment
+       .widthFactor (args :width-factor)
+       .heightFactor (args :height-factor)
+       .child child))))
+
+(defn aspect-ratio
+  "A widget that attempts to size the child to a specific aspect ratio.
+
+   The aspect ratio is expressed as a ratio of width to height.
+   For example, a 16:9 width:height aspect ratio would have a value of 16.0/9.0.
+
+   Args:
+   - ratio: The aspect ratio to apply to the child.
+   - child: The child widget to be sized.
+
+   [Flutter docs](https://api.flutter.dev/flutter/widgets/AspectRatio-class.html)"
+  [ratio child]
+  (m/AspectRatio .aspectRatio (double ratio) .child child))
+
+(defn action-listener 
+  "A helper widget for making sure that listeners on an action are removed properly.
+   
+   Listeners on the Action class must have their listener callbacks removed with Action.removeActionListener when the listener is disposed of.
+   This widget helps with that, by providing a lifetime for the connection between the listener and the Action, and by handling the adding and removing of the listener at the right points in the widget lifecycle.
+   
+   If you listen to an Action widget in a widget hierarchy, you should use this widget.
+   If you are using an Action outside of a widget context, then you must call removeListener yourself.
+   
+   [Flutter docs](https://api.flutter.dev/flutter/widgets/ActionListener-class.html)"
+  [listener action child]
+  (m/ActionListener .listener listener .action action .child child))
+
+(defn with-autocomplete-highlighted-index 
+  "An inherited widget used to indicate which autocomplete option should be highlighted for keyboard navigation.
+   
+   The RawAutoComplete widget will wrap the options view generated by the optionsViewBuilder with this widget to provide the highlighted option's index to the builder.
+   
+   [Flutter docs](https://api.flutter.dev/flutter/widgets/AutocompleteHighlightedOption-class.html)"
+  [option child]
+  (m/AutocompleteHighlightedOption .highlightIndexNotifier option .child child))
+
+(defn autofill-group
+  "An AutofillScope widget that groups AutofillClients together.
+
+   AutofillClients that share the same closest AutofillGroup ancestor must be built together, and they be will be autofilled together.
+   
+   AutofillClients within the same AutofillScope are isolated from other input fields during autofill. That is, when an autofillable TextInputClient gains focus, only the AutofillClients within the same AutofillScope will be visible to the autofill service, in the same order as they appear in AutofillScope.autofillClients.
+   
+   AutofillScope also allows TextInput to redirect autofill values from the platform to the AutofillClient with the given identifier, by calling AutofillScope.getAutofillClient.
+   
+   An AutofillClient that's not tied to any AutofillScope will only participate in autofill if the autofill is directly triggered by its own TextInputClient.
+   
+   The AutofillGroup widget only knows about AutofillClients registered to it using the AutofillGroupState.register API. Typically, AutofillGroup will not pick up AutofillClients that are not mounted, for example, an AutofillClient within a Scrollable that has never been scrolled into the viewport. To workaround this problem, ensure clients in the same AutofillGroup are built together.
+   
+   The topmost AutofillGroup widgets (the ones that are closest to the root widget) can be used to clean up the current autofill context when the current autofill context is no longer relevant.
+   
+   An autofill context is a collection of input fields that live in the platform's text input plugin. The platform is encouraged to save the user input stored in the current autofill context before the context is destroyed, when TextInput.finishAutofillContext is called with shouldSave set to true.
+   
+   Currently, there can only be at most one autofill context at any given time. When any input field in an AutofillGroup requests for autofill (which is done automatically when an autofillable EditableText gains focus), the current autofill context will merge the content of that AutofillGroup into itself. When there isn't an existing autofill context, one will be created to hold the newly added input fields from the group.
+   
+   Once added to an autofill context, an input field will stay in the context until the context is destroyed. To prevent leaks, call TextInput.finishAutofillContext to signal the text input plugin that the user has finalized their input in the current autofill context. The platform text input plugin either encourages or discourages the platform from saving the user input based on the value of the shouldSave parameter. The platform usually shows a \"Save for autofill?\" prompt for user confirmation.
+   
+   By default, onDisposeAction is set to AutofillContextAction.commit, in which case when any of the topmost AutofillGroups is being disposed, the platform will be informed to save the user input from the current autofill context, then the current autofill context will be destroyed, to free resources. You can, for example, wrap a route that contains a Form full of autofillable input fields in an AutofillGroup, so the user input of the Form can be saved for future autofill by the platform.
+
+   [Flutter docs](https://api.flutter.dev/flutter/widgets/AutofillGroup-class.html)"
+  ([action child] (m/AutofillGroup .child child .onDisposeAction (autofill-context-action action)))
+  ([child] (autofill-group child m/AutofillContextAction.commit)))
+
+(defn keep-alive
+  "Mark a child as needing to stay alive even when it's in a lazy list that would otherwise remove it.
+
+   This widget is for use in a RenderAbstractViewports, such as Viewport or TwoDimensionalViewport.
+   
+   This widget is rarely used directly. The SliverChildBuilderDelegate and SliverChildListDelegate delegates, used with SliverList and SliverGrid, as well as the scroll view counterparts ListView and GridView, have an addAutomaticKeepAlives feature, which is enabled by default, and which causes AutomaticKeepAlive widgets to be inserted around each child, causing KeepAlive widgets to be automatically added and configured in response to KeepAliveNotifications.
+   
+   The same addAutomaticKeepAlives feature is supported by the TwoDimensionalChildBuilderDelegate and TwoDimensionalChildListDelegate.
+   
+   Therefore, to keep a widget alive, it is more common to use those notifications than to directly deal with KeepAlive widgets.
+   
+   In practice, the simplest way to deal with these notifications is to mix AutomaticKeepAliveClientMixin into one's State. See the documentation for that mixin class for details.
+   
+   You can pass `:auto` as the `alive` argument to use `AutomaticKeepAlive` widget.
+
+   [Flutter docs](https://api.flutter.dev/flutter/widgets/KeepAlive-class.html)
+   [AutomaticKeepAlive docs](https://api.flutter.dev/flutter/widgets/AutomaticKeepAlive-class.html)"
+  ([alive child] (if (= alive :auto)
+                   (m/AutomaticKeepAlive .child child)
+                   (m/KeepAlive .keepAlive (true? alive) .child child)))
+  ([child] (keep-alive true child)))
+
+(defn on-back-button
+  "A convenience widget that registers a callback for when the back button is pressed.
+
+   In order to use this widget, there must be an ancestor Router widget in the tree that has a RootBackButtonDispatcher. e.g. The Router widget created by the MaterialApp.router has a built-in RootBackButtonDispatcher by default.
+   
+   It only applies to platforms that accept back button clicks, such as Android.
+   
+   It can be useful for scenarios, in which you create a different state in your screen but don't want to use a new page for that.
+
+   [Flutter docs](https://api.flutter.dev/flutter/widgets/BackButtonListener-class.html)"
+  [action child] 
+  (m/BackButtonListener .child child .onBackButtonPressed (fn [future] (.then future action))))
+
+(defn banner 
+  [args child]
+  (let [message (if (string? args) args (:text args ""))]
+    (m/Banner 
+     .key (widget-key (args :key))
+     .child child
+     .message message
+     .textDirection (some-> (args :text-direction) text-direction)
+     .location (some-> (args :location) banner-location)
+     .layoutDirection (some-> (args :layout-direction text-direction))
+     .color (or (some-> (args :color) color) (m/Color 0xA0B71C1C))
+     .textStyle (or (some-> (args :text-style) text-style) m/_kTextStyle))))
+
+(defn baseline
+  "A widget that positions its child according to the child's baseline.
+   
+   This widget shifts the child down such that the child's baseline (or the bottom of the child, if the child has no baseline) is baseline logical pixels below the top of this box, then sizes this box to contain the child.
+   If baseline is less than the distance from the top of the child to the baseline of the child, then the child is top-aligned instead.
+   
+   [Flutter docs](https://api.flutter.dev/flutter/widgets/Baseline-class.html)"
+  ([offset type child] (m/Baseline .baseline (double offset) .baselineType (text-baseline type) .child child))
+  ([offset child] (baseline offset m/TextBaseline.alpthabetic child)))
+
+(defn block-semantics
+  "A widget that drops the semantics of all widget that were painted before it in the same semantic container.
+
+   This is useful to hide widgets from accessibility tools that are painted behind a certain widget, e.g. an alert should usually disallow interaction with any widget located \"behind\" the alert (even when they are still partially visible).
+   Similarly, an open Drawer blocks interactions with any widget outside the drawer.
+   
+   [Flutter docs](https://api.flutter.dev/flutter/widgets/BlockSemantics-class.html)"
+  ([blocking child]
+   (m/BlockSemantics .blocking blocking .child child))
+  ([child] (block-semantics true child)))
+
+
+
+(declare sized)
+
+(defn column
+  "Creates a column widget with the specified arguments and children.
+
+  Args:
+  - args?: A map of arguments for the column widget.
+    - :key An identifier for the column. 
+    - :main-axis-alignment (keyword, default: :start): The alignment of the children along the main axis.
+      Possible values: :center, :start, :end, :space-between, :space-around.
+    - :main-axis-size (keyword, default: :min): The size of the column in the main axis.
+      Possible values: :max, :min.
+    - :cross-axis-alignment (keyword, default: :center): The alignment of the children along the cross axis.
+      Possible values: :center, :start, :end, :stretch, :baseline.
+    - :text-direction (keyword, default: :ltr): The direction of the text.
+      Possible values: :ltr, :rtl.
+    - :text-baseline (keyword, default: :alphabetic): The baseline alignment for the text.
+      Possible values: :alphabetic, :ideographic.
+    - :vertical-direction (keyword, default: :down): The direction in which the children are placed vertically.
+      Possible values: :top, :down.
+    - :spacing (number, default: 0): The spacing between each child widget.
+
+  - children: The child widgets to be placed in the column.
+
+  Returns:
+  A column widget with the specified arguments and children."
+  [args? & children]
+  (let [children (if (map? args?) (flatten children) (flatten [[args?] children]))
+        args (if (map? args?) args? {})
+        spacing (get args :spacing 0)]
+    (m/Column
+     .key (widget-key (args :key))
+     .mainAxisAlignment (main-axis-alignment (get args :main-axis-alignment :start))
+     .mainAxisSize (main-axis-size (get args :main-axis-size :min))
+     .crossAxisAlignment (cross-axis-alignment (get args :cross-axis-alignment :center))
+     .textDirection (text-direction (get args :text-direction :ltr))
+     .textBaseline (text-baseline (get args :text-baseline :alphabetic))
+     .verticalDirection (vertical-direction (get args :vertical-direction :down))
+     .children
+     (if (> spacing 0)
+       (interpose (sized {:height spacing}) children)
+       children))))
+
+(defn stack [& children]
+  (let [children (if (map? (first children)) (flatten (rest children)) (flatten children))
+        params (if (map? (first children)) (first children) {})]
+    (m/Stack
+     .key (widget-key (params :key))
+     .alignment (alignment-geometry (get params :alignment m/AlignmentDirectional.topStart))
+     .fit (stack-fit (get params :fit m/StackFit.loose))
+     .children children)))
+
+(defn container
+  ([] (container {} nil))
+  ([child] (if (instance? m/Widget child) (container {} child) (container child nil)))
+  ([args child]
+   (let [key (widget-key (args :key))
+         alignment (alignment-geometry (get args :alignment m/Alignment.center))
+         padding (insets (get args :padding 0))
+         color (some-> (get args :color) color)
+         decoration (some-> (get args :decoration) decoration)
+         foregroundDecoration (some-> (get args :foreground-decoration) decoration)
+         width (some args [:width :w :size])
+         height (some args [:height :h :size])
+         constraints (get args :constraints)
+         margin (insets (get args :margin 0))
+         transform (get args :transform)
+         transformAlignment (alignment-geometry (get args :transform-alignment m/Alignment.center))
+         clipBehavior (get args :clip (get args :clip-behavior m/Clip.none))
+         container (if
+                    (contains? args :animation)
+                     (let [animation (animation-options (get args :animation {}))]
+                       (m/AnimatedContainer
+                        .key key
+                        .alignment alignment
+                        .padding padding
+                        .color color
+                        .decoration decoration
+                        .foregroundDecoration foregroundDecoration
+                        .width width
+                        .height height
+                        .constraints constraints
+                        .margin margin
+                        .transform transform
+                        .transformAlignment transformAlignment
+                        .clipBehavior clipBehavior
+                        .child child
+                        .duration (animation :duration)
+                        .curve (animation :curve)
+                        .onEnd (animation :onEnd)))
+
+                     (m/Container
+                      .key key
+                      .alignment alignment
+                      .padding padding
+                      .color color
+                      .decoration decoration
+                      .foregroundDecoration foregroundDecoration
+                      .width width
+                      .height height
+                      .constraints constraints
+                      .margin margin
+                      .transform transform
+                      .transformAlignment transformAlignment
+                      .clipBehavior clipBehavior
+                      .child child))]
+     (cond
+       (every? #(= % :hug) [width height])
+       (m/IntrinsicWidth .child (m/IntrinsicHeight .child container))
+
+       (= width :hug)
+       (m/IntrinsicWidth .child container)
+
+       (= height :hug)
+       (m/IntrinsicHeight .child container)
+       :else container))))
+
+(defn opacity
+  ([opacity args child]
+   (if (contains? args :animation)
+     (let [animation (animation-options (args :animation))]
+       (m/AnimatedOpacity
+        .key (widget-key (args :key))
+        .opacity opacity
+        .child child
+        .duration (animation :duration)
+        .curve (animation :curve)
+        .onEnd (animation :on-end)
+        .alwaysIncludeSemantics (get args :always-include-semantics false)))
+     (m/Opacity
+      .key (widget-key (args :key))
+      .opacity opacity
+      .alwaysIncludeSemantics (get args :always-include-semantics false)
+      .child child)))
+  ([opacity child]
+   (m/Opacity
+    .opacity opacity
+    .child child)))
+
+(defn decorated [with-decoration child]
+  (m/DecoratedBox
+   .decoration (decoration with-decoration)
+   .child child))
+
+(defn sized
+  "Creates a SizedBox widget with the specified size and child.
+   The size can be specified as a number, a map of width and height, or two numbers.
+   Examples:
+   ```clojure
+   (sized 100) ;; SizedBox(width: 100, height: 100)
+   (sized {:width 100 :height 200}) ;; SizedBox(width: 100, height: 200)
+   (sized 100 200) ;; SizedBox(width: 100, height: 200)
+   (sized {:w 100 :h 200}) ;; SizedBox(width: 100, height: 200)
+   (sized :expand) ;; SizedBox.expand
+   (sized :shrink) ;; SizedBox.shrink
+   (sized [100 200]) ;; SizedBox(width: 100, height: 200)
+   ```
+   If the size argument is a map, the keys :width and :height are used to specify the width and height.
+   If the size argument is a vector of two numbers, the first number is used for the width and the second number is used for the height."
+  ([value]
+   (if (instance? m/Widget value)
+     (sized nil nil value)
+     (sized value nil)))
+  ([value child]
+   (cond
+     (number? child) (sized value child nil)
+     (= value :expand) (m/SizedBox.expand .child child)
+     (= value :shrink) (m/SizedBox.shrink .child child)
+     (number? value) (sized value value child)
+     (map? value) (sized
+                   (some value [:width :w])
+                   (some value [:height :h])
+                   child)
+     (= (count value) 2) (sized (get value 0) (get value 1) child)
+     :else (throw (Exception. (str "Invalid size: " value)))))
+  ([width height child]
+   (m/SizedBox
+    .width width
+    .height height
+    .child child)))
+
+(defn colored
+  ([value] (if (instance? m/Widget value) (colored m/Colors.transparent value) (colored value nil)))
+  ([clr child]
+   (m/ColoredBox .color (color clr) .child child)))
+
+(defn keyed [key child]
+  (m/KeyedSubtree
+   .key (widget-key key)
+   .child child))
+
+(defn padding
+    "Creates a Padding widget with the specified padding and child.
+     The padding can be specified as a number, a map of insets, or four numbers.
+     Examples:
+     ```clojure
+     (padding 8 child) ;; Padding(padding: EdgeInsets.all(8))
+     (padding {:all 8} child) ;; Padding(padding: EdgeInsets.all(8))
+     (padding {:left 8 :right 16} child) ;; Padding(padding: EdgeInsets.only(left: 8, right: 16))
+     (padding [8 16 24 32] child) ;; Padding(padding: EdgeInsets.fromLTRB(8, 16, 24, 32))
+     (padding (insets 8) child) ;; Padding(padding: EdgeInsets.all(8))
+     (padding 4 {:animation {:duration 0.1}} child) ;; AnimatedPadding(padding: EdgeInsets.all(4), duration: Duration(milliseconds: 100))
+     ```
+     If the padding argument is a map, the keys :all, :left, :right, :start, :end, :vertical, :horizontal, :top, and :bottom are used to specify the padding.
+     If the padding argument is a vector of four numbers, the numbers are used for the left, top, right, and bottom padding."
+  ([value args child]
+   (let [animation (animation-options (get args :animation {}))]
+     (m/AnimatedPadding
+      .padding (insets value)
+      .child child
+      .duration (animation :duration)
+      .curve (animation :curve)
+      .onEnd (animation :on-end))))
+  ([value child]
+   (m/Padding
+    .padding (insets value)
+    .child child)))
+
 (defn text
   "Creates a text widget with the specified text and arguments.
    
@@ -1280,3 +1633,53 @@
   (m/ClipRRect
    .borderRadius (border-radius radius)
    .child child))
+
+;; MARK: Animated
+
+(defn animated
+  ([child-fn] (animated {} child-fn))
+  ([animation? child-fn]
+   (if (fn? animation?)
+     (animated {} animation? child-fn)
+     (animated animation? child-fn :none)))
+  ([animation? child-fn child]
+   (f/widget
+    :vsync vsync
+    :managed [anim-contr (m/AnimationController 
+                          .vsync vsync 
+                          .value 0.0 
+                          .duration (:duration (animation-options animation?)))]
+    :let [animation (if (instance? m/Listenable animation?) 
+                      animation?
+                      (let [options (animation-options animation?)]
+                        (set! (.duration anim-contr) (options :duration))
+                        anim-contr))]
+    (m/AnimatedBuilder
+     .animation animation
+     .child (if (instance? m/Widget child) child nil)
+     .builder (fn [ctx child]
+                (binding [*anim-ctx* (assoc *anim-ctx* :is-animated? true)]
+                  (if (= child :none)
+                    (child-fn (.-value animation) ctx)
+                    (child-fn child (.-value animation) ctx))))))))
+
+(defn tt []
+  (animated
+   {:duration 0.25 :curve :linear}
+   (fn [t, ctx]
+     (->>
+      (text "Text" {:color (color :white)})
+      (padding (insets 10))
+      (colored :red))))
+  
+  (->>
+   (text "Text" {:color :red})
+   (animated
+    ;; [insets (insets 10)]
+    {:duration 0.25 :curve :linear}
+    #(padding 4 %)))
+  
+  (->>
+   (text "Text" {:color :red})
+   (padding 10 {:animation {:duration 0.25 :curve :linear}}))
+  )
