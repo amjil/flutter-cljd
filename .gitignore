@@ -42,12 +42,6 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
-ios
-android
-macos
-linux
-web
-windows
 .lsp
 .clj-kondo/.cache
 .clj-kondo/lock

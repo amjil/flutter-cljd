@@ -5,6 +5,7 @@
    ["dart:core" :as c]
    ["dart:ui" :as ui]
    ["dart:math" :as math]
+   ["dart:async" :as async]
    [cljd.flutter :as f :refer [widget]]))
 
 ;; -------------------------
@@ -465,6 +466,38 @@
     locale
     (m/Locale locale)))
 
+(defn color
+  ([r g b] (m/Color.fromRGBO r g b 1.0))
+  ([r g b o] (m/Color.fromRGBO r g b o))
+  ([value]
+   (cond
+     (instance? m/Color value) value
+     (number? value) (m/Color value)
+     (keyword? value) (case value
+                        :blue m/Colors.blue
+                        :red m/Colors.red
+                        :green m/Colors.green
+                        :yellow m/Colors.yellow
+                        :orange m/Colors.orange
+                        :purple m/Colors.purple
+                        :pink m/Colors.pink
+                        :cyan m/Colors.cyan
+                        :teal m/Colors.teal
+                        :amber m/Colors.amber
+                        :lime m/Colors.lime
+                        :light-blue m/Colors.lightBlue
+                        :light-green m/Colors.lightGreen
+                        :deep-orange m/Colors.deepOrange
+                        :deep-purple m/Colors.deepPurple
+                        :indigo m/Colors.indigo
+                        :blue-grey m/Colors.blueGrey
+                        :grey m/Colors.grey
+                        :black m/Colors.black
+                        :white m/Colors.white
+                        :transparent m/Colors.transparent
+                        (m/Color value))
+     :else (m/Color value))))
+
 (defn text-style
   "An immutable style describing how to format and paint text.
 
@@ -609,38 +642,6 @@
       :mirror m/TileMode.mirror
       :decal m/TileMode.decal
       (throw (Exception. (str "Invalid tile-mode: " mode))))))
-
-(defn color
-  ([r g b] (m/Color.fromRGBO r g b 1.0))
-  ([r g b o] (m/Color.fromRGBO r g b o))
-  ([value]
-   (cond
-     (instance? m/Color value) value
-     (number? value) (m/Color value)
-     (keyword? value) (case value
-                        :blue m/Colors.blue
-                        :red m/Colors.red
-                        :green m/Colors.green
-                        :yellow m/Colors.yellow
-                        :orange m/Colors.orange
-                        :purple m/Colors.purple
-                        :pink m/Colors.pink
-                        :cyan m/Colors.cyan
-                        :teal m/Colors.teal
-                        :amber m/Colors.amber
-                        :lime m/Colors.lime
-                        :light-blue m/Colors.lightBlue
-                        :light-green m/Colors.lightGreen
-                        :deep-orange m/Colors.deepOrange
-                        :deep-purple m/Colors.deepPurple
-                        :indigo m/Colors.indigo
-                        :blue-grey m/Colors.blueGrey
-                        :grey m/Colors.grey
-                        :black m/Colors.black
-                        :white m/Colors.white
-                        :transparent m/Colors.transparent
-                        (m/Color value))
-     :else (m/Color value))))
 
 (defn- gradient-colors [colors]
   (cond
@@ -1231,11 +1232,34 @@
    
    It can be useful for scenarios, in which you create a different state in your screen but don't want to use a new page for that.
 
+   Args:
+    - action: The action to be executed when the back button is pressed.
+    - child: The child widget to be displayed.
+
    [Flutter docs](https://api.flutter.dev/flutter/widgets/BackButtonListener-class.html)"
   [action child] 
   (m/BackButtonListener .child child .onBackButtonPressed (fn [future] (.then future action))))
 
 (defn banner 
+  "Displays a diagonal message above the corner of another widget.
+
+   Useful for showing the execution mode of an app (e.g., that asserts are enabled.)
+
+   Args:
+    - args: A map of arguments for the banner widget.
+      - :key An identifier for the banner.
+      - :child The widget to show behind the banner.
+      - :text The message to show in the banner.
+      - :location (keyword or BannerLocation, default: :top-start): The location of the banner.
+        Possible values: :top-start, :top-end, :bottom-start, :bottom-end.
+      - :layout-direction (keyword or TextDirection, default: :ltr): The layout direction of the banner.
+        Possible values: :ltr, :rtl.
+      - :text-direction (keyword or TextDirection, default: :ltr): The direction of the text.
+        Possible values: :ltr, :rtl.
+      - :color (Color, default: 0xA0B71C1C): The color of the banner.
+      - :text-style (TextStyle, default: TextStyle(color: Color(0xFFFFFFFF), fontSize: 12.0 * 0.85, fontWeight: FontWeight.w900, height: 1.0)): The text style of the banner.
+   
+   [Flutter docs](https://api.flutter.dev/flutter/widgets/Banner-class.html)"
   [args child]
   (let [message (if (string? args) args (:text args ""))]
     (m/Banner 
@@ -1246,7 +1270,11 @@
      .location (some-> (args :location) banner-location)
      .layoutDirection (some-> (args :layout-direction text-direction))
      .color (or (some-> (args :color) color) (m/Color 0xA0B71C1C))
-     .textStyle (or (some-> (args :text-style) text-style) m/_kTextStyle))))
+     .textStyle (or (some-> (args :text-style) text-style) (m/TextStyle
+                                                            .color m/Colors.white
+                                                            .fontSize (* 12.0 0.85)
+                                                            .fontWeight m/FontWeight.w900
+                                                            .height 1.0)))))
 
 (defn baseline
   "A widget that positions its child according to the child's baseline.
@@ -1256,7 +1284,7 @@
    
    [Flutter docs](https://api.flutter.dev/flutter/widgets/Baseline-class.html)"
   ([offset type child] (m/Baseline .baseline (double offset) .baselineType (text-baseline type) .child child))
-  ([offset child] (baseline offset m/TextBaseline.alpthabetic child)))
+  ([offset child] (baseline offset m/TextBaseline.alphabetic child)))
 
 (defn block-semantics
   "A widget that drops the semantics of all widget that were painted before it in the same semantic container.

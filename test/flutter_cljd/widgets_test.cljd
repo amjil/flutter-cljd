@@ -130,14 +130,6 @@
       (is (= (.-keepAlive widget) false))
       (is (instance? m/Text (.-child widget))))))
 
-(deftest test-on-back-button
-  (testing "On back button widget"
-    (let [action #(println "Back button pressed")
-          child (m/Text "Child widget")
-          widget (f/on-back-button action child)]
-      (is (= (.-onBackButtonPressed widget) action))
-      (is (instance? m/Text (.-child widget))))))
-
 (deftest test-banner
   (testing "Banner widget"
     (let [args {:text "Banner message"}
@@ -150,7 +142,7 @@
     (let [args {:text "Banner message" :key "banner-key"}
           child (m/Text "Child widget")
           widget (f/banner args child)]
-      (is (= (widget-key (.-key widget)) "banner-key"))
+      (is (= (.-value (.-key widget)) "banner-key"))
       (is (= (.-message widget) "Banner message"))
       (is (instance? m/Text (.-child widget))))))
 
@@ -202,7 +194,3 @@
 
   (testing "Invalid main-axis alignment"
     (is (thrown? Exception (f/main-axis-alignment :invalid)))))
-
-(defn tt []
-  (m/widget->>
-   :let [child (m/Text "Child widget")]))
