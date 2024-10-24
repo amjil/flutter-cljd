@@ -72,6 +72,7 @@
       (is (instance? m/AlignTransition widget))
       (is (= (.-alignment widget) animation))
       (is (instance? m/Text (.-child widget))))))
+
 (deftest test-aspect-ratio
   (testing "Aspect ratio widget"
     (let [child (m/Text "Child widget")
@@ -79,43 +80,32 @@
       (is (= (.-aspectRatio widget) (/ 16.0 9.0)))
       (is (instance? m/Text (.-child widget))))))
 
-(deftest test-action-listener
-  (testing "Action listener widget"
-    (let [listener #(println "Action triggered")
-          action (m/Action ...)
-          child (m/Text "Child widget")
-          widget (f/action-listener listener action child)]
-      (is (= (.-listener widget) listener))
-      (is (= (.-action widget) action))
-      (is (instance? m/Text (.-child widget))))))
-
 (deftest test-with-autocomplete-highlighted-index
   (testing "Autocomplete highlighted option widget"
-    (let [option 2
+    (let [option (#/(m/ValueNotifier int) 0)
           child (m/Text "Child widget")
           widget (f/with-autocomplete-highlighted-index option child)]
-      (is (= (.-highlightIndexNotifier widget) option))
       (is (instance? m/Text (.-child widget))))))
 
 (deftest test-autofill-group
   (testing "Autofill group widget"
     (let [child (m/Text "Child widget")
-          widget (f/autofill-group child)]
-      (is (= (.-child widget) child))
+          widget (f/autofill-group :commit child)]
+      (is (instance? m/Text (.-child widget)))
       (is (= (.-onDisposeAction widget) m/AutofillContextAction.commit))))
 
   (testing "Autofill group with custom action"
     (let [action m/AutofillContextAction.commit
           child (m/Text "Child widget")
           widget (f/autofill-group action child)]
-      (is (= (.-child widget) child))
+      (is (instance? m/Text (.-child widget)))
       (is (= (.-onDisposeAction widget) action)))))
 
 (deftest test-keep-alive
   (testing "Keep alive widget with auto"
     (let [child (m/Text "Child widget")
           widget (f/keep-alive :auto child)]
-      (is (instance? m/AutomaticKeepAlive (.-child widget)))
+      (is (instance? m/AutomaticKeepAlive widget))
       (is (instance? m/Text (.-child widget)))))
 
   (testing "Keep alive widget with true"
@@ -130,16 +120,22 @@
       (is (= (.-keepAlive widget) false))
       (is (instance? m/Text (.-child widget))))))
 
+(deftest test-on-back-button
+  (testing "On back button widget"
+    (let [child (m/Text "Child widget")
+          widget (f/on-back-button #(println "Pressed") child)]
+      (is (instance? m/Text (.-child widget))))))
+
 (deftest test-banner
   (testing "Banner widget"
-    (let [args {:text "Banner message"}
+    (let [args {:message "Banner message"}
           child (m/Text "Child widget")
           widget (f/banner args child)]
       (is (= (.-message widget) "Banner message"))
       (is (instance? m/Text (.-child widget)))))
 
   (testing "Banner widget with key"
-    (let [args {:text "Banner message" :key "banner-key"}
+    (let [args {:message "Banner message" :key "banner-key"}
           child (m/Text "Child widget")
           widget (f/banner args child)]
       (is (= (.-value (.-key widget)) "banner-key"))

@@ -1238,7 +1238,12 @@
 
    [Flutter docs](https://api.flutter.dev/flutter/widgets/BackButtonListener-class.html)"
   [action child] 
-  (m/BackButtonListener .child child .onBackButtonPressed (fn [future] (.then future action))))
+  (m/BackButtonListener .child child .onBackButtonPressed (fn [] 
+                                                            (let [result (action)]
+                                                              (cond
+                                                                (instance? async/Future result) (.then result #(boolean %))
+                                                                (boolean? result) (async/Future.value result)
+                                                                :else (async/Future.value true))))))
 
 (defn banner 
   "Displays a diagonal message above the corner of another widget.
@@ -1249,7 +1254,7 @@
     - args: A map of arguments for the banner widget.
       - :key An identifier for the banner.
       - :child The widget to show behind the banner.
-      - :text The message to show in the banner.
+      - :message The message to show in the banner.
       - :location (keyword or BannerLocation, default: :top-start): The location of the banner.
         Possible values: :top-start, :top-end, :bottom-start, :bottom-end.
       - :layout-direction (keyword or TextDirection, default: :ltr): The layout direction of the banner.
@@ -1257,18 +1262,18 @@
       - :text-direction (keyword or TextDirection, default: :ltr): The direction of the text.
         Possible values: :ltr, :rtl.
       - :color (Color, default: 0xA0B71C1C): The color of the banner.
-      - :text-style (TextStyle, default: TextStyle(color: Color(0xFFFFFFFF), fontSize: 12.0 * 0.85, fontWeight: FontWeight.w900, height: 1.0)): The text style of the banner.
+      - :text-style (TextStyle, default: TextStyle(color: Colors.white, fontSize: 12.0 * 0.85, fontWeight: FontWeight.w900, height: 1.0)): The text style of the banner.
    
    [Flutter docs](https://api.flutter.dev/flutter/widgets/Banner-class.html)"
   [args child]
-  (let [message (if (string? args) args (:text args ""))]
+  (let [message (if (string? args) args (:message args ""))]
     (m/Banner 
      .key (widget-key (args :key))
      .child child
      .message message
      .textDirection (some-> (args :text-direction) text-direction)
-     .location (some-> (args :location) banner-location)
-     .layoutDirection (some-> (args :layout-direction text-direction))
+     .location (or (some-> (args :location) banner-location) m/BannerLocation.topEnd)
+     .layoutDirection (some-> (args :layout-direction) text-direction)
      .color (or (some-> (args :color) color) (m/Color 0xA0B71C1C))
      .textStyle (or (some-> (args :text-style) text-style) (m/TextStyle
                                                             .color m/Colors.white
