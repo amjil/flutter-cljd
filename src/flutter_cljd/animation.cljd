@@ -78,5 +78,3 @@
   (if (instance? a/AlwaysStoppedAnimation value) 
     value 
     (a/AlwaysStoppedAnimation. value)))
-
-

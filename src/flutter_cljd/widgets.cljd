@@ -2,11 +2,17 @@
   "The Flutter widgets framework. [Docs](https://api.flutter.dev/flutter/widgets/widgets-library.html)"
   (:require
    ["package:flutter/material.dart" :as m]
+   ["package:flutter/services.dart" :as s]
+   ["package:flutter/widgets.dart" :as w]
    ["dart:core" :as c]
    ["dart:ui" :as ui]
    ["dart:math" :as math]
    ["dart:async" :as async]
-   [cljd.flutter :as f :refer [widget]]))
+   [cljd.string :as str]
+   [cljd.flutter :as f :refer [widget]]
+   [flutter-cljd.keyboard-keys :as keys]
+   [flutter-cljd.core :refer [??]]
+   ["package:flutter/animation.dart" :as a]))
 
 ;; -------------------------
 ;; MARK: Macros
@@ -260,6 +266,35 @@
       :end-bottom m/BannerLocation.bottomEnd
       (throw (Exception. (str "Invalid banner-location: " location))))))
 
+(defn key-event-result [result]
+  (if
+    (instance? w/KeyEventResult result)
+    result
+    (case result
+      :handled w/KeyEventResult.handled
+      :ignored w/KeyEventResult.ignored
+      :skip-remaining-handlers w/KeyEventResult.skipRemainingHandlers
+      w/KeyEventResult.handled)))
+
+;; (defn lock-state 
+;;   "Determines how the state of a lock key is used to accept a shortcut.
+   
+;;    Possible values:
+;;     - instance of `LockState`
+;;     - `:locked` The lock key must be locked to trigger the shortcut.
+;;     - `:unlocked` The lock key must be unlocked to trigger the shortcut.
+;;     - `:ignored` The lock key state is not used to determine SingleActivator.accepts result.
+   
+;;    [Flutter docs](https://api.flutter.dev/flutter/widgets/LockState.html)"
+;;   [state]
+;;   (if (instance? w/LockState state)
+;;     state
+;;     (case state
+;;       :locked w/LockState.locked
+;;       :unlocked w/LockState.unlocked
+;;       :ignored w/LockState.ignored
+;;       (throw (Exception. (str "Invalid lock-state: " state))))))
+
 ;; -------------------------
 ;; MARK: Classes
 ;; -------------------------
@@ -276,41 +311,31 @@
 
     (keyword? alignment)
     (case alignment
-      :top m/Alignment.topCenter
-      :top-center m/Alignment.topCenter
-      :top-left m/Alignment.topLeft
-      :top-start m/AlignmentDirectional.topStart
-      :top-right m/Alignment.topRight
-      :top-end m/AlignmentDirectional.topEnd
-      :left m/Alignment.centerLeft
-      :left-center m/Alignment.centerLeft
-      :left-top m/Alignment.topLeft
-      :left-bottom m/Alignment.bottomLeft
-      :start m/AlignmentDirectional.centerStart
-      :start-center m/AlignmentDirectional.centerStart
-      :start-top m/AlignmentDirectional.topStart
-      :start-bottom m/AlignmentDirectional.bottomStart
-      :bottom m/Alignment.bottomCenter
-      :bottom-center m/Alignment.bottomCenter
-      :bottom-left m/Alignment.bottomLeft
-      :bottom-start m/AlignmentDirectional.bottomStart
-      :bottom-right m/Alignment.bottomRight
-      :bottom-end m/AlignmentDirectional.bottomEnd
-      :right m/Alignment.centerRight
-      :right-center m/Alignment.centerRight
-      :right-top m/Alignment.topRight
-      :right-bottom m/Alignment.bottomRight
-      :end m/AlignmentDirectional.centerEnd
-      :end-center m/AlignmentDirectional.centerEnd
-      :end-top m/AlignmentDirectional.topEnd
-      :end-bottom m/AlignmentDirectional.bottomEnd
+      ;; Top alignments 
+      (:top :top-center :center-top) m/Alignment.topCenter 
+      (:top-left :left-top) m/Alignment.topLeft 
+      (:top-start :start-top) m/AlignmentDirectional.topStart 
+      (:top-right :right-top) m/Alignment.topRight 
+      (:top-end :end-top) m/AlignmentDirectional.topEnd
+  
+      ;; Left alignments
+      (:left :left-center :center-left) m/Alignment.centerLeft
+      (:start :start-center :center-start) m/AlignmentDirectional.centerStart
+      
+      ;; Bottom alignments
+      (:bottom :bottom-center :center-bottom) m/Alignment.bottomCenter
+      (:bottom-left :left-bottom) m/Alignment.bottomLeft
+      (:bottom-start :start-bottom) m/AlignmentDirectional.bottomStart
+      (:bottom-right :right-bottom) m/Alignment.bottomRight
+      (:bottom-end :end-bottom) m/AlignmentDirectional.bottomEnd
+    
+      ;; Right alignments
+      (:right :right-center :center-right) m/Alignment.centerRight
+      (:end :end-center :center-end) m/AlignmentDirectional.centerEnd
+    
+      ;; Center alignment
       :center m/Alignment.center
-      :center-left m/Alignment.centerLeft
-      :center-right m/Alignment.centerRight
-      :center-start m/AlignmentDirectional.centerStart
-      :center-end m/AlignmentDirectional.centerEnd
-      :center-top m/Alignment.topCenter
-      :center-bottom m/Alignment.bottomCenter
+
       (throw (Exception. (str "Invalid alignment: " alignment))))
 
     :else (throw (Exception. (str "Invalid alignment: " alignment)))))
@@ -816,7 +841,7 @@
 (defn duration [value]
   (cond
     (instance? c/Duration value) value
-    (int? value) (c/Duration .seconds value)
+    (integer? value) (c/Duration .seconds value)
     (number? value) (c/Duration .microseconds (int (* value 1000000.0)))
     (map? value) (c/Duration
                   .days (int (get value :days 0))
@@ -889,7 +914,7 @@
   "Creates an animation options object from the specified value.
    The value can be specified as a map with the following keys:
    - :duration (number, map, default: 0.25): The duration of the animation.
-   - :curve (keyword, default: :easeInOut): The curve of the animation.
+   - :curve (keyword, default: :ease-in-out): The curve of the animation.
    - :on-end (function, default: nil): The callback function to be called when the animation ends.
    The value can also be specified as a vector with the following elements:
    - The duration of the animation.
@@ -1045,6 +1070,111 @@
      (rect (offset (get value 0 [0 0])) (size (get value 1 [0 0])))
 
      :else (throw (Exception. (str "Invalid rect: " value))))))
+
+(defn logical-keyboard-key 
+  "Converts a given `key` into a `LogicalKeyboardKey` instance.
+   If `key` is already a `LogicalKeyboardKey` instance, it is returned as-is.
+   Otherwise, it attempts to resolve the `key` by converting it to a string, 
+   then finding the corresponding `LogicalKeyboardKey` based on the first character.
+   Returns nil if the lookup fails."
+  [key]
+  (cond 
+    (instance? s/LogicalKeyboardKey key) key
+    (int? key) (s/LogicalKeyboardKey key)
+    :else  
+    (keys/logical-keyboard-keys 
+     (str/lower-case (if (keyword? key) (name key) (str key))))))
+
+(defn- one-char?
+  "Checks if the `value` is a single character.
+   Returns true if `value` is a char, a single-character string, 
+   or a digit (0-9); otherwise, returns false."
+  [value]
+  (or
+   (char? value)
+   (and (string? value) (= (count value) 1))
+   (and (int? value) (<= 0 value 9))))
+
+(def ^:private modifier-keys-ids
+   "Set of key IDs corresponding to modifier keys: control, shift, alt, and meta."
+  (set (map #(.-keyId %) [s/LogicalKeyboardKey.control
+                     s/LogicalKeyboardKey.shift
+                     s/LogicalKeyboardKey.alt
+                     s/LogicalKeyboardKey.meta])))
+
+(defn shortcut-activator
+  "Creates a `ShortcutActivator` based on the given `args`.
+   If `args` is already a `ShortcutActivator`, it is returned directly.
+   If `args` is a single character, creates a `CharacterActivator`.
+   If `args` is a string, keyword, integer, vector, or sequence, processes it 
+   to generate appropriate modifier and trigger key sets, then constructs 
+   either a `CharacterActivator`, `SingleActivator`, or `LogicalKeySet` based on the input.
+   
+   Args can contain an additional map with the following keys:
+    - `:include-repeats` (boolean, default: true): Whether to include repeated key events.
+   
+   Throws an exception if `args` is invalid."
+  [args]
+  (cond
+    (instance? m/ShortcutActivator args) args
+
+    (one-char? args) (m/CharacterActivator (str args))
+
+    (or (keyword? args) (string? args) (int? args)) (shortcut-activator [args])
+
+    (or (vector? args) (seq? args))
+    (let [keys (set (filter some? (map logical-keyboard-key args)))
+          chars (filter one-char? args)
+          groups (group-by #(contains? modifier-keys-ids (.-keyId %)) keys)
+          modifiers (set (get groups true `()))
+          triggers (set (get groups false `()))
+          alt (some? (some #(= (.-keyId s/LogicalKeyboardKey.alt) (.-keyId %)) modifiers))
+          control (some? (some #(= (.-keyId s/LogicalKeyboardKey.control) (.-keyId %)) modifiers))
+          shift (some? (some #(= (.-keyId s/LogicalKeyboardKey.shift) (.-keyId %)) modifiers))
+          meta (some? (some #(= (.-keyId s/LogicalKeyboardKey.meta) (.-keyId %)) modifiers))
+          args (or (some map? args) {})
+          include-repeats (:include-repeats args true)]
+      (if (and (false? shift) (= (count chars) 1))
+        (m/CharacterActivator (str (first chars))
+                              .alt alt
+                              .control control
+                              .meta meta
+                              .includeRepeats include-repeats)
+        (if (= (count triggers) 1)
+          (m/SingleActivator (first triggers)
+                             .alt alt
+                             .control control
+                             .shift shift
+                             .meta meta
+                             ;;  .numLock (lock-state (get args :num-lock w/LockState.ignored))
+                             .includeRepeats include-repeats)
+          (m/LogicalKeySet.fromSet keys)))
+      )
+
+    :else
+    (throw (Exception. (str "Invalid activator: " args)))))
+
+;; -------------------------
+;; MARK: Helpers
+;; -------------------------
+
+(defn get-inherited
+  "Retrieves an inherited value from `context` based on the specified `key`.
+   Searches for an inherited widget of type `InheritedBindings` in the `context`.
+   If found, extracts the `bindings` map from the widget and returns the value 
+   associated with `key`. If `key` is not found, returns `default-value?` if provided, or `nil` by default.
+
+     Parameters:
+     - `context`: The context to search within.
+     - `key`: The key to look up in the bindings.
+     - `default-value?` (optional): The value to return if `key` is not found. Defaults to `nil`."
+  ([context key] (get-inherited context key nil))
+  ([context key default-value?]
+   (let [inherited-elt (#/(.getElementForInheritedWidgetOfExactType f/InheritedBindings) context)
+         bindings (some-> inherited-elt
+                          ^f/InheritedBindings (.-widget)
+                          .-bindings)]
+     (get bindings key default-value?))))
 
 ;; -------------------------
 ;; MARK: Widgets
@@ -1302,9 +1432,210 @@
    (m/BlockSemantics .blocking blocking .child child))
   ([child] (block-semantics true child)))
 
+(defn bottom-navigation-bar-item 
+  "An interactive button within either material's BottomNavigationBar or the iOS themed CupertinoTabBar with an icon and title.
+   
+   This class is rarely used in isolation. It is typically embedded in one of the bottom navigation widgets.
+   
+   Args:
+    - args: A map of arguments for the bottom navigation bar item widget.
+      - :icon The icon of the bottom navigation bar item. Required.
+      - :label The label of the bottom navigation bar item.
+      - :active-icon The active icon of the bottom navigation bar item.
+      - :background-color The background color of the bottom navigation bar item.
+      - :tooltip The tooltip of the bottom navigation bar item.
+   
+   [Flutter docs](https://api.flutter.dev/flutter/material/BottomNavigationBarItem-class.html)"
+  [args]
+  (m/BottomNavigationBarItem
+   .icon (get args :icon (m/SizedBox .width 0 .height 0))
+   .label (args :label)
+   .activeIcon (args :active-icon)
+   .backgroundColor (some-> (args :background-color) color)
+   .tooltip (args :tooltip)))
 
+(defn builder
+  "A stateless utility widget whose build method uses its builder callback to create the widget's child.
+   
+   Args:
+    - builder: Called with the context and to build the widget.
+    - child: The child widget to be wrapped by the builder widget. 
+      When provided, the builder callback will be called with the child widget as the first argument and the context as the second argument.
+   
+   ```clojure
+    (builder (fn [ctx] (text (str \"Hello, World!\" (.hasAppBar (Scaffold.of context))))))
+   
+   (->>
+     (text \"Hello, World!\")
+     (builder #(padding 10 %)))
+   ```
+   [Flutter docs](https://api.flutter.dev/flutter/widgets/Builder-class.html)"
+  ([builder] (m/Builder .builder builder))
+  ([builder child] (m/Builder .builder (fn [ctx] (builder child ctx)))))
 
-(declare sized)
+(defn with-transformed-inherited
+  ([transform child]
+   (builder
+    (fn [context]
+      (let [inherited-elt (#/(.getElementForInheritedWidgetOfExactType f/InheritedBindings) context)
+            bindings (or (some-> inherited-elt
+                                 ^f/InheritedBindings (.-widget)
+                                 .-bindings) {})
+            transformed-value (transform bindings)]
+        (f/InheritedBindings. transformed-value child)))))
+  ([key transform & kts&child]
+   (with-transformed-inherited
+     (fn [bindings]
+       (let [updated-bindings (assoc bindings key (transform (get bindings key)))]
+         (reduce (fn [b [k t]]
+                   (assoc b k (t (get b k))))
+                 updated-bindings
+                 (partition 2 (butlast kts&child)))))
+     (last kts&child))))
+
+(defn with-inherited
+  ([key value child]
+   (with-transformed-inherited key (constantly value) child))
+
+  ([key0 value0 key1 value1 & kvs&child]
+   (apply with-transformed-inherited
+          (concat 
+           (apply concat (map 
+                          (fn [[k v]] [k (constantly v)])
+                          (concat [[key0 value0] [key1 value1]]
+                                  (partition 2 (butlast kvs&child)))))
+           [(last kvs&child)]))))
+
+(defn shortcuts
+  "```clojure
+   (shortcuts
+     {[:control \\W] :some-intent
+      [:control \\C] [:some-intent some-arg]
+      [:alt \\c] #(print \"ALT-C is pressed\")
+      :f1 #(print \"F1 is pressed\")}
+     (text \"Hello, Shortcuts!\"))
+   ```"
+  ([shortcuts args child]
+   (let [{:keys [debug-label modal include-semantics]} args]
+    (cond
+      (instance? m/ShortcutManager shortcuts)
+      (m/Shortcuts.manager .manager shortcuts .child child .debugLabel debug-label)
+
+      (map? shortcuts)
+      (m/Focus
+       .debugLabel debug-label
+       .canRequestFocus false
+       .onKeyEvent
+       (fn [node event]
+         (if (nil? (.-context node))
+           m/KeyEventResult.ignored
+           (key-event-result
+            (let [ctx (some-> m/primaryFocus .-context)
+                  keyboard s/HardwareKeyboard.instance]
+              (or
+               (when (some? ctx)
+                 (let [kv (first 
+                           (filter   
+                            (fn [[k _]] (.accepts (shortcut-activator k) event keyboard)) 
+                            shortcuts))]
+                   (when (some? kv)
+                     (let [value (last kv)
+                           invoke (fn [action]
+                                    (let [;; TODO: dispatcher (get-inherited ctx ::action-dispatcher)
+                                          result (action)]
+                                      (if (false? result)
+                                        nil
+                                        (or result m/KeyEventResult.handled))))]
+                       (cond
+                         (fn? value) (invoke value)
+
+                         (instance? m/Intent value)
+                         (let [action (m/Actions.maybeFind ctx .intent value)]
+                           (when (some? action)
+                             (let [result (.invokeActionIfEnabled (m/Actions.of ctx) action value ctx)]
+                               (when (.-$1 result) (.toKeyEventResult action value (.-$2 result))))))
+                         
+                         :else 
+                         (let [actions-element (get-inherited ctx ::actions {}) 
+                               has-value (> (count value) 1)
+                               action (get actions-element (if has-value (first value) value))]
+                           (when (fn? action)
+                             (invoke
+                              (if has-value #(apply action (rest value)) action)))))))))
+               (if modal m/KeyEventResult.skipRemainingHandlers m/KeyEventResult.ignored))))))
+       .includeSemantics (or include-semantics true)
+       .child child)
+      
+      :else (throw (Exception. (str "Invalid shortcuts: " shortcuts))))))
+  ([shortcuts child] (flutter-cljd.widgets/shortcuts shortcuts {} child)))
+
+(deftype ^:private AnyActionDispatcher [invoke]
+  :extends w/ActionDispatcher
+  (invokeAction [action intent context]
+                (let [result (invoke action intent context)]
+                  (.invokeAction ^super action intent context)
+                  result))
+  (invokeActionIfEnabled [action intent context]
+                         (let [result (invoke action intent context)
+                               enabled (.-$1 (.invokeActionIfEnabled ^super action intent context))]
+                           (list enabled result)))) ;; TODO create a tuple
+
+(defn action-dispatcher [dispatcher]
+  (cond
+    (instance? w/ActionDispatcher dispatcher) dispatcher
+    ;; TODO (fn? dispatcher) (AnyActionDispatcher dispatcher)
+    :else (throw (Exception. (str "Invalid dispatcher: " dispatcher ", `ActionDispatcher` was expected.")))))
+
+(defn actions
+  ([actions dispatcher? child]
+   (let [grouped-actions (group-by (fn [[k v]] (and (instance? c/Type k) (instance? m/Action v))) actions)
+         flutter-actions (get grouped-actions true {})
+         clojure-actions (get grouped-actions false {})]
+     (with-transformed-inherited
+       ::actions #(merge (or % {}) clojure-actions)
+       ;; TODO: ::action-dispatcher #(or (action-dispatcher-fn dispatcher?) %)
+       (m/Actions
+        .actions flutter-actions
+        .dispatcher (some-> dispatcher? action-dispatcher)
+        .child child))))
+  ([actions child] (flutter-cljd.widgets/actions actions nil child)))
+
+(defn sized
+  "Creates a SizedBox widget with the specified size and child.
+   The size can be specified as a number, a map of width and height, or two numbers.
+   Examples:
+   ```clojure
+   (sized 100) ;; SizedBox(width: 100, height: 100)
+   (sized {:width 100 :height 200}) ;; SizedBox(width: 100, height: 200)
+   (sized 100 200) ;; SizedBox(width: 100, height: 200)
+   (sized {:w 100 :h 200}) ;; SizedBox(width: 100, height: 200)
+   (sized :expand) ;; SizedBox.expand
+   (sized :shrink) ;; SizedBox.shrink
+   (sized [100 200]) ;; SizedBox(width: 100, height: 200)
+   ```
+   If the size argument is a map, the keys :width and :height are used to specify the width and height.
+   If the size argument is a vector of two numbers, the first number is used for the width and the second number is used for the height."
+  ([value]
+   (if (instance? m/Widget value)
+     (sized nil nil value)
+     (sized value nil)))
+  ([value child]
+   (cond
+     (number? child) (sized value child nil)
+     (= value :expand) (m/SizedBox.expand .child child)
+     (= value :shrink) (m/SizedBox.shrink .child child)
+     (number? value) (sized value value child)
+     (map? value) (sized
+                   (some value [:width :w])
+                   (some value [:height :h])
+                   child)
+     (= (count value) 2) (sized (get value 0) (get value 1) child)
+     :else (throw (Exception. (str "Invalid size: " value)))))
+  ([width height child]
+   (m/SizedBox
+    .width width
+    .height height
+    .child child)))
 
 (defn column
   "Creates a column widget with the specified arguments and children.
@@ -1447,43 +1778,6 @@
   (m/DecoratedBox
    .decoration (decoration with-decoration)
    .child child))
-
-(defn sized
-  "Creates a SizedBox widget with the specified size and child.
-   The size can be specified as a number, a map of width and height, or two numbers.
-   Examples:
-   ```clojure
-   (sized 100) ;; SizedBox(width: 100, height: 100)
-   (sized {:width 100 :height 200}) ;; SizedBox(width: 100, height: 200)
-   (sized 100 200) ;; SizedBox(width: 100, height: 200)
-   (sized {:w 100 :h 200}) ;; SizedBox(width: 100, height: 200)
-   (sized :expand) ;; SizedBox.expand
-   (sized :shrink) ;; SizedBox.shrink
-   (sized [100 200]) ;; SizedBox(width: 100, height: 200)
-   ```
-   If the size argument is a map, the keys :width and :height are used to specify the width and height.
-   If the size argument is a vector of two numbers, the first number is used for the width and the second number is used for the height."
-  ([value]
-   (if (instance? m/Widget value)
-     (sized nil nil value)
-     (sized value nil)))
-  ([value child]
-   (cond
-     (number? child) (sized value child nil)
-     (= value :expand) (m/SizedBox.expand .child child)
-     (= value :shrink) (m/SizedBox.shrink .child child)
-     (number? value) (sized value value child)
-     (map? value) (sized
-                   (some value [:width :w])
-                   (some value [:height :h])
-                   child)
-     (= (count value) 2) (sized (get value 0) (get value 1) child)
-     :else (throw (Exception. (str "Invalid size: " value)))))
-  ([width height child]
-   (m/SizedBox
-    .width width
-    .height height
-    .child child)))
 
 (defn colored
   ([value] (if (instance? m/Widget value) (colored m/Colors.transparent value) (colored value nil)))

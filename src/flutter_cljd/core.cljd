@@ -1,0 +1,45 @@
+(ns flutter-cljd.core)
+
+(defmacro ??
+  "A nil-coalescing macro that returns the first non-nil value from a series of expressions.
+    
+    Similar to `or`, but with a key difference: `??` only treats `nil` as a 'falsy' value, 
+    whereas `or` treats both `nil` and `false` as 'falsy'. This makes `??` useful in cases where 
+    `false` should be preserved as a valid return value.
+  
+    ### Usage
+    - `(?? expr1 expr2 expr3 ...)` evaluates each expression in sequence until a non-nil value is found.
+    - If `expr1` is non-nil, it is returned immediately, without evaluating `expr2` or `expr3`.
+    - If all expressions are `nil`, the macro returns `nil`.
+  
+    ### Examples
+  
+    ```clojure
+    ;; Returns the first non-nil value, which is 42
+    (?? nil nil 42) ; => 42
+  
+    ;; If no non-nil values are found, returns nil
+    (?? nil nil nil) ; => nil
+  
+    ;; Works with expressions and functions that return nil or non-nil values
+    (?? (get {:a 1} :b) (get {:a 1} :a) (println \"Fallback\")) ; => 1
+  
+    ;; Unlike `or`, preserves `false` as a valid result
+    (?? nil false 42) ; => false
+    (or nil false 42) ; => 42
+  
+    ;; Stops evaluating as soon as a non-nil value is found
+    (?? nil (do (println \"This is evaluated\") 2) 3) ; Prints 'This is evaluated' and returns 2
+    ```"
+  {:clj-kondo/lint-as 'clojure.core/or}
+  ([] `nil)
+  ([x] x)
+  ([x & next]
+   (reduce (fn [acc val]
+             `(let [value# ~val]
+                (if (some? value#)
+                  value#
+                  ~acc)))
+           `nil
+           (reverse (cons x next)))))
+

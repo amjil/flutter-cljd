@@ -1,7 +1,8 @@
 (ns flutter-cljd.widgets-test
   (:require [clojure.test :refer [deftest is testing]]
-            [flutter-cljd.widgets :as f] 
-            ["package:flutter/material.dart" :as m]))
+            [flutter-cljd.widgets :as f]
+            ["package:flutter/material.dart" :as m]
+            ["package:flutter/services.dart" :as s]))
 
 (deftest test-absorb-pointer
   (testing "Absorb pointer with absorbing set to true"
@@ -190,3 +191,20 @@
 
   (testing "Invalid main-axis alignment"
     (is (thrown? Exception (f/main-axis-alignment :invalid)))))
+
+(deftest logical-keyboard-key-test
+  (testing "logical-keyboard-key"
+    (let [key 0x00000000061]
+      (is (= (-> s/LogicalKeyboardKey.keyA f/logical-keyboard-key .-keyId) key))
+      (is (= (-> :a f/logical-keyboard-key .-keyId) key))
+      (is (= (-> "A" f/logical-keyboard-key .-keyId) key))
+      (is (= (-> "a" f/logical-keyboard-key  .-keyId) key))
+      (is (= (-> key f/logical-keyboard-key .-keyId) key))
+      (is (= (-> :shift f/logical-keyboard-key .-keyId) (.-keyId s/LogicalKeyboardKey.shift))))))
+
+(deftest shortcut-activator-test
+  (testing "shortcut-activator"
+    (let [char-activator (m/CharacterActivator. "A")]
+      (is (= (f/shortcut-activator char-activator) char-activator))
+      (is (= (-> ["a"] f/shortcut-activator .-character) "a"))
+      (is (true? (-> [:shift :a] f/shortcut-activator .-shift))))))
