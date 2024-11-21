@@ -1,4 +1,23 @@
-(ns flutter-cljd.core)
+(ns flutter-cljd.core
+  "Core utilities and helpers for flutter-cljd.
+   
+   ## Quoting in Clojure/ClojureDart
+   
+   The quote symbol (') is used to prevent evaluation of lists/symbols:
+   
+   ```clojure
+   ;; Without quote - tries to call 1 as a function:
+   (1 2 3) ; Error!
+   
+   ;; With quote - creates literal list:
+   '(1 2 3) ; => (1 2 3)
+   
+   ;; Not needed for function calls:
+   (println \"hello\") ; Evaluates println
+   
+   ;; Not needed in special forms:
+   (defn add [x y] (+ x y)) ; defn handles its args specially
+   ```")
 
 (defmacro ??
   "A nil-coalescing macro that returns the first non-nil value from a series of expressions.
