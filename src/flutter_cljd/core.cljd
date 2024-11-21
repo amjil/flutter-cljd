@@ -43,3 +43,6 @@
            `nil
            (reverse (cons x next)))))
 
+(def π
+  "The mathematical constant `π` (pi), which is the ratio of a circle's circumference to its diameter."
+  (.pi double))
