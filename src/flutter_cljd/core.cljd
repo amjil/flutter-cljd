@@ -1,4 +1,4 @@
-(ns flutter-cljd.core
+(ns flutter-cljd.utils
   "Core utilities and helpers for flutter-cljd.
    
    ## Quoting in Clojure/ClojureDart

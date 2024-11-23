@@ -9,7 +9,7 @@
    [cljd.string :as str]
    [cljd.flutter :as f :refer [widget]]
    [flutter-cljd.keyboard-keys :as keys]
-   [flutter-cljd.core :refer [?? π]]
+   [flutter-cljd.utils :refer [?? π]]
    [flutter-cljd.drawing :refer [size offset point rect]]))
 
 ;; -------------------------
