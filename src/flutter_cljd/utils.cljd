@@ -1,23 +1,5 @@
 (ns flutter-cljd.utils
-  "Core utilities and helpers for flutter-cljd.
-   
-   ## Quoting in Clojure/ClojureDart
-   
-   The quote symbol (') is used to prevent evaluation of lists/symbols:
-   
-   ```clojure
-   ;; Without quote - tries to call 1 as a function:
-   (1 2 3) ; Error!
-   
-   ;; With quote - creates literal list:
-   '(1 2 3) ; => (1 2 3)
-   
-   ;; Not needed for function calls:
-   (println \"hello\") ; Evaluates println
-   
-   ;; Not needed in special forms:
-   (defn add [x y] (+ x y)) ; defn handles its args specially
-   ```"
+  "Core utilities and helpers for flutter-cljd."
   (:require
     [cljd.flutter :as f]))
 
@@ -67,3 +49,6 @@
 (def π
   "The mathematical constant `π` (pi), which is the ratio of a circle's circumference to its diameter."
   (.pi double))
+
+(defn lerp [from to]
+  )
