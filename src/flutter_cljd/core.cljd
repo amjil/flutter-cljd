@@ -19,12 +19,7 @@
    (defn add [x y] (+ x y)) ; defn handles its args specially
    ```"
   (:require
-   ["package:flutter/material.dart" :as m]
-   ["package:flutter/widgets.dart" :as w]
-   ["package:flutter/painting.dart" :as p]
-   ["package:flutter/foundation.dart" :as f]
-   ["dart:core" :as c]
-   ["dart:ui" :as ui]))
+    [cljd.flutter :as f]))
 
 (defmacro ??
   "A nil-coalescing macro that returns the first non-nil value from a series of expressions.
