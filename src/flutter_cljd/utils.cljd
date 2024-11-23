@@ -51,4 +51,21 @@
   (.pi double))
 
 (defn lerp [from to]
-  )
+  (cond
+    (implements? from f/ITweenable)
+    #(.lerp (.tween from to) %)
+
+    (and (number? from) (number? to))
+    #(+ (* (- 1 %) from) (* % to))
+
+    (and (vector? from) (vector? to))
+    (mapv lerp from to)
+
+    (and (map? from) (map? to))
+    (reduce-kv (fn [acc k v]
+                 (assoc acc k (lerp (get from k) v)))
+               {}
+               to)
+    
+    :else
+    #(if (> % 0.5) to from)))
