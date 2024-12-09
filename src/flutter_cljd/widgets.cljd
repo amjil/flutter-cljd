@@ -6,11 +6,13 @@
    ["package:flutter/widgets.dart" :as w]
    ["dart:core" :as c]
    ["dart:async" :as async]
+   ["dart:ui" :as ui]
    [cljd.string :as str]
    [cljd.flutter :as f :refer [widget]]
    [flutter-cljd.keyboard-keys :as keys]
-   [flutter-cljd.utils :refer [?? π]]
-   [flutter-cljd.drawing :refer [size offset point rect]]))
+   [flutter-cljd.utils :as ut]
+   [flutter-cljd.drawing :as dr :refer [offset, mat4]]
+   [flutter-cljd.color-filters :as clr-f]))
 
 ;; -------------------------
 ;; MARK: Macros
@@ -308,9 +310,52 @@
       :anti-alias-with-save-layer m/Clip.antiAliasWithSaveLayer
       (throw (Exception. (str "Invalid clip: " clip))))))
 
+(defn decoration-position [position]
+  (if (instance? m/DecorationPosition position)
+    position
+    (case position
+      :background m/DecorationPosition.background
+      :foreground m/DecorationPosition.foreground
+      (throw (Exception. (str "Invalid decoration-position: " position " (expected :background or :foreground)"))))))
+
 ;; -------------------------
 ;; MARK: Classes
 ;; -------------------------
+
+(defn alignment [alignment]
+  (cond
+    (instance? m/Alignment alignment) alignment
+
+    (vector? alignment)
+    (m/Alignment (get alignment 0) (get alignment 1 (get alignment 0)))
+
+    (number? alignment)
+    (m/Alignment alignment alignment)
+
+    (keyword? alignment)
+    (case alignment
+      ;; Top alignments 
+      (:top :top-center :center-top) m/Alignment.topCenter
+      (:top-left :left-top) m/Alignment.topLeft
+      (:top-right :right-top) m/Alignment.topRight
+
+      ;; Left alignments
+      (:left :left-center :center-left) m/Alignment.centerLeft
+
+      ;; Bottom alignments
+      (:bottom :bottom-center :center-bottom) m/Alignment.bottomCenter
+      (:bottom-left :left-bottom) m/Alignment.bottomLeft
+      (:bottom-right :right-bottom) m/Alignment.bottomRight
+
+      ;; Right alignments
+      (:right :right-center :center-right) m/Alignment.centerRight
+
+      ;; Center alignment
+      :center m/Alignment.center
+
+      (throw (Exception. (str "Invalid alignment: " alignment))))
+
+    :else (throw (Exception. (str "Invalid alignment: " alignment)))))
 
 (defn alignment-geometry [alignment]
   (cond
@@ -536,6 +581,66 @@
                         (m/Color value))
      :else (m/Color value))))
 
+(defn color-filter 
+  "A description of a color filter to apply when drawing a shape or compositing a layer with a particular Paint.
+   A color filter is a function that takes two colors, and outputs one color.
+   When applied during compositing, it is independently applied to each pixel of the layer being drawn before the entire layer is merged with the destination.
+   
+   Instances of this class are used with Paint.colorFilter on Paint objects.
+   
+   Possible values:
+    - instance of `ColorFilter`
+    - `:linear-to-srgb-gamma` Linear to sRGB gamma.
+    - `:srgb-to-linear-gamma` sRGB to linear gamma.
+    - `:identity` Identity color filter.
+    - `:invert` Invert color filter.
+    - `:sepia` Sepia color filter.
+    - `:greyscale` Greyscale color filter.
+    - a vector of length 2: [color blend-mode]
+    - a 4x5 row-major matrix as a vector of numbers or a vector of vectors of numbers where first 4 rows represent red, green, blue and alpha channels respectively.
+   4th row can be omitted, in which case it is assumed to be [0, 0, 0, 1, 0].
+
+   ```clojure
+    (color-filter :invert)
+   
+    (color-filter [:red :multiply])
+   
+    (color-filter [0.393 0.769 0.189 0 0
+                   0.349 0.686 0.168 0 0
+                   0.272 0.534 0.131 0 0])
+   ```
+   [Flutter docs](https://api.flutter.dev/flutter/dart-ui/ColorFilter-class.html)"
+  [filter]
+  (cond
+    (instance? m/ColorFilter filter) filter
+
+    (keyword? filter)
+    (case filter
+      :linear-to-srgb-gamma (m/ColorFilter.linearToSrgbGamma)
+      :srgb-to-linear-gamma (m/ColorFilter.srgbToLinearGamma)
+      :identity clr-f/identity
+      :invert clr-f/invert
+      :sepia clr-f/sepia
+      :greyscale clr-f/greyscale
+      (throw (Exception. (str "Invalid color-filter keyword: " filter ", use :linear-to-srgb-gamma, :srgb-to-linear-gamma, :identity, :invert, :sepia, :greyscale"))))
+    
+    (vector? filter)
+    (case (count filter)
+      2 (m/ColorFilter.mode (color (get filter 0)) (blend-mode (get filter 1)))
+      (let [dim 5
+            size 20
+            values (->> filter flatten (take size) vec)]
+        (m/ColorFilter.matrix (#/(c/List.from c/double) 
+                               (map-indexed
+                                (fn [idx _]
+                                  (cond
+                                    (< idx (count values)) (double (nth values idx)) 
+                                    (= (mod idx dim) (quot idx dim)) 1.0
+                                    :else 0.0))
+                                (range 0 size))))))
+
+    :else (throw (Exception. (str "Invalid color-filter: " filter)))))
+
 (defn text-style
   "An immutable style describing how to format and paint text.
 
@@ -725,7 +830,7 @@
   (m/SweepGradient
    .center (alignment-geometry (:center args m/Alignment.center))
    .startAngle (:start-angle args 0)
-   .endAngle (:end-angle args (* 2 π))
+   .endAngle (:end-angle args (* 2 (.pi double)))
    .colors (gradient-colors (args :colors))
    .stops (args :stops)
    .tileMode (some-> (:tile-mode args :clamp) tile-mode)))
@@ -1086,6 +1191,87 @@
 
     :else
     (throw (Exception. (str "Invalid activator: " args)))))
+
+(defn box-constraints  
+  "Immutable layout constraints for RenderBox layout.
+   
+   The functions accepts the following arguments:
+    - A BoxConstraints object.
+    - A ViewConstraints object.
+    - A map with the following keys:
+      - :width, :w, :size (number or a map with :max and :min keys): Width constraints. If a number is provided, it is used as the fixed width of the box. 
+      - :height, :h, :size (number or a map with :max and :min keys): Height constraints. If a number is provided, it is used as the fixed height of the box.
+      - :min-width, :min-w, :min-size (number, default: 0): The minimum width of the box.
+      - :max-width, :max-w, :max-size (number, default: double.infinity): The maximum width of the box.
+      - :min-height, :min-h, :min-size (number, default: 0): The minimum height of the box.
+      - :max-height, :max-h, :max-size (number, default: double.infinity): The maximum height of the box.
+    - A number or a vector with two numbers representing the fixed width and height of the box.
+
+   ```clojure
+   (box-constraints {:min-width 100 :max-width 200 :min-height 50 :max-height 100})
+   (box-constraints {:width {:min 100 :max 200} :height {:min 50 :max 100}})
+   (box-constraints [100 200])
+   (box-constraints 100)
+   (box-constraints {:w 100 :h {:max 300}})
+   (box-constraints {:min-size 10 :max-size 100})
+   ```
+  
+   A Size respects a BoxConstraints if, and only if, all of the following relations hold:
+      - minWidth <= Size.width <= maxWidth
+      - minHeight <= Size.height <= maxHeight
+     
+   The constraints themselves must satisfy these relations:
+      - 0.0 <= minWidth <= maxWidth <= double.infinity
+      - 0.0 <= minHeight <= maxHeight <= double.infinity
+     
+   double.infinity is a legal value for each constraint.
+   [Flutter docs](https://api.flutter.dev/flutter/rendering/BoxConstraints-class.html)"
+  [value]
+  (cond
+    (instance? m/BoxConstraints value) value
+    ;; (instance? ui/ViewConstraints value) (m/BoxConstraints.fromViewConstraints value)
+    (map? value)
+    (let [w (some value [:width :w :size])
+          h (some value [:height :h :size])
+          get-cnstrt (fn [value type] (cond 
+                                        (map? value) (get value type)
+                                        (number? value) value
+                                        :else nil))
+          compute (fn [dim type]
+                    (let [type-str (name type)
+                          [val names]
+                          (case dim
+                            :w [w ["width" "w"]]
+                            [h ["height" "h"]])
+                          [fun edge]
+                          (case type
+                            :min [max 0.0]
+                            [min c/double.infinity])
+                          keys (map #(keyword (str type-str "-" %)) (conj names "size"))]
+                      (double (reduce fun (filter some? [(some value keys) (get-cnstrt val type) edge])))))]
+      (m/BoxConstraints
+       .minWidth (compute :w :min) 
+       .maxWidth (compute :w :max)
+       .minHeight (compute :h :min)
+       .maxHeight (compute :h :max)))
+    (number? value) (m/BoxConstraints.tightFor .width (double value) .height (double value))
+    (vector? value) (m/BoxConstraints.tightFor .width (double (get value 0)) .height (double (get value 1)))
+    
+    :else 
+    (throw (Exception. (str "Invalid box constraints: " value)))))
+
+(defn some-box-constraints
+  "Creates a BoxConstraints object from the specified constraints.
+   If the constraints do not have bounded height or width, returns nil."
+  [constraints]
+  (let [constr (box-constraints constraints)]
+    (if (or
+         (.-hasBoundedHeight constr)
+         (.-hasBoundedWidth constr)
+         (> (.-minHeight constr) 0.0)
+         (> (.-minWidth constr) 0.0))
+      constr
+      nil)))
 
 ;; -------------------------
 ;; MARK: Helpers
@@ -1629,12 +1815,22 @@
   ([clr child]
    (m/ColoredBox .color (color clr) .child child)))
 
+(defn color-filtered
+  "Applies a ColorFilter to its child.
+   
+   This widget applies a function independently to each pixel of child's content, according to the ColorFilter specified.
+   Use the ColorFilter.mode constructor to apply a Color using a BlendMode.
+   Use the BackdropFilter widget instead, if the ColorFilter needs to be applied onto the content beneath child."
+  ([filter child]
+   (m/ColorFiltered .colorFilter (color-filter filter) .child child)))
+
 (defn column
   "Creates a column widget with the specified arguments and children.
 
   Args:
   - args: A map of arguments for the column widget.
     - :key An identifier for the column. 
+    - :spacing (number, default: 0): The spacing between each child widget.
     - :main-axis-alignment (keyword, default: :start): The alignment of the children along the main axis.
       Possible values: :center, :start, :end, :space-between, :space-around.
     - :main-axis-size (keyword, default: :min): The size of the column in the main axis.
@@ -1647,28 +1843,311 @@
       Possible values: :alphabetic, :ideographic.
     - :vertical-direction (keyword, default: :down): The direction in which the children are placed vertically.
       Possible values: :top, :down.
-    - :spacing (number, default: 0): The spacing between each child widget.
 
-  - children: The child widgets to be placed in the column.
+  - children: The child widgets to be placed in the column. Can contain nested lists of children.
+   
+   ```clojure
+   (column {:main-axis-alignment :center :spacing 10} 
+    (text \"Hello, World!\"))
+   ```
 
   Returns:
   A column widget with the specified arguments and children."
-  [args & children]
-  (let [children (if (map? args) (flatten children) (flatten [[args] children]))
-        args (if (map? args) args {})
-        spacing (get args :spacing 0)]
-    (m/Column
+  ([] (column {}))
+  ([args & children]
+   (let [[args children] (ut/args-children args children)
+         spacing (:spacing args 0)]
+     (m/Column
+      .key (widget-key (args :key))
+      .mainAxisAlignment (main-axis-alignment (:main-axis-alignment args :start))
+      .mainAxisSize (main-axis-size (:main-axis-size args :min))
+      .crossAxisAlignment (cross-axis-alignment (:cross-axis-alignment args :center))
+      .textDirection (text-direction (:text-direction args :ltr))
+      .textBaseline (text-baseline (:text-baseline args :alphabetic))
+      .verticalDirection (vertical-direction (:vertical-direction args :down))
+      .children
+      (if (> spacing 0)
+        (interpose (m/SizedBox .height spacing) children)
+        children)))))
+
+(defn composited-transform-follower
+  "A widget that follows a `composited-transform-target`.
+
+   When this widget is composited during the compositing phase (which comes after the paint phase, as described in WidgetsBinding.drawFrame), it applies a transformation that brings targetAnchor of the linked CompositedTransformTarget and followerAnchor of this widget together.
+   The two anchor points will have the same global coordinates, unless offset is not Offset.zero, in which case followerAnchor will be offset by offset in the linked CompositedTransformTarget's coordinate space.
+
+   The `LayerLink` object used as the link must be the same object as that provided to the matching `composited-transform-target`
+   
+   The `composited-transform-target` must come earlier in the paint order than this `composited-transform-follower`
+
+   Hit testing on descendants of this widget will only work if the target position is within the box that this widget's parent considers to be hittable.
+   If the parent covers the screen, this is trivially achievable, so this widget is usually used as the root of an OverlayEntry in an app-wide Overlay (e.g. as created by the MaterialApp widget's Navigator).
+   
+   Args:
+   - args: A map of arguments for the composited transform follower widget or a `LayerLink` object.
+     - :key An identifier for the composited transform follower.
+     - :link The LayerLink object that the follower will follow.
+     - :show-when-unlinked (boolean, default: true): Whether to show the child when the link is not linked.
+     - :offset (Offset, default: Offset.zero): The offset to apply to the link's target anchor.
+     - :target-anchor (Alignment, default: Alignment.topLeft): The alignment of the target anchor relative to the size of the linked `composited-transform-target`
+     - :follower-anchor (Alignment, default: Alignment.topLeft): The alignment of this widget's anchor relative to its size.
+   
+   ```clojure
+   (composited-transform-follower link (text \"Hello, World!\"))
+   ```
+
+   [Flutter docs](https://api.flutter.dev/flutter/widgets/CompositedTransformFollower-class.html)"
+  [args child]
+  (let [args (if (map? args) args {})
+        link (if (instance? w/LayerLink args) args (:link args))]
+    (w/CompositedTransformFollower
      .key (widget-key (args :key))
-     .mainAxisAlignment (main-axis-alignment (:main-axis-alignment args :start))
-     .mainAxisSize (main-axis-size (:main-axis-size args :min))
-     .crossAxisAlignment (cross-axis-alignment (:cross-axis-alignment args :center))
-     .textDirection (text-direction (:text-direction args :ltr))
-     .textBaseline (text-baseline (:text-baseline args :alphabetic))
-     .verticalDirection (vertical-direction (:vertical-direction args :down))
-     .children
-     (if (> spacing 0)
-       (interpose (m/SizedBox .height spacing) children)
-       children))))
+     .link link
+     .showWhenUnlinked (:show-when-unlinked args true)
+     .offset (offset (:offset args 0))
+     .targetAnchor (alignment (:target-anchor args m/Alignment.topLeft))
+     .followerAnchor (alignment (:follower-anchor args m/Alignment.topLeft))
+     .child child)))
+
+(defn composited-transform-target
+  "A widget that can be targeted by a `composited-transform-follower`
+
+   When this widget is composited during the compositing phase (which comes after the paint phase, as described in WidgetsBinding.drawFrame),
+   it updates the link object so that any `composited-transform-follower` widgets that are subsequently composited in the same frame and were given the same LayerLink can position themselves at the same screen location.
+
+   A single CompositedTransformTarget can be followed by multiple `composited-transform-follower` widgets.
+
+   The CompositedTransformTarget must come earlier in the paint order than any linked `composited-transform-follower`.
+   
+   [Flutter docs](https://api.flutter.dev/flutter/widgets/CompositedTransformTarget-class.html)"
+  [link child]
+   (w/CompositedTransformTarget .link link .child child))
+
+(defn constrained
+  "A widget that imposes additional constraints on its child.
+   
+   Check `box-constraints` function for more information on how to create constraints.
+   
+   ```clojure
+   (constrained {:min-width 100 :max-width 200})
+   (constrained {:min-height 100 :max-height 200})
+   (constrained {:min-width 100 :max-width 200 :min-height 100 :max-height 200})
+   (constrained {:width 100 :max-height 200})
+   ```
+
+   [Flutter docs](https://api.flutter.dev/flutter/widgets/ConstrainedBox-class.html)"
+  ([constraints child]
+   (w/ConstrainedBox .constraints (box-constraints constraints) .child child))
+  ([constraints]
+   (if (instance? m/Widget constraints)
+     (constrained {} constraints)
+     (constrained constraints (:child constraints)))))
+
+;; TODO: Extend support for .constraintsTransform
+(defn constraints-transformed
+  "A container widget that applies an arbitrary transform to its constraints, and sizes its child using the resulting `BoxConstraints`, optionally clipping, or treating the overflow as an error.
+
+   This container sizes its child using a `BoxConstraints` created by applying `:transform` to its own constraints.
+   This container will then attempt to adopt the same size, within the limits of its own constraints.
+   If it ends up with a different size, it will align the child based on alignment.
+   If the container cannot expand enough to accommodate the entire child, the child will be clipped if `:clip` is not `:none`.
+
+   In debug mode, if `:clip` is `:none` and the child overflows the container, a warning will be printed on the console, and black and yellow striped areas will appear where the overflow occurs.
+
+   When child is nil, this widget becomes as small as possible and never overflows.
+
+   This widget can be used to ensure some of child's natural dimensions are honored, and get an early warning otherwise during development.
+   For instance, if child requires a minimum height to fully display its content, `:transform` can be set to `maxHeightUnconstrained`,
+   so that if the parent `RenderObject` fails to provide enough vertical space, a warning will be displayed in debug mode, while still allowing child to grow vertically
+   
+   Args:
+    - args: A map of arguments for the constraints transformed box widget or a transform function.
+      - `:key` An identifier for the constraints transformed box.
+      - `:child` The child widget to be displayed.
+      - `:text-direction` (keyword, default: :ltr): The direction of the text. Possible values: :ltr, :rtl.
+      - `:alignment` (Alignment, default: Alignment.center): The alignment of the child within the container.
+      - `:transform` (BoxConstraints -> BoxConstraints): The transform to apply to the constraints. 
+      - `:clip` (keyword, default: :none): The clip behavior of the child. Possible values: :none, :hard-edge, :anti-alias, :anti-alias-with-save-layer.
+      - `:debug-transform-type` (string, default: \"\"): The type of transform to use for debugging.
+    - child: The child widget to be displayed.
+
+   [Flutter docs](https://api.flutter.dev/flutter/widgets/ConstraintsTransformBox-class.html)"
+  [args child]
+  (let [[args transform] (if (map? args) [args (:transform args)] [{} args])]
+    (w/ConstraintsTransformBox
+     .key (widget-key (args :key))
+     .child child
+     .textDirection (text-direction (:text-direction args))
+     .alignment (alignment-geometry (:alignment args :center))
+     .constraintsTransform transform
+     .clipBehavior (clip (or (some args [:clip :clip-behavior]) m/Clip.none))
+     .debugTransformType (:debug-transform-type args ""))))
+
+(defn container
+  "A convenience widget that combines common painting, positioning, and sizing widgets.
+   A container first surrounds the child with padding (inflated by any borders present in the decoration) and then applies additional constraints to the padded extent 
+   (incorporating the width and height as constraints, if either is non-null).
+   The container is then surrounded by additional empty space described from the margin.
+
+   During painting, the container first applies the given transform, then paints the decoration to fill the padded extent,
+   then it paints the child, and finally paints the `:foreground-decoration`, also filling the padded extent.
+
+   Containers with no children try to be as big as possible unless the incoming constraints are unbounded, in which case they try to be as small as possible.
+   Containers with children size themselves to their children. The width, height, and constraints arguments to the constructor override this.
+
+   By default, containers return false for all hit tests. If the color property is specified, the hit testing is handled by `ColoredBox`,
+   which always returns true. If the decoration or `:foreground-decoration` properties are specified, hit testing is handled by `Decoration.hitTest`.
+
+   ## Layout behavior
+   See BoxConstraints for an introduction to box layout models.
+
+   Since Container combines a number of other widgets each with their own layout behavior, Container's layout behavior is somewhat complicated.
+
+   Summary: Container tries, in order: to honor alignment, to size itself to the child, to honor the width, height, and constraints, to expand to fit the parent, to be as small as possible.
+
+   More specifically:
+
+   If the widget has no child, no height, no width, no constraints, and the parent provides unbounded constraints, then Container tries to size as small as possible.
+
+   If the widget has no child and no alignment, but a height, width, or constraints are provided,
+   then the Container tries to be as small as possible given the combination of those constraints and the parent's constraints.
+
+   If the widget has no child, no height, no width, no constraints, and no alignment,
+   but the parent provides bounded constraints, then Container expands to fit the constraints provided by the parent.
+
+   If the widget has an alignment, and the parent provides unbounded constraints, then the Container tries to size itself around the child.
+
+   If the widget has an alignment, and the parent provides bounded constraints, then the Container tries to expand to fit the parent, and then positions the child within itself as per the alignment.
+
+   Otherwise, the widget has a child but no height, no width, no constraints, and no alignment, and the Container passes the constraints from the parent to the child and sizes itself to match the child.
+
+   The margin and padding properties also affect the layout, as described in the documentation for those properties. (Their effects merely augment the rules described above.)
+   The decoration can implicitly increase the padding (e.g. borders in a BoxDecoration contribute to the padding); see Decoration.padding."
+  ([] (container {} nil))
+  ([child] (if (instance? m/Widget child) (container {} child) (container child nil)))
+  ([args child]
+   (let [key (widget-key (args :key))
+         alignment (some-> args :alignment alignment-geometry)
+         padding (some-> args :padding insets)
+         color (some-> args :color color)
+         decor (cond
+                 (contains? args :decoration)
+                 (let [decor (decoration (:decoration args))]
+                   (if (nil? color)
+                     decor
+                     (.copyWith decor .color color)))
+                 
+                 (some? color)
+                 (m/BoxDecoration .color color)
+                 
+                 :else nil)
+         foreground-decoration (some-> args :foreground-decoration decoration)
+         hug-height (= (some args [:height :h :size]) :hug) 
+         hug-width (= (some args [:width :w :size]) :hug)
+         constraints (some-> (:constraints args args)
+                             some-box-constraints
+                             .normalize)
+         margin (some-> args :margin insets)
+         transform (some-> args :transform mat4)
+         transform-alignment (some-> args :transform-alignment alignment-geometry)
+         clip-behavior (clip (or (some args [:clip :clip-behavior]) m/Clip.none))
+         container (if
+                    (contains? args :animation)
+                     (let [animation (animation-options (:animation args {}))]
+                       (m/AnimatedContainer
+                        .key key
+                        .alignment alignment
+                        .padding padding
+                        .color nil
+                        .decoration decor
+                        .foregroundDecoration foreground-decoration
+                        .width nil
+                        .height nil
+                        .constraints constraints
+                        .margin margin
+                        .transform transform
+                        .transformAlignment transform-alignment
+                        .clipBehavior clip-behavior
+                        .child child
+                        .duration (animation :duration)
+                        .curve (animation :curve)
+                        .onEnd (animation :on-end)))
+
+                     (m/Container
+                      .key key
+                      .alignment alignment
+                      .padding padding
+                      .color nil
+                      .decoration decor
+                      .foregroundDecoration foreground-decoration
+                      .width nil
+                      .height nil
+                      .constraints constraints
+                      .margin margin
+                      .transform transform
+                      .transformAlignment transform-alignment
+                      .clipBehavior clip-behavior
+                      .child child))]
+     (cond
+       (and hug-height hug-width)
+       (m/IntrinsicWidth .child (m/IntrinsicHeight .child container))
+
+       hug-width
+       (m/IntrinsicWidth .child container)
+
+       hug-height
+       (m/IntrinsicHeight .child container) 
+
+       :else container))))
+
+;; TODO: Wrap delegate
+(defn custom-multi-child-layout [delegate & children]
+  (w/CustomMultiChildLayout 
+   .delegate delegate 
+   .children (ut/flatten-children children)))
+
+(defn flex
+  ([direction] (flex direction {}))
+  ([direction args & children]
+   (let [[args children] (ut/args-children args children)
+         spacing (:spacing args 0)
+         axis (axis direction)]
+     (m/Flex
+      .key (widget-key (args :key))
+      .direction axis
+      .mainAxisAlignment (main-axis-alignment (:main-axis-alignment args :start))
+      .mainAxisSize (main-axis-size (:main-axis-size args :min))
+      .crossAxisAlignment (cross-axis-alignment (:cross-axis-alignment args :center))
+      .textDirection (text-direction (:text-direction args :ltr))
+      .verticalDirection (vertical-direction (:vertical-direction args :down))
+      .textBaseline (text-baseline (:text-baseline args :alphabetic))
+      .clipBehavior (clip (:clip args :none))
+      .children
+      (if (> spacing 0)
+        (interpose
+         (m/SizedBox
+          .width (if (= axis m/Axis.horizontal) spacing 0.0)
+          .height (if (= axis m/Axis.horizontal) 0.0 spacing))
+         children)
+        children)))))
+
+(defn row
+  ([] (row {}))
+  ([args & children]
+   (let [[args children] (ut/args-children args children)
+         spacing (:spacing args 0)]
+     (m/Row
+      .key (widget-key (args :key))
+      .mainAxisAlignment (main-axis-alignment (:main-axis-alignment args :start))
+      .mainAxisSize (main-axis-size (:main-axis-size args :min))
+      .crossAxisAlignment (cross-axis-alignment (:cross-axis-alignment args :center))
+      .textDirection (text-direction (:text-direction args :ltr))
+      .verticalDirection (vertical-direction (:vertical-direction args :down))
+      .textBaseline (text-baseline (:text-baseline args :alphabetic))
+      .children
+      (if (> spacing 0)
+        (interpose (m/SizedBox .width spacing) children)
+        children)))))
 
 (defn sized
   "Creates a SizedBox widget with the specified size and child.
@@ -1716,71 +2195,6 @@
      .fit (stack-fit (get params :fit m/StackFit.loose))
      .children children)))
 
-(defn container
-  ([] (container {} nil))
-  ([child] (if (instance? m/Widget child) (container {} child) (container child nil)))
-  ([args child]
-   (let [key (widget-key (args :key))
-         alignment (alignment-geometry (get args :alignment m/Alignment.center))
-         padding (insets (get args :padding 0))
-         color (some-> (get args :color) color)
-         decoration (some-> (get args :decoration) decoration)
-         foregroundDecoration (some-> (get args :foreground-decoration) decoration)
-         width (some args [:width :w :size])
-         height (some args [:height :h :size])
-         constraints (get args :constraints)
-         margin (insets (get args :margin 0))
-         transform (get args :transform)
-         transformAlignment (alignment-geometry (get args :transform-alignment m/Alignment.center))
-         clipBehavior (get args :clip (get args :clip-behavior m/Clip.none))
-         container (if
-                    (contains? args :animation)
-                     (let [animation (animation-options (get args :animation {}))]
-                       (m/AnimatedContainer
-                        .key key
-                        .alignment alignment
-                        .padding padding
-                        .color color
-                        .decoration decoration
-                        .foregroundDecoration foregroundDecoration
-                        .width width
-                        .height height
-                        .constraints constraints
-                        .margin margin
-                        .transform transform
-                        .transformAlignment transformAlignment
-                        .clipBehavior clipBehavior
-                        .child child
-                        .duration (animation :duration)
-                        .curve (animation :curve)
-                        .onEnd (animation :onEnd)))
-
-                     (m/Container
-                      .key key
-                      .alignment alignment
-                      .padding padding
-                      .color color
-                      .decoration decoration
-                      .foregroundDecoration foregroundDecoration
-                      .width width
-                      .height height
-                      .constraints constraints
-                      .margin margin
-                      .transform transform
-                      .transformAlignment transformAlignment
-                      .clipBehavior clipBehavior
-                      .child child))]
-     (cond
-       (every? #(= % :hug) [width height])
-       (m/IntrinsicWidth .child (m/IntrinsicHeight .child container))
-
-       (= width :hug)
-       (m/IntrinsicWidth .child container)
-
-       (= height :hug)
-       (m/IntrinsicHeight .child container)
-       :else container))))
-
 (defn opacity
   ([opacity args child]
    (if (contains? args :animation)
@@ -1792,21 +2206,30 @@
         .duration (animation :duration)
         .curve (animation :curve)
         .onEnd (animation :on-end)
-        .alwaysIncludeSemantics (get args :always-include-semantics false)))
+        .alwaysIncludeSemantics (:always-include-semantics args false)))
      (m/Opacity
       .key (widget-key (args :key))
       .opacity opacity
-      .alwaysIncludeSemantics (get args :always-include-semantics false)
+      .alwaysIncludeSemantics (:always-include-semantics args false)
       .child child)))
   ([opacity child]
-   (m/Opacity
-    .opacity opacity
-    .child child)))
+   (if (map? opacity)
+     (flutter-cljd.widgets/opacity (:opacity opacity 1.0) opacity child)
+     (m/Opacity
+      .opacity opacity
+      .child child))))
 
-(defn decorated [with-decoration child]
-  (m/DecoratedBox
-   .decoration (decoration with-decoration)
-   .child child))
+(defn decorated
+  ([position with-decoration child]
+   (m/DecoratedBox
+    .decoration (decoration with-decoration)
+    .position (decoration-position position)
+    .child child))
+  ([with-decoration child]
+   (decorated 
+    (:position with-decoration m/DecorationPosition.background)
+    with-decoration
+    child)))
 
 (defn keyed [key child]
   (m/KeyedSubtree
@@ -1933,13 +2356,13 @@
    (fn [ctx]
      (let [def-style (m/DefaultTextStyle.of ctx)
            key (widget-key (args :key))
-           style (.merge (.-style def-style) (text-style (get args :style args)))
+           style (.merge (.-style def-style) (text-style (:style args args)))
            align (or (some-> args :align text-align) (.-textAlign def-style))
-           soft-wrap (get args :soft-wrap (if (nil? (.-softWrap def-style)) true (.-softWrap def-style)))
-           overflow (get args :overflow (.-overflow def-style))
-           max-lines (get args :max-lines (.-maxLines def-style))
-           text-width-basis (get args :text-width-basis (.-textWidthBasis def-style))
-           text-height-behavior (get args :text-height-behavior (.-textHeightBehavior def-style))
+           soft-wrap (:soft-wrap args (if (nil? (.-softWrap def-style)) true (.-softWrap def-style)))
+           overflow (:overflow args (.-overflow def-style))
+           max-lines (:max-lines args (.-maxLines def-style))
+           text-width-basis (:text-width-basis args (.-textWidthBasis def-style))
+           text-height-behavior (:text-height-behavior args (.-textHeightBehavior def-style))
            animation (some-> args :animation animation-options)]
        (if (nil? animation)
          (m/DefaultTextStyle

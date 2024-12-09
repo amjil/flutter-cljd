@@ -1,0 +1,311 @@
+(ns flutter-cljd.drawing
+  (:require
+   ["dart:ui" :as ui]
+   ["dart:math" :as math]
+   ["package:vector_math/vector_math_64.dart" :as vec-math]))
+
+(defn size
+  "Creates a new `Size` object with the given width and height.
+
+  Arity:
+  1. [w h] - Creates a `Size` object with the specified width and height.
+  2. [value] - Creates a `Size` object based on the provided value. The value can be:
+     - An instance of `Size`, in which case the same `Size` object is returned.
+     - A number, in which case a square `Size` object is created with the value as both width and height.
+     - A map, in which case the width and height are extracted from the map using the keys `:w`, `:width`, or `:size` for width, and `:h`, `:height`, or `:size` for height.
+     - A vector or seq, in which case the first and second elements are used as width and height respectively.
+     - An instance of `Offset` or `Point`, in which case the x/dx and y/dy values are used as width and height respectively.
+   ```clojure
+   (size 100 200) ;; Size(100.0, 200.0)
+   (size 100) ;; Size(100.0, 100.0)
+   (size {:w 100 :h 200}) ;; Size(100.0, 200.0)
+   ```"
+  ([w h] (ui/Size (double w) (double h)))
+  ([value]
+   (cond
+     (instance? ui/Size value) value
+     (number? value) (size value value)
+     (map? value) (size (or (some value [:w :width :size]) 0) (or (some value [:h :height :size]) 0))
+     (or (vector? value) (seq? value)) (size (get value 0 0) (get value 1 0))
+     (instance? ui/Offset value) (size (.-dx value) (.-dy value))
+     (instance? math/Point value) (size (.-x value) (.-y value))
+     :else (throw (Exception. (str "Invalid size: " value))))))
+
+(defn offset
+  "Creates a new `Offset` object with the given dx and dy.
+   
+   Arity:
+   1. [dx dy] - Creates an `Offset` object with the specified dx and dy.
+   2. [value] - Creates an `Offset` object based on the provided value. The value can be:
+      - An instance of `Offset`, in which case the same `Offset` object is returned.
+      - A number, in which case a square `Offset` object is created with the value as both dx and dy
+      - A map, in which case the dx and dy are extracted from the map using the keys `:dx`, `:x`, or `:offset` for dx, and `:dy`, `:y`, or `:offset` for dy.
+      - A vector or seq, in which case the first and second elements are used as dx and dy respectively.
+      - An instance of `Point`, in which case the x and y values are used as dx and dy respectively.
+      - An instance of `Size`, in which case the width and height are used as dx and dy respectively.
+   ```clojure
+   (offset 100 200) ;; Offset(100.0, 200.0)
+   (offset {:dx 100 :dy 200}) ;; Offset(100.0, 200.0)
+   (offset [100 200]) ;; Offset(100.0, 200.0)
+    ```
+   "
+  ([dx dy] (ui/Offset (double dx) (double dy)))
+  ([value]
+   (cond
+     (instance? ui/Offset value) value
+     (number? value) (offset value value)
+     (map? value) (offset (or (some value [:dx :x :offset]) 0) (or (some value [:dy :y :offset]) 0))
+     (or (vector? value) (seq? value)) (offset (get value 0 0) (get value 1 0))
+     (instance? math/Point value) (offset (.-x value) (.-y value))
+     (instance? ui/Size value) (offset (.-width value) (.-height value))
+     :else (throw (Exception. (str "Invalid offset: " value))))))
+
+(defn point
+  "Creates a new `Point` object with the given dx and dy.
+   
+   Arity:
+   1. [x y] - Creates an `Point` object with the specified x and y.
+   2. [value] - Creates an `Point` object based on the provided value. The value can be:
+      - An instance of `Point`, in which case the same `Point` object is returned.
+      - A number, in which case a square `Point` object is created with the value as both x and y
+      - A map, in which case the dx and dy are extracted from the map using the keys `:x`, `:dx` or `:offset` for dx, and `:y`, `:dy` or `:offset` for y.
+      - A vector or seq, in which case the first and second elements are used as x and y respectively.
+      - An instance of `Offset`, in which case the dx and dy values are used as x and y respectively.
+      - An instance of `Size`, in which case the width and height are used as dx and dy respectively.
+   ```clojure
+   (point 100 200) ;; Point(100.0, 200.0)
+   (point {:dx 100 :dy 200}) ;; Point(100.0, 200.0)
+    ```
+   "
+  ([x y] (math/Point (double x) (double y)))
+  ([value]
+   (cond
+     (instance? math/Point value) value
+     (number? value) (point value value)
+     (map? value) (point (or (some value [:x :dx :offset]) 0) (or (some value [:y :dy :offset]) 0))
+     (or (vector? value) (seq? value)) (point (get value 0 0) (get value 1 0))
+     (instance? ui/Offset value) (point (.-dx value) (.-dy value))
+     (instance? ui/Size value) (point (.-width value) (.-height value))
+     :else (throw (Exception. (str "Invalid point: " value))))))
+
+(defn rect
+  "Creates a new `Rect` object with the given center or offset and size.
+
+     Arity:
+     1. [center size] - Creates a `Rect` object with the specified center and size.
+     2. [l t w h] - Creates a `Rect` object with the specified left, top, width, and height.
+     3. [value] - Creates a `Rect` object based on the provided value. The value can be:
+        - An instance of `Rect`, in which case the same `Rect` object is returned.
+        - A map, in which case the center and size are extracted from the map using the keys `:center` or `:x`/`:y` , and `:size` or `:w`/`:h`/`:width`/`:height` respectively.
+          Or the left, top, width, and height are extracted using the keys `:left`/`:l`, `:top`/`:t`, `:width`/`:w`, and `:height`/`:h` respectively.
+          Also `:offset` key can be used to specify the left and top values instead of the center.
+     ```clojure
+     (rect {:center [100 200] :size [300 400]}) ;; Rect.fromCenter(center: Point(100.0, 200.0), width: 300.0, height: 400.0)
+     (rect {:offset [100 200] :size [300 400]}) ;; Rect.fromLTWH(100.0, 200.0, 300.0, 400.0)
+     (rect [100 200] [300 400]) ;; Rect.fromCenter(center: Point(100.0, 200.0), width: 300.0, height: 400.0)
+     (rect [100 200 300 400]) ;; Rect.fromLTWH(100.0, 200.0, 300.0, 400.0)
+     (rect (offset 100 200) (size 300 400)) ;; Rect.fromCenter(center: Point(100.0, 200.0), width: 300.0, height: 400.0)
+     (rect {:x 100 :y 200} {:w 300 :h 400}) ;; Rect.fromCenter(center: Point(100.0, 200.0), width: 300.0, height: 400.0)
+     (rect {:x 100 :y 200 :w 300 :h 400}) ;; Rect.fromCenter(center: Point(100.0, 200.0), width: 300.0, height: 400.0)
+     ```
+     "
+  ([center size] (let [size (flutter-cljd.drawing/size size)]
+                   (ui/Rect.fromCenter .center (offset center) .width (.-width size) .height (.-height size))))
+  ([l t w h] (ui/Rect.fromLTWH (double l) (double t) (double w) (double h)))
+  ([value]
+   (cond
+     (instance? ui/Rect value) value
+
+     (map? value)
+     (let [size (get value :size value)
+           point (offset (or (some value [:center :offset]) value))]
+       (if (contains? value :offset)
+         (rect (.-dx point) (.-dy point) (.-width size) (.-height size))
+         (rect point size)))
+
+     (or (vector? value) (seq? value))
+     (rect (offset (get value 0 [0 0])) (size (get value 1 [0 0])))
+
+     :else (throw (Exception. (str "Invalid rect: " value))))))
+
+(defn vec2
+  "Creates a new `Vector2` object with the given x and y values.
+   
+   [Flutter doc](https://api.flutter.dev/flutter/vector_math_64/Vector2-class.html)"
+  ([value]
+   (cond
+     (instance? vec-math/Vector2 value) value
+     (vector? value) (vec-math/Vector2.array (map double value))
+     (number? value) (vec-math/Vector2.all (double value))
+     :else (throw (Exception. (str "Invalid vector2: " value)))))
+  ([x y]
+   (ui/Vector2 (double x) (double y))))
+
+(defn vec3
+  "Creates a new `Vector3` object with the given x, y, and z values.
+   
+   [Flutter doc](https://api.flutter.dev/flutter/vector_math_64/Vector3-class.html)"
+  ([value]
+   (cond
+     (instance? vec-math/Vector3 value) value
+     (vector? value) (vec-math/Vector3.array (map double value))
+     (number? value) (vec-math/Vector3.all (double value))
+     :else (throw (Exception. (str "Invalid vector3: " value)))))
+  ([x y z]
+   (ui/Vector3 (double x) (double y) (double z))))
+
+(defn vec4
+  "Creates a new `Vector4` object with the given x, y, z, and w values.
+   
+   [Flutter doc](https://api.flutter.dev/flutter/vector_math_64/Vector4-class.html)"
+  ([value]
+   (cond
+     (instance? vec-math/Vector4 value) value
+     (vector? value) (vec-math/Vector4.array (map double value))
+     (number? value) (vec-math/Vector4.all (double value))
+     :else (throw (Exception. (str "Invalid vector4: " value)))))
+  ([x y z w]
+   (ui/Vector4 (double x) (double y) (double z) (double w))))
+
+(defn mat2 
+  "Creates a 2x2 matrix from the specified arguments.
+   The arguments can be specified as a vector with 4 elements, vector of vectors, or a 4 double values.
+   
+   [Flutter doc](https://api.flutter.dev/flutter/vector_math_64/Matrix2-class.html)"
+  ([arg0 arg1 arg2 arg3]
+   (mat2 [arg0 arg1 arg2 arg3]))
+  ([value]
+   (cond
+     (instance? vec-math/Matrix2 value) value
+     (vector? value) (vec-math/Matrix2.fromList (map double (flatten value)))
+     :else (throw (Exception. (str "Invalid matrix2: " value))))))
+
+(defn mat3
+  "Creates a 3x3 matrix from the specified arguments.
+   The arguments can be specified as a vector with 9 elements, vector of vectors, or a 9 double values.
+   
+   [Flutter doc](https://api.flutter.dev/flutter/vector_math_64/Matrix3-class.html)"
+  ([arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8]
+   (mat3 [arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8]))
+  ([value]
+   (cond
+     (instance? vec-math/Matrix3 value) value
+     (vector? value) (vec-math/Matrix3.fromList (map double (flatten value)))
+     :else (throw (Exception. (str "Invalid matrix3: " value))))))
+
+(defn mat4
+  "Creates a 4x4 matrix from the specified arguments.
+   The arguments can be specified as a vector with 16 elements, vector of vectors, or a 16 double values.
+   
+   [Flutter doc](https://api.flutter.dev/flutter/vector_math_64/Matrix4-class.html)"
+  ([arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 arg10 arg11 arg12 arg13 arg14 arg15]
+   (mat4 [arg0 arg1 arg2 arg3 arg4 arg5 arg6 arg7 arg8 arg9 arg10 arg11 arg12 arg13 arg14 arg15]))
+  ([arg0 arg1 arg2 arg3]
+   (mat4 [arg0 arg1 arg2 arg3]))
+  ([value]
+   (cond
+     (instance? vec-math/Matrix4 value) value
+     (vector? value) (vec-math/Matrix4.fromList (map double (flatten value)))
+     :else (throw (Exception. (str "Invalid matrix4: " value))))))
+
+(defn quat
+  "Creates a new `Quaternion` object with the given x, y, z, and w values.
+   
+   [Flutter doc](https://api.flutter.dev/flutter/vector_math_64/Quaternion-class.html)"
+  ([value]
+   (cond
+     (instance? vec-math/Quaternion value) value
+     (vector? value) (quat (get value 0 0) (get value 1 0) (get value 2 0) (get value 3 0))
+     (number? value) (quat value value value value)
+     :else (throw (Exception. (str "Invalid quaternion: " value)))))
+  ([x y z w]
+   (ui/Quaternion (double x) (double y) (double z) (double w))))
+
+(defn vec3-zero
+  "Creates a new `Vector3` object with all values set to zero."
+  []
+  (vec-math/Vector3.zero))
+
+(defn mat4-zero
+  "Creates a new `Matrix4` object with all values set to zero."
+  []
+  (vec-math/Matrix4.zero))
+
+(defn mat4-identity
+  "Creates a new `Matrix4` object with all values set to identity."
+  []
+  (vec-math/Matrix4.identity))
+
+(defn mat4-outer 
+  "Creates a new `Matrix4` object with the outer product of the given vectors."
+  [u v]
+  (vec-math/Matrix4.outer (vec3 u) (vec3 v)))
+
+(defn mat4-rotation-x
+  "Creates a new `Matrix4` object with the given x rotation."
+  [radians]
+  (vec-math/Matrix4.rotationX (double radians)))
+
+(defn mat4-rotation-y
+  "Creates a new `Matrix4` object with the given y rotation."
+  [radians]
+  (vec-math/Matrix4.rotationY (double radians)))
+
+(defn mat4-rotation-z
+  "Creates a new `Matrix4` object with the given z rotation."
+  [radians]
+  (vec-math/Matrix4.rotationZ (double radians)))
+
+(defn mat4-skew
+  "Creates a new `Matrix4` object with the given skew values."
+  [alpha beta]
+  (vec-math/Matrix4.skew (double alpha) (double beta)))
+
+(defn mat4-skew-x
+  "Creates a new `Matrix4` object with the given x skew value."
+  [alpha]
+  (vec-math/Matrix4.skewX (double alpha)))
+
+(defn mat4-skew-y
+  "Creates a new `Matrix4` object with the given y skew value."
+  [beta]
+  (vec-math/Matrix4.skewY (double beta)))
+
+(defn mat4-translation
+  "Creates a new `Matrix4` object with the given translation values."
+  ([vector]
+   (vec-math/Matrix4.translation (vec3 vector)))
+  ([x y z]
+   (vec-math/Matrix4.translation (vec3 x y z))))
+
+(defn quat-axis-angle
+  "Creates a new `Quaternion` object with the given axis and angle."
+  [axis angle]
+  (ui/Quaternion.axisAngle (vec3 axis) (double angle)))
+
+(defn quat-dq
+  "Creates a new `Quaternion` object with the given q and omega values."
+  [q omega]
+  (ui/Quaternion.dq (quat q) (vec3 omega)))
+
+(defn quat-euler
+  "Creates a new `Quaternion` object with the given euler angles."
+  [x y z]
+  (ui/Quaternion.euler (double x) (double y) (double z)))
+
+(defn quat-from-rotation
+  "Creates a new `Quaternion` object with the given rotation matrix."
+  [matrix]
+  (ui/Quaternion.fromRotation (mat3 matrix)))
+
+(defn quat-identity
+  "Creates a new `Quaternion` object with all values set to identity."
+  []
+  (ui/Quaternion.identity))
+
+(defn quat-random
+  "Creates a new `Quaternion` object with random values."
+  []
+  (ui/Quaternion.random))
+
+

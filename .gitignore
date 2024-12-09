@@ -50,3 +50,5 @@ app.*.map.json
 .clj-kondo/imports
 
 pubspec.lock
+.aider*
+.env

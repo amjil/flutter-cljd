@@ -1,7 +1,8 @@
 (ns flutter-cljd.utils
   "Core utilities and helpers for flutter-cljd."
   (:require
-    [cljd.flutter :as f]))
+    [cljd.flutter :as f]
+   ["package:flutter/widgets.dart" :as w]))
 
 (defmacro ??
   "A nil-coalescing macro that returns the first non-nil value from a series of expressions.
@@ -50,22 +51,35 @@
   "The mathematical constant `π` (pi), which is the ratio of a circle's circumference to its diameter."
   (.pi double))
 
-(defn lerp [from to]
-  (cond
-    (implements? from f/ITweenable)
-    #(.lerp (.tween from to) %)
+(defn lerp 
+  ([from to t] 
+   ((lerp from to) t))
+  ([from to]
+   (cond
+    ;; (satisfies? from f/ITweenable)
+    ;; (f/lerp from to)
+     
+     (and (number? from) (number? to))
+     #(+ (* (- 1 %) from) (* % to))
 
-    (and (number? from) (number? to))
-    #(+ (* (- 1 %) from) (* % to))
+     (and (vector? from) (vector? to))
+     (fn [t] (mapv #((lerp %1 %2) t) from to))
 
-    (and (vector? from) (vector? to))
-    (mapv lerp from to)
+     (and (seq? from) (seq? to))
+     (fn [t] (map #((lerp %1 %2) t) from to))
 
-    (and (map? from) (map? to))
-    (reduce-kv (fn [acc k v]
-                 (assoc acc k (lerp (get from k) v)))
-               {}
-               to)
-    
-    :else
-    #(if (> % 0.5) to from)))
+     (and (map? from) (map? to))
+     (fn [t] (reduce-kv (fn [acc k v] 
+                          (assoc acc k ((lerp (get from k) v) t))) 
+                        {} 
+                        to))
+     
+     :else
+     #(if (> % 0.5) to from))))
+
+(defn flatten-children [children]
+  (filter #(instance? w/Widget %) (flatten children)))
+
+(defn args-children [args children]
+  [(if (map? args) args {})
+   (flatten-children (if (map? args) children (cons args children)))])
