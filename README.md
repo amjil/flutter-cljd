@@ -15,7 +15,7 @@ The API is designed around pure Clojure types instead of Dart’s, offering a mo
 ### Streamline and enhance Dart APIs
 The library simplifies certain Dart APIs, making them easier to use and more expressive, improving the overall developer experience.
 
-### Examples
+## Examples
 ```clojure
 ;; Basic button with styling
 (->> (text "Click me!")
