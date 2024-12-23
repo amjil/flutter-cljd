@@ -9,6 +9,13 @@ ClojureDart wrapper for Flutter Material widgets, designed to simplify and compa
 ### Provide a more concise and readable UI syntax
 The library focuses on simplifying the syntax for building Flutter UIs, making it more compact, intuitive, and aligned with Clojure’s functional style.
 
+### Use Clojure data structures for better consistency and flexibility
+The API is designed around pure Clojure types instead of Dart’s, offering a more seamless and consistent experience for Clojure developers while increasing code flexibility.
+
+### Streamline and enhance Dart APIs
+The library simplifies certain Dart APIs, making them easier to use and more expressive, improving the overall developer experience.
+
+### Examples
 ```clojure
 ;; Basic button with styling
 (->> (text "Click me!")
@@ -53,9 +60,3 @@ The library focuses on simplifying the syntax for building Flutter UIs, making i
      :role "Senior Developer"
      :avatar (image "path/to/avatar.png")}))
 ```
-
-### Use Clojure data structures for better consistency and flexibility
-The API is designed around pure Clojure types instead of Dart’s, offering a more seamless and consistent experience for Clojure developers while increasing code flexibility.
-
-### Streamline and enhance Dart APIs
-The library simplifies certain Dart APIs, making them easier to use and more expressive, improving the overall developer experience.
