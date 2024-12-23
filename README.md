@@ -26,9 +26,9 @@ The library simplifies certain Dart APIs, making them easier to use and more exp
 ```clojure
 ;; Card with multiple elements
 (->> (row {:spacing 10}
-       (text "Title" {:size 20 :weight :bold})
+       (text "Title" {:size 20, :weight :bold})
        (text "Subtitle" {:color :gray}))
-     (padding {:all 16})
+     (padding 16)
      (card {:elevation 2 :radius 8}))
 ```
 ```clojure
@@ -46,10 +46,10 @@ The library simplifies certain Dart APIs, making them easier to use and more exp
          
          ;; Text content
          (ui/column {:spacing 10}
-           (ui/text name {:size 18 :weight :bold})
+           (ui/text name {:size 18, :weight :bold})
            (ui/text role {:size 14})))
        (ui/with-style {:color :gray})
-       (ui/padding {:all 16})
+       (ui/padding 16)
        (ui/card {:elevation 4 :radius 12})
        (ui/center)))
 
@@ -58,5 +58,5 @@ The library simplifies certain Dart APIs, making them easier to use and more exp
   (profile-card
     {:name "John Doe"
      :role "Senior Developer"
-     :avatar (image "path/to/avatar.png")}))
+     :avatar (ui/image "path/to/avatar.png")}))
 ```
