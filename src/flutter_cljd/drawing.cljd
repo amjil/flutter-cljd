@@ -139,7 +139,7 @@
      (number? value) (vec-math/Vector2.all (double value))
      :else (throw (Exception. (str "Invalid vector2: " value)))))
   ([x y]
-   (ui/Vector2 (double x) (double y))))
+   (vec-math/Vector2 (double x) (double y))))
 
 (defn vec3
   "Creates a new `Vector3` object with the given x, y, and z values.
@@ -152,7 +152,7 @@
      (number? value) (vec-math/Vector3.all (double value))
      :else (throw (Exception. (str "Invalid vector3: " value)))))
   ([x y z]
-   (ui/Vector3 (double x) (double y) (double z))))
+   (vec-math/Vector3 (double x) (double y) (double z))))
 
 (defn vec4
   "Creates a new `Vector4` object with the given x, y, z, and w values.
@@ -165,7 +165,7 @@
      (number? value) (vec-math/Vector4.all (double value))
      :else (throw (Exception. (str "Invalid vector4: " value)))))
   ([x y z w]
-   (ui/Vector4 (double x) (double y) (double z) (double w))))
+   (vec-math/Vector4 (double x) (double y) (double z) (double w))))
 
 (defn mat2 
   "Creates a 2x2 matrix from the specified arguments.
@@ -219,7 +219,7 @@
      (number? value) (quat value value value value)
      :else (throw (Exception. (str "Invalid quaternion: " value)))))
   ([x y z w]
-   (ui/Quaternion (double x) (double y) (double z) (double w))))
+   (vec-math/Quaternion (double x) (double y) (double z) (double w))))
 
 (defn vec3-zero
   "Creates a new `Vector3` object with all values set to zero."
@@ -281,31 +281,30 @@
 (defn quat-axis-angle
   "Creates a new `Quaternion` object with the given axis and angle."
   [axis angle]
-  (ui/Quaternion.axisAngle (vec3 axis) (double angle)))
+  (vec-math/Quaternion.axisAngle (vec3 axis) (double angle)))
 
 (defn quat-dq
   "Creates a new `Quaternion` object with the given q and omega values."
   [q omega]
-  (ui/Quaternion.dq (quat q) (vec3 omega)))
+  (vec-math/Quaternion.dq (quat q) (vec3 omega)))
 
 (defn quat-euler
   "Creates a new `Quaternion` object with the given euler angles."
   [x y z]
-  (ui/Quaternion.euler (double x) (double y) (double z)))
+  (vec-math/Quaternion.euler (double x) (double y) (double z)))
 
 (defn quat-from-rotation
   "Creates a new `Quaternion` object with the given rotation matrix."
   [matrix]
-  (ui/Quaternion.fromRotation (mat3 matrix)))
+  (vec-math/Quaternion.fromRotation (mat3 matrix)))
 
 (defn quat-identity
   "Creates a new `Quaternion` object with all values set to identity."
   []
-  (ui/Quaternion.identity))
+  (vec-math/Quaternion.identity))
 
 (defn quat-random
   "Creates a new `Quaternion` object with random values."
   []
-  (ui/Quaternion.random))
-
+  (vec-math/Quaternion.random (math/Random.secure)))
 

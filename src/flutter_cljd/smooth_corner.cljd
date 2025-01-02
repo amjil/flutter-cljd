@@ -1,258 +1,258 @@
-(ns flutter-cljd.smooth-corner
-  (:require
-   ["package:flutter/painting.dart" :as pt]
-   ["dart:math" :as math]
-   ["package:vector_math/vector_math.dart" :as v_math]
-   [flutter-cljd.utils :refer [π]]
-   [flutter-cljd.drawing :as dr]
-   [clojure.core :as core]))
+;; (ns flutter-cljd.smooth-corner
+;;   (:require
+;;    ["package:flutter/painting.dart" :as pt]
+;;    ["dart:math" :as math]
+;;    ["package:vector_math/vector_math.dart" :as v_math]
+;;    [flutter-cljd.utils :refer [π]]
+;;    [flutter-cljd.drawing :as dr]
+;;    [clojure.core :as core]))
 
-;; https://github.com/aloisdeniel/figma_squircle/blob/main/lib/src/processed_smooth_radius.dart
-(defn smooth-radius-params
-  [& {:keys [radius smoothing w h] :as args}]
-  (if (or (<= radius 0) (<= w 0) (<= h 0) (<= smoothing 0))
-    args
-    (let [max-radius (/ (min w h) 2)
-          max-radius-half (/ max-radius 2)
-          corner-radius (min radius max-radius)
-          diff-ratio (if (<= corner-radius max-radius-half)
-                       1
-                       (- 1 (/ (- corner-radius max-radius-half) max-radius-half)))
-          angle-beta (* π 0.5 (- 1 (* smoothing diff-ratio)))
-          angle-alpha (* π 0.25 smoothing diff-ratio)
-          section-length (* (math/sin (/ angle-beta 2)) corner-radius (math/sqrt 2))
-          c (* corner-radius (math/tan (/ (- (/ π 2) angle-beta) 4)) (math/cos angle-alpha))
-          d (* c (math/tan angle-alpha))
-          b (/ (- (min (* corner-radius (+ 1 smoothing)) max-radius) section-length c d) 3)
-          a (* 2 b)]
-      {:a a
-       :b b
-       :c c
-       :d d
-       :w w
-       :h h
-       :smoothing smoothing
-       :section-length section-length
-       :radius corner-radius})))
+;; ;; https://github.com/aloisdeniel/figma_squircle/blob/main/lib/src/processed_smooth_radius.dart
+;; (defn smooth-radius-params
+;;   [& {:keys [radius smoothing w h] :as args}]
+;;   (if (or (<= radius 0) (<= w 0) (<= h 0) (<= smoothing 0))
+;;     args
+;;     (let [max-radius (/ (min w h) 2)
+;;           max-radius-half (/ max-radius 2)
+;;           corner-radius (min radius max-radius)
+;;           diff-ratio (if (<= corner-radius max-radius-half)
+;;                        1
+;;                        (- 1 (/ (- corner-radius max-radius-half) max-radius-half)))
+;;           angle-beta (* π 0.5 (- 1 (* smoothing diff-ratio)))
+;;           angle-alpha (* π 0.25 smoothing diff-ratio)
+;;           section-length (* (math/sin (/ angle-beta 2)) corner-radius (math/sqrt 2))
+;;           c (* corner-radius (math/tan (/ (- (/ π 2) angle-beta) 4)) (math/cos angle-alpha))
+;;           d (* c (math/tan angle-alpha))
+;;           b (/ (- (min (* corner-radius (+ 1 smoothing)) max-radius) section-length c d) 3)
+;;           a (* 2 b)]
+;;       {:a a
+;;        :b b
+;;        :c c
+;;        :d d
+;;        :w w
+;;        :h h
+;;        :smoothing smoothing
+;;        :section-length section-length
+;;        :radius corner-radius})))
 
-(defn- add-smooth-top-right [path & {:keys [w h radius smoothing] :as params}]
-  (let [abs-radius (min (abs radius) (/ w 2) (/ h 2))
-        t abs-radius
-        r (- w abs-radius)]
-   (cond
-     (= radius 0)
-     (doto path
-       (.moveTo (/ w 2) 0)
-       (.lineTo w 0)
-       (.lineTo w (/ h 2)))
+;; (defn- add-smooth-top-right [path & {:keys [w h radius smoothing] :as params}]
+;;   (let [abs-radius (min (abs radius) (/ w 2) (/ h 2))
+;;         t abs-radius
+;;         r (- w abs-radius)]
+;;    (cond
+;;      (= radius 0)
+;;      (doto path
+;;        (.moveTo (/ w 2) 0)
+;;        (.lineTo w 0)
+;;        (.lineTo w (/ h 2)))
      
-     (< radius 0)
-     (doto path
-       (.moveTo (/ w 2) 0)
-       (.lineTo r 0)
-       (.arcTo (dr/rect [r 0 abs-radius abs-radius]) π (- (/ π 2)) false)
-       (.lineTo w t)
-       (.lineTo w (/ h 2)))
+;;      (< radius 0)
+;;      (doto path
+;;        (.moveTo (/ w 2) 0)
+;;        (.lineTo r 0)
+;;        (.arcTo (dr/rect [r 0 abs-radius abs-radius]) π (- (/ π 2)) false)
+;;        (.lineTo w t)
+;;        (.lineTo w (/ h 2)))
      
-     (<= smoothing 0)
-     (doto path
-       (.moveTo (/ w 2) 0)
-       (.lineTo r 0)
-       (.arcTo (dr/rect [r 0 abs-radius abs-radius]) (* 1.5 π) (/ π 2) false)
-       (.lineTo w t)
-       (.lineTo w (/ h 2)))
+;;      (<= smoothing 0)
+;;      (doto path
+;;        (.moveTo (/ w 2) 0)
+;;        (.lineTo r 0)
+;;        (.arcTo (dr/rect [r 0 abs-radius abs-radius]) (* 1.5 π) (/ π 2) false)
+;;        (.lineTo w t)
+;;        (.lineTo w (/ h 2)))
 
-     :else
-     (let [{:keys [a b c d p section-length]} params]
-       (doto path
-         (.moveTo (max (/ w 2) (- w p)) 0)
-         (.cubicTo
-          (- w (- p a)) 0
-          (- w (- p a b)) 0
-          (- w (- p a b c)) d)
-         (.relativeArcToPoint (dr/offset section-length) .radius abs-radius)
-         (.cubicTo 
-          w (- p a b)
-          w (- p a)
-          w (min (/ h 2) p)))))))
+;;      :else
+;;      (let [{:keys [a b c d p section-length]} params]
+;;        (doto path
+;;          (.moveTo (max (/ w 2) (- w p)) 0)
+;;          (.cubicTo
+;;           (- w (- p a)) 0
+;;           (- w (- p a b)) 0
+;;           (- w (- p a b c)) d)
+;;          (.relativeArcToPoint (dr/offset section-length) .radius abs-radius)
+;;          (.cubicTo 
+;;           w (- p a b)
+;;           w (- p a)
+;;           w (min (/ h 2) p)))))))
 
-(defn- add-smooth-bottom-right [path & {:keys [w h radius smoothing] :as params}]
-  (let [abs-radius (min (abs radius) (/ w 2) (/ h 2))
-        r (- w abs-radius)
-        b (- h abs-radius)]
-    (cond
-      (= radius 0)
-      (doto path
-        (.lineTo w h)
-        (.lineTo (/ w 2) h))
+;; (defn- add-smooth-bottom-right [path & {:keys [w h radius smoothing] :as params}]
+;;   (let [abs-radius (min (abs radius) (/ w 2) (/ h 2))
+;;         r (- w abs-radius)
+;;         b (- h abs-radius)]
+;;     (cond
+;;       (= radius 0)
+;;       (doto path
+;;         (.lineTo w h)
+;;         (.lineTo (/ w 2) h))
 
-        (< radius 0)
-        (doto path
-          (.lineTo w b)
-          (.arcTo (dr/rect [r b abs-radius abs-radius]) (* 1.5 π) (- (/ π 2)) false)
-          (.lineTo r h)
-          (.lineTo (/ w 2) h))
+;;         (< radius 0)
+;;         (doto path
+;;           (.lineTo w b)
+;;           (.arcTo (dr/rect [r b abs-radius abs-radius]) (* 1.5 π) (- (/ π 2)) false)
+;;           (.lineTo r h)
+;;           (.lineTo (/ w 2) h))
 
-        (<= smoothing 0)
-        (doto path
-          (.lineTo w b)
-          (.arcTo (dr/rect [r b abs-radius abs-radius]) (/ π 2) (/ π 2) false)
-          (.lineTo r h)
-          (.lineTo (/ w 2) h))
+;;         (<= smoothing 0)
+;;         (doto path
+;;           (.lineTo w b)
+;;           (.arcTo (dr/rect [r b abs-radius abs-radius]) (/ π 2) (/ π 2) false)
+;;           (.lineTo r h)
+;;           (.lineTo (/ w 2) h))
 
-        :else
-        (let [{:keys [a b c d p section-length]} params]
-          (doto path
-            (.lineTo w (max (/ h 2) (- h p)))
-            (.cubicTo 
-             w (- h (- p a))
-             w (- h (- p a b))
-            (- w d) (- h (- p a b c)))
-            (.relativeArcToPoint (dr/offset (- section-length) section-length) .radius abs-radius)
-            (.cubicTo
-             (- w (- p a b)) h
-             (- w (- p a)) h
-             (max (/ w 2) (- w p)) h))))))
+;;         :else
+;;         (let [{:keys [a b c d p section-length]} params]
+;;           (doto path
+;;             (.lineTo w (max (/ h 2) (- h p)))
+;;             (.cubicTo 
+;;              w (- h (- p a))
+;;              w (- h (- p a b))
+;;             (- w d) (- h (- p a b c)))
+;;             (.relativeArcToPoint (dr/offset (- section-length) section-length) .radius abs-radius)
+;;             (.cubicTo
+;;              (- w (- p a b)) h
+;;              (- w (- p a)) h
+;;              (max (/ w 2) (- w p)) h))))))
 
-(defn- add-smooth-bottom-left [path & {:keys [w h radius smoothing] :as params}]
-  (let [abs-radius (min (abs radius) (/ w 2) (/ h 2))
-        l abs-radius
-        b (- h abs-radius)]
-    (cond
-      (= radius 0)
-      (doto path
-        (.lineTo 0 h)
-        (.lineTo 0 (/ h 2)))
+;; (defn- add-smooth-bottom-left [path & {:keys [w h radius smoothing] :as params}]
+;;   (let [abs-radius (min (abs radius) (/ w 2) (/ h 2))
+;;         l abs-radius
+;;         b (- h abs-radius)]
+;;     (cond
+;;       (= radius 0)
+;;       (doto path
+;;         (.lineTo 0 h)
+;;         (.lineTo 0 (/ h 2)))
 
-      (< radius 0)
-      (doto path
-        (.lineTo l h)
-        (.arcTo (dr/rect [0 b abs-radius abs-radius]) 0 (- (/ π 2)) false)
-        (.lineTo 0 b)
-        (.lineTo 0 (/ h 2)))
+;;       (< radius 0)
+;;       (doto path
+;;         (.lineTo l h)
+;;         (.arcTo (dr/rect [0 b abs-radius abs-radius]) 0 (- (/ π 2)) false)
+;;         (.lineTo 0 b)
+;;         (.lineTo 0 (/ h 2)))
 
-      (<= smoothing 0)
-      (doto path
-        (.lineTo l h)
-        (.arcTo (dr/rect [0 b abs-radius abs-radius]) π (/ π 2) false)
-        (.lineTo 0 b)
-        (.lineTo 0 (/ h 2)))
+;;       (<= smoothing 0)
+;;       (doto path
+;;         (.lineTo l h)
+;;         (.arcTo (dr/rect [0 b abs-radius abs-radius]) π (/ π 2) false)
+;;         (.lineTo 0 b)
+;;         (.lineTo 0 (/ h 2)))
 
-      :else
-      (let [{:keys [a b c d p section-length]} params]
-        (doto path
-          (.lineTo (min (/ w 2) p) h)
-          (.cubicTo
-           (- p a) h
-           (- p a b) h
-           (- p a b c) (- h d))
-          (.relativeArcToPoint (dr/offset (- section-length)) .radius abs-radius)
-          (.cubicTo
-           0 (- h (- p a b))
-           0 (- h (- p a))
-           0 (max (/ h 2) (- h p))))))))
+;;       :else
+;;       (let [{:keys [a b c d p section-length]} params]
+;;         (doto path
+;;           (.lineTo (min (/ w 2) p) h)
+;;           (.cubicTo
+;;            (- p a) h
+;;            (- p a b) h
+;;            (- p a b c) (- h d))
+;;           (.relativeArcToPoint (dr/offset (- section-length)) .radius abs-radius)
+;;           (.cubicTo
+;;            0 (- h (- p a b))
+;;            0 (- h (- p a))
+;;            0 (max (/ h 2) (- h p))))))))
 
-(defn- add-smooth-top-left [path & {:keys [w h radius smoothing] :as params}]
-  (let [abs-radius (min (abs radius) (/ w 2) (/ h 2))
-        l abs-radius
-        t abs-radius
-        r (- w abs-radius)
-        b (- h abs-radius)]
-    (cond
-      (= radius 0)
-      (doto path
-        (.lineTo 0 0)
-        (.close))
+;; (defn- add-smooth-top-left [path & {:keys [w h radius smoothing] :as params}]
+;;   (let [abs-radius (min (abs radius) (/ w 2) (/ h 2))
+;;         l abs-radius
+;;         t abs-radius
+;;         r (- w abs-radius)
+;;         b (- h abs-radius)]
+;;     (cond
+;;       (= radius 0)
+;;       (doto path
+;;         (.lineTo 0 0)
+;;         (.close))
 
-      (< radius 0)
-      (doto path
-        (.lineTo 0 t)
-        (.arcTo (dr/rect [0 0 abs-radius abs-radius]) 0 (- (/ π 2)) false)
-        (.lineTo l 0)
-        (.lineTo (/ w 2) 0)
-        (.close))
+;;       (< radius 0)
+;;       (doto path
+;;         (.lineTo 0 t)
+;;         (.arcTo (dr/rect [0 0 abs-radius abs-radius]) 0 (- (/ π 2)) false)
+;;         (.lineTo l 0)
+;;         (.lineTo (/ w 2) 0)
+;;         (.close))
 
-      (<= smoothing 0)
-      (doto path
-        (.lineTo 0 t)
-        (.arcTo (dr/rect [0 0 abs-radius abs-radius]) (* 1.5 π) (/ π 2) false)
-        (.lineTo l 0)
-        (.lineTo (/ w 2) 0)
-        (.close))
+;;       (<= smoothing 0)
+;;       (doto path
+;;         (.lineTo 0 t)
+;;         (.arcTo (dr/rect [0 0 abs-radius abs-radius]) (* 1.5 π) (/ π 2) false)
+;;         (.lineTo l 0)
+;;         (.lineTo (/ w 2) 0)
+;;         (.close))
 
-      :else
-      (let [{:keys [a b c d p section-length]} params]
-        (doto path
-          (.lineTo 0 (min (/ h 2) p))
-          (.cubicTo
-           0 (- p a)
-           0 (- p a b)
-           d (- p a b c))
-          (.relativeArcToPoint (dr/offset section-length (- section-length)) .radius abs-radius)
-          (.cubicTo
-           (- p a b) 0
-           (- p a) 0
-           (min (/ w 2) p) 0)
-          (.close))))))
+;;       :else
+;;       (let [{:keys [a b c d p section-length]} params]
+;;         (doto path
+;;           (.lineTo 0 (min (/ h 2) p))
+;;           (.cubicTo
+;;            0 (- p a)
+;;            0 (- p a b)
+;;            d (- p a b c))
+;;           (.relativeArcToPoint (dr/offset section-length (- section-length)) .radius abs-radius)
+;;           (.cubicTo
+;;            (- p a b) 0
+;;            (- p a) 0
+;;            (min (/ w 2) p) 0)
+;;           (.close))))))
 
-(def ^:dynamic *corner-smoothing* 0.6)
+;; (def ^:dynamic *corner-smoothing* 0.6)
 
-(defn smooth-corners [corners]
-  (let [get-radius-for (fn [value] (if (number? value) value (:radius value)))
-        get-radius (fn [value] (or (some get-radius-for [value corners]) 0))
-        get-smoothing (fn [value] (or (some :smoothing [value corners]) *corner-smoothing*))
-        top-left (some corners [:top-left :left-top :top :left :l :t :all])
-        top-right (some corners [:top-right :right-top :top :right :r :t :all])
-        bottom-right (some corners [:bottom-right :right-bottom :bottom :right :r :b :all])
-        bottom-left (some corners [:bottom-left :left-bottom :bottom :left :l :b :all])]
-    {:top-left {:radius (get-radius top-left) :smoothing (get-smoothing top-left)}
-     :top-right {:radius (get-radius top-right) :smoothing (get-smoothing top-right)}
-     :bottom-right {:radius (get-radius bottom-right) :smoothing (get-smoothing bottom-right)}
-     :bottom-left {:radius (get-radius bottom-left) :smoothing (get-smoothing bottom-left)}}))
+;; (defn smooth-corners [corners]
+;;   (let [get-radius-for (fn [value] (if (number? value) value (:radius value)))
+;;         get-radius (fn [value] (or (some get-radius-for [value corners]) 0))
+;;         get-smoothing (fn [value] (or (some :smoothing [value corners]) *corner-smoothing*))
+;;         top-left (some corners [:top-left :left-top :top :left :l :t :all])
+;;         top-right (some corners [:top-right :right-top :top :right :r :t :all])
+;;         bottom-right (some corners [:bottom-right :right-bottom :bottom :right :r :b :all])
+;;         bottom-left (some corners [:bottom-left :left-bottom :bottom :left :l :b :all])]
+;;     {:top-left {:radius (get-radius top-left) :smoothing (get-smoothing top-left)}
+;;      :top-right {:radius (get-radius top-right) :smoothing (get-smoothing top-right)}
+;;      :bottom-right {:radius (get-radius bottom-right) :smoothing (get-smoothing bottom-right)}
+;;      :bottom-left {:radius (get-radius bottom-left) :smoothing (get-smoothing bottom-left)}}))
 
-(defn add-smooth-rect [path corners rect]
-  (let [w (.-width rect)
-        h (.-height rect)
-        size {:w w :h h}
-        corners (smooth-corners corners)
-        top-left-map (merge size (:top-left corners))
-        top-right-map (merge size (:top-right corners))
-        bottom-right-map (merge size (:bottom-right corners))
-        bottom-left-map (merge size (:bottom-left corners))
-        params (reduce
-                (fn [params map]
-                  (if (contains? params map)
-                    map
-                    (assoc params map (smooth-radius-params map))))
-                {}
-                [top-left-map top-right-map bottom-right-map bottom-left-map])]
-    (.transform
-     (doto path
-       (add-smooth-top-right (params top-right-map))
-       (add-smooth-bottom-right (params bottom-right-map))
-       (add-smooth-bottom-left (params bottom-left-map))
-       (add-smooth-top-left (params top-left-map)))
-     (.-storage (v_math/Matrix4.translationValues (.-left rect) (.-top rect) 0)))))
+;; (defn add-smooth-rect [path corners rect]
+;;   (let [w (.-width rect)
+;;         h (.-height rect)
+;;         size {:w w :h h}
+;;         corners (smooth-corners corners)
+;;         top-left-map (merge size (:top-left corners))
+;;         top-right-map (merge size (:top-right corners))
+;;         bottom-right-map (merge size (:bottom-right corners))
+;;         bottom-left-map (merge size (:bottom-left corners))
+;;         params (reduce
+;;                 (fn [params map]
+;;                   (if (contains? params map)
+;;                     map
+;;                     (assoc params map (smooth-radius-params map))))
+;;                 {}
+;;                 [top-left-map top-right-map bottom-right-map bottom-left-map])]
+;;     (.transform
+;;      (doto path
+;;        (add-smooth-top-right (params top-right-map))
+;;        (add-smooth-bottom-right (params bottom-right-map))
+;;        (add-smooth-bottom-left (params bottom-left-map))
+;;        (add-smooth-top-left (params top-left-map)))
+;;      (.-storage (v_math/Matrix4.translationValues (.-left rect) (.-top rect) 0)))))
 
-(deftype SmoothRectangleBorder [corners side align]
-  :extends pt/OutlinedBorder
-  (dimensions [this]
-    (case align
-      :inside (pt/EdgeInsets.all (.-width side))
-      :outside pt/EdgeInsets.zero
-      (pt/EdgeInsets.all (/ (.-width side) 2))))
-  (scale [this t]
-    (SmoothRectangleBorder 
-     corners
-     (.scale side t)
-     align))
-  (lerpFrom [this a t]
-    (if (instance? SmoothRectangleBorder a)
-      (SmoothRectangleBorder
-       (core/lepr a t)
-       (pt/BorderSide.lerp (.-side a) side t)
-       align)
-      (.lerpFrom ^super a t)))
-  (== [this other]
-    (and 
-     (= ))))
+;; (deftype SmoothRectangleBorder [corners side align]
+;;   :extends pt/OutlinedBorder
+;;   (dimensions [this]
+;;     (case align
+;;       :inside (pt/EdgeInsets.all (.-width side))
+;;       :outside pt/EdgeInsets.zero
+;;       (pt/EdgeInsets.all (/ (.-width side) 2))))
+;;   (scale [this t]
+;;     (SmoothRectangleBorder 
+;;      corners
+;;      (.scale side t)
+;;      align))
+;;   (lerpFrom [this a t]
+;;     (if (instance? SmoothRectangleBorder a)
+;;       (SmoothRectangleBorder
+;;        (core/lerp a t)
+;;        (pt/BorderSide.lerp (.-side a) side t)
+;;        align)
+;;       (.lerpFrom ^super a t)))
+;;   (== [this other]
+;;     (and 
+;;      (= ))))
