@@ -2190,9 +2190,9 @@
   (let [children (if (map? (first children)) (flatten (rest children)) (flatten children))
         params (if (map? (first children)) (first children) {})]
     (m/Stack
-     .key (widget-key (params :key))
-     .alignment (alignment-geometry (get params :alignment m/AlignmentDirectional.topStart))
-     .fit (stack-fit (get params :fit m/StackFit.loose))
+     .key (widget-key (:key params))
+     .alignment (alignment-geometry (:alignment params m/AlignmentDirectional.topStart))
+     .fit (stack-fit (:fit params m/StackFit.loose))
      .children children)))
 
 (defn opacity
@@ -2335,7 +2335,7 @@
        (m/Text
         (str string)
         .key key
-        .style (text-style (get args :style args))
+        .style (text-style (:style args args))
         .strutStyle strut-style
         .textAlign text-align
         .textDirection text-direction
