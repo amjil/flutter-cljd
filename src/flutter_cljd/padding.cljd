@@ -5,49 +5,53 @@
    ["package:flutter/rendering.dart" :as r]
    ["package:flutter/widgets.dart" :as w]))
 
-(defn- resolvedPadding [this padding textDirection] 
-  (if-let [cache (.-resolvedPaddingCache this)] 
-    cache 
-    (do (set! (.-resolvedPaddingCache this) (.resolve padding textDirection)) 
-        (.-resolvedPaddingCache this))))
+(defn- resolvedPadding [this] 
+  (let [cache (.-resolvedPaddingCache this)
+           padding (.-padding this)
+           textDirection (.-textDirection this)] 
+    (if (some? cache)
+      cache
+      (set! (.-resolvedPaddingCache this) (.resolve padding textDirection)))))
 
 (defn- markNeedResolution [this]
   (set! (.-resolvedPaddingCache this) nil) 
   (.markNeedsLayout this))
 
 (deftype RenderAnyPadding [^w/EdgeInsetsGeometry ^:mutable padding  
-                            ^w/TextDirection? ^:mutable textDirection 
-                            ^r/RenderBox? child
-                            ^:mutable resolvedPaddingCache]
-  :extends (r/RenderShiftedBox child)
+                           ^w/TextDirection? ^:mutable textDirection
+                           ^:mutable resolvedPaddingCache]
+  :extends (r/RenderShiftedBox nil)
 
   ;; Intrinsic dimensions methods
   (computeMinIntrinsicWidth [this height]
-    (let [padding (resolvedPadding this padding textDirection)]
+    (let [padding (resolvedPadding this)]
       (if-let [child (.-child this)]
-        (let [child-width (.getMinIntrinsicWidth child
-                                                 (math/max 0.0 (- height (.-vertical padding))))]
+        (let [child-width (.getMinIntrinsicWidth 
+                           child 
+                           (math/max 0.0 (- height (.-vertical padding))))]
           (#/(math/max double) 0.0 (+ child-width (.-horizontal padding))))
         (#/(math/max double) 0.0 (.-horizontal padding)))))
 
   (computeMaxIntrinsicWidth [this height]
-    (let [padding (resolvedPadding this padding textDirection)]
+    (let [padding (resolvedPadding this)]
       (if-let [child (.-child this)]
-        (let [child-width (.getMaxIntrinsicWidth child
-                                                 (math/max 0.0 (- height (.-vertical padding))))]
+        (let [child-width (.getMaxIntrinsicWidth 
+                           child 
+                           (math/max 0.0 (- height (.-vertical padding))))]
           (#/(math/max double) 0.0 (+ child-width (.-horizontal padding))))
         (#/(math/max double) 0.0 (.-horizontal padding)))))
 
   (computeMinIntrinsicHeight [this width]
-    (let [padding (resolvedPadding this padding textDirection)]
+    (let [padding (resolvedPadding this)]
       (if-let [child (.-child this)]
-        (let [child-height (.getMinIntrinsicHeight child
-                                                   (math/max 0.0 (- width (.-horizontal padding))))]
+        (let [child-height (.getMinIntrinsicHeight 
+                            child 
+                            (math/max 0.0 (- width (.-horizontal padding))))]
           (#/(math/max double) 0.0 (+ child-height (.-vertical padding))))
         (#/(math/max double) 0.0 (.-vertical padding)))))
 
   (computeMaxIntrinsicHeight [this width]
-    (let [padding (resolvedPadding this padding textDirection)]
+    (let [padding (resolvedPadding this)]
       (if-let [child (.-child this)]
         (let [child-height (.getMaxIntrinsicHeight 
                             child 
@@ -57,7 +61,7 @@
 
   ;; Layout methods
   (computeDryLayout [this constraints]
-    (let [padding (resolvedPadding this padding textDirection)]
+    (let [padding (resolvedPadding this)]
       (if-let [child (.-child this)]
         (let [inner-constraints (.deflate constraints padding)
               child-size (.getDryLayout child inner-constraints)]
@@ -70,20 +74,20 @@
 
   (computeDryBaseline [this constraints baseline]
     (if-let [child (.-child this)]
-      (let [^w/EdgeInsets padding (resolvedPadding this padding textDirection)
-            inner-constraints (.deflate constraints padding)
-            result (+ (.getDryBaseline child inner-constraints baseline)
-                      (.-top padding))]
-        result)
+      (let [^w/EdgeInsets padding (resolvedPadding this)
+            ^w/BoxConstraints inner-constraints (.deflate constraints padding)
+            ^r/EdgeInsets result (+ (r/BaselineOffset (.getDryBaseline child inner-constraints baseline))
+                                    (.-top padding))]
+        (.-offset result))
       nil))
 
   (performLayout [this]
-    (let [constraints (.-constraints this)
-          padding (resolvedPadding this padding textDirection)]
+    (let [^w/BoxConstraints constraints (.-constraints this)
+          ^w/EdgeInsets padding (resolvedPadding this)]
       (if-let [child (.-child this)]
-        (let [inner-constraints (.deflate constraints padding)]
+        (let [^w/BoxConstraints inner-constraints (.deflate constraints padding)]
           (.layout child inner-constraints .parentUsesSize true)
-          (let [child-parent-data (.-parentData child)]
+          (let [^r/BoxParentData child-parent-data (.-parentData child)]
             (set! (.-offset child-parent-data) (w/Offset. (.-left padding) (.-top padding)))
             (set! (.-size this) (.constrain constraints
                                             (w/Size. (math/max 0.0 (+ (.-width (.-size child)) (.-horizontal padding)))
@@ -101,7 +105,7 @@
         (r/debugPaintPadding (.-canvas context)
                              outer-rect
                              (when (.-child this)
-                               (.deflateRect (resolvedPadding this padding textDirection) outer-rect))))))
+                               (.deflateRect (resolvedPadding this) outer-rect))))))
 
   (debugFillProperties [this properties]
     (.debugFillProperties ^super this properties)
@@ -123,7 +127,7 @@
   :extends (w/SingleChildRenderObjectWidget .key key .child child)
 
   (createRenderObject [this context]
-    (RenderAnyPadding. padding (w/Directionality.maybeOf context) nil nil))
+   (RenderAnyPadding. padding (w/Directionality.maybeOf context) nil))
 
   (updateRenderObject [this context renderObject]
     (setPadding renderObject padding)

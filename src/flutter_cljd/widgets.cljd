@@ -6,6 +6,7 @@
    ["package:flutter/widgets.dart" :as w]
    ["dart:core" :as c]
    ["dart:async" :as async]
+   ["dart:ui" :as ui]
    [cljd.string :as str]
    [cljd.flutter :as f :refer [widget]]
    [flutter-cljd.keyboard-keys :as keys]
@@ -271,24 +272,24 @@
       :skip-remaining-handlers w/KeyEventResult.skipRemainingHandlers
       w/KeyEventResult.handled)))
 
-;; (defn lock-state 
-;;   "Determines how the state of a lock key is used to accept a shortcut.
+(defn lock-state 
+  "Determines how the state of a lock key is used to accept a shortcut.
    
-;;    Possible values:
-;;     - instance of `LockState`
-;;     - `:locked` The lock key must be locked to trigger the shortcut.
-;;     - `:unlocked` The lock key must be unlocked to trigger the shortcut.
-;;     - `:ignored` The lock key state is not used to determine SingleActivator.accepts result.
+   Possible values:
+    - instance of `LockState`
+    - `:locked` The lock key must be locked to trigger the shortcut.
+    - `:unlocked` The lock key must be unlocked to trigger the shortcut.
+    - `:ignored` The lock key state is not used to determine SingleActivator.accepts result.
    
-;;    [Flutter docs](https://api.flutter.dev/flutter/widgets/LockState.html)"
-;;   [state]
-;;   (if (instance? w/LockState state)
-;;     state
-;;     (case state
-;;       :locked w/LockState.locked
-;;       :unlocked w/LockState.unlocked
-;;       :ignored w/LockState.ignored
-;;       (throw (Exception. (str "Invalid lock-state: " state))))))
+   [Flutter docs](https://api.flutter.dev/flutter/widgets/LockState.html)"
+  [state]
+  (if (instance? w/LockState state)
+    state
+    (case state
+      :locked w/LockState.locked
+      :unlocked w/LockState.unlocked
+      :ignored w/LockState.ignored
+      (throw (Exception. (str "Invalid lock-state: " state))))))
 
 (defn clip 
   "Determines how to clip a widget's content.
@@ -1187,7 +1188,7 @@
                              .control control
                              .shift shift
                              .meta meta
-                             ;;  .numLock (lock-state (get args :num-lock w/LockState.ignored))
+                              .numLock (lock-state (:num-lock args w/LockState.ignored))
                              .includeRepeats include-repeats)
           (m/LogicalKeySet.fromSet keys))))
 
@@ -1231,7 +1232,7 @@
   [value]
   (cond
     (instance? m/BoxConstraints value) value
-    ;; (instance? ui/ViewConstraints value) (m/BoxConstraints.fromViewConstraints value)
+    (instance? ui/ViewConstraints value) (m/BoxConstraints.fromViewConstraints value)
     (map? value)
     (let [w (some value [:width :w :size])
           h (some value [:height :h :size])
@@ -2261,10 +2262,7 @@
       .curve (animation :curve)
       .onEnd (animation :on-end))))
   ([value child]
-   (pd/AnyPadding 
-    (insets value)
-    nil 
-    child)))
+   (pd/AnyPadding (insets value) nil child)))
 
 (defn text
   "Creates a text widget with the specified text and arguments.
