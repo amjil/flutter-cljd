@@ -12,7 +12,8 @@
    [flutter-cljd.utils :as ut]
    [flutter-cljd.drawing :as dr :refer [offset, mat4]]
    [flutter-cljd.color-filters :as clr-f]
-   [flutter-cljd.padding :as pd]))
+   [flutter-cljd.padding :as pd]
+   ["package:flutter/animation.dart" :as a]))
 
 ;; -------------------------
 ;; MARK: Macros
@@ -2260,9 +2261,10 @@
       .curve (animation :curve)
       .onEnd (animation :on-end))))
   ([value child]
-   (pd/AnyPadding
-    .padding (insets value)
-    .child child)))
+   (pd/AnyPadding 
+    (insets value)
+    nil 
+    child)))
 
 (defn text
   "Creates a text widget with the specified text and arguments.
