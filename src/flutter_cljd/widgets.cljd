@@ -2260,7 +2260,7 @@
       .curve (animation :curve)
       .onEnd (animation :on-end))))
   ([value child]
-   (m/Padding
+   (pd/AnyPadding
     .padding (insets value)
     .child child)))
 
