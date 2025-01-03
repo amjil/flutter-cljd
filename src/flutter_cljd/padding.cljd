@@ -15,8 +15,8 @@
   (set! (.-resolvedPaddingCache this) nil) 
   (.markNeedsLayout this))
 
-(deftype RenderAnyPadding [^w/EdgeInsetsGeometry padding  
-                            ^w/TextDirection? textDirection 
+(deftype RenderAnyPadding [^w/EdgeInsetsGeometry ^:mutable padding  
+                            ^w/TextDirection? ^:mutable textDirection 
                             ^r/RenderBox? child
                             ^:mutable resolvedPaddingCache]
   :extends (r/RenderShiftedBox child)
