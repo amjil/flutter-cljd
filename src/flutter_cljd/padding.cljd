@@ -119,7 +119,7 @@
       (set! (.-textDirection this) value)
       (markNeedResolution this)))
 
-(deftype AnyPadding [^w/EdgeInsetsGeometry padding ^w/Key key ^w/Widget child]
+(deftype AnyPadding [^w/EdgeInsetsGeometry padding ^w/Key? key ^w/Widget? child]
   :extends (w/SingleChildRenderObjectWidget .key key .child child)
 
   (createRenderObject [this context]
