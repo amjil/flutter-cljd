@@ -136,3 +136,48 @@
   (debugFillProperties [this properties]
     (.debugFillProperties ^super this properties)
     (.add properties (f/DiagnosticsProperty. "padding" padding))))
+
+(deftype AnimatedAnyPaddingState []
+  :extends w/AnimatedWidgetBaseState
+
+  (initState [this]
+    (set! (.-_padding this) nil)
+    (.initState ^super this))
+
+  (forEachTween [this visitor]
+    (set! (.-_padding this)
+          (visitor (.-_padding this)
+                   (-> this .-widget .-padding)
+                   (fn [value]
+                     (w/EdgeInsetsGeometryTween.
+                      .begin value)))))
+
+  (build [this context]
+    (let [padding (.evaluate
+                   (.-_padding this)
+                   (.-animation this))]
+      (AnyPadding. 
+       padding 
+       (-> this .-widget .-key)
+       (-> this .-widget .-child))))
+
+  (debugFillProperties [this description]
+    (.debugFillProperties ^super this description)
+    (.add description (f/DiagnosticsProperty.
+                       "padding"
+                       (.-_padding this)
+                       .defaultValue nil))))
+
+(deftype AnimatedAnyPadding [key padding child curve duration onEnd]
+  :extends (w/ImplicitlyAnimatedWidget
+             .key key
+             .curve curve
+             .duration duration
+             .onEnd onEnd)
+
+  (createState [this]
+    (AnimatedAnyPaddingState.))
+
+  (debugFillProperties [this properties]
+    (.debugFillProperties ^super this properties)
+    (.add properties (f/DiagnosticsProperty. "padding" padding))))

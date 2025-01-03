@@ -2255,12 +2255,13 @@
      If the padding argument is a vector of four numbers, the numbers are used for the left, top, right, and bottom padding."
   ([value args child]
    (let [animation (animation-options (get args :animation {}))]
-     (m/AnimatedPadding
-      .padding (insets value)
-      .child child
-      .duration (animation :duration)
-      .curve (animation :curve)
-      .onEnd (animation :on-end))))
+     (pd/AnimatedAnyPadding
+      nil 
+      (insets value) 
+      child
+      (animation :curve) 
+      (animation :duration)
+      (animation :on-end))))
   ([value child]
    (pd/AnyPadding (insets value) nil child)))
 
