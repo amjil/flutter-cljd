@@ -2124,7 +2124,7 @@
 
    [Flutter docs](https://api.flutter.dev/flutter/widgets/Expanded-class.html)"
   ([child] (expanded 1 child))
-  ([flex child] (m/Expanded .flex flex .child child)))
+  ([flex child] (m/Expanded .flex (or flex 1) .child child)))
 
 (defn flex
   ([direction] (flex direction {}))
