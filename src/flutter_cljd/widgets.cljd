@@ -6,13 +6,13 @@
    ["package:flutter/widgets.dart" :as w]
    ["dart:core" :as c]
    ["dart:async" :as async]
-   ["dart:ui" :as ui]
    [cljd.string :as str]
    [cljd.flutter :as f :refer [widget]]
    [flutter-cljd.keyboard-keys :as keys]
    [flutter-cljd.utils :as ut]
    [flutter-cljd.drawing :as dr :refer [offset, mat4]]
-   [flutter-cljd.color-filters :as clr-f]))
+   [flutter-cljd.color-filters :as clr-f]
+   [flutter-cljd.padding :as pd]))
 
 ;; -------------------------
 ;; MARK: Macros
@@ -556,6 +556,7 @@
    (cond
      (instance? m/Color value) value
      (number? value) (m/Color value)
+     
      (keyword? value) (case value
                         :blue m/Colors.blue
                         :red m/Colors.red
