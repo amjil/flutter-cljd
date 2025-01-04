@@ -1280,7 +1280,7 @@
        .maxHeight (compute :h :max)))
     (number? value) (m/BoxConstraints.tightFor .width (double value) .height (double value))
     (vector? value) (box-constraints {:w (get value 0) :h (get value 1)})
-    (instance? m/Size value) (m/BoxConstraints.tight .size value)
+    (instance? m/Size value) (m/BoxConstraints.tight value)
     (nil? value) (m/BoxConstraints.tightFor .width nil .height nil)
     
     :else 
