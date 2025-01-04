@@ -1,0 +1,3 @@
+(ns flutter-cljd.inherited-keys)
+
+(def enabled {:key :enabled :default-value true})
