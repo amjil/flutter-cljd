@@ -10,10 +10,11 @@
    [cljd.string :as str]
    [cljd.flutter :as f :refer [widget]]
    [flutter-cljd.keyboard-keys :as keys]
-   [flutter-cljd.utils :as ut]
+   [flutter-cljd.utils :as ut :refer [??]]
    [flutter-cljd.drawing :as dr :refer [offset, mat4]]
    [flutter-cljd.color-filters :as clr-f]
-   [flutter-cljd.padding :as pd]))
+   [flutter-cljd.padding :as pd]
+   [flutter-cljd.inherited-keys :as inh]))
 
 ;; -------------------------
 ;; MARK: Macros
@@ -1326,15 +1327,27 @@
 
      Parameters:
      - `context`: The context to search within.
-     - `key`: The key to look up in the bindings.
-     - `default-value?` (optional): The value to return if `key` is not found. Defaults to `nil`."
+     - `key`: The key to look up in the bindings. If not provided, returns the entire bindings map. Key can also be a map with the following keys:
+       - `:key`: The key to look up in the bindings.
+       - `:default-value`: The value to return if `key` is not found. Defaults to `nil`.
+     - `default-value`: The value to return if `key` is not found. Defaults to `nil`.
+   
+   Some default keys are defined in `flutter-cljd.inherited-keys` namespace"
+  ([context] (get-inherited context nil nil))
   ([context key] (get-inherited context key nil))
-  ([context key default-value?]
+  ([context key default-value]
    (let [inherited-elt (#/(.getElementForInheritedWidgetOfExactType f/InheritedBindings) context)
          bindings (some-> inherited-elt
-                          ^f/InheritedBindings (.-widget)
+                          ^f/InheritedBindings
+                          .-widget
                           .-bindings)]
-     (get bindings key default-value?))))
+     (cond 
+       (nil? key) bindings
+
+       (and (map? key) (contains? key :key))
+       (get bindings (:key key) (or default-value (:default-value key)))
+       
+       :else (get bindings key default-value)))))
 
 ;; -------------------------
 ;; MARK: Widgets
@@ -1634,6 +1647,25 @@
   ([builder child] (m/Builder .builder (fn [ctx] (builder child ctx)))))
 
 (defn with-transformed-inherited
+  "A widget that transforms inherited bindings using the specified `transform` function.
+   
+   The `transform` function is called with the inherited bindings map as an argument and should return a new map of bindings.
+   
+   Args:
+    - key: The key to be transformed in the inherited bindings. If not provided, the entire bindings map is transformed. Key may be a keyword or a map with the following keys:
+      - `:key` (keyword): The key to be transformed.
+      - `:default-value` (any): The default value to be transformed.
+    - transform: The function to transform the inherited bindings.
+    - child: The child widget to be wrapped by the transformed inherited widget.
+   
+   ```clojure
+   (->>
+     (text \"Hello, World!\")
+     (with-transformed-inherited #(assoc % :theme :dark)))
+   ```
+   Some default keys are defined in the `flutter-cljd.inherited-keys` namespace.
+
+   To access the inherited bindings, use `get-inherited` function."
   ([transform child]
    (builder
     (fn [context]
@@ -1646,25 +1678,80 @@
   ([key transform & kts&child]
    (with-transformed-inherited
      (fn [bindings]
-       (let [updated-bindings (assoc bindings key (transform (get bindings key)))]
-         (reduce (fn [b [k t]]
-                   (assoc b k (t (get b k))))
-                 updated-bindings
-                 (partition 2 (butlast kts&child)))))
+       (let [update (fn [b [k t]] 
+                      (let [[key dflt] (if (and (map? k) (contains? k :key)) [(:key k) (:default-value k)] [k nil])]
+                        (assoc b key (t (get b key dflt)))))]
+         (reduce 
+          update 
+          bindings
+          (->> kts&child butlast (concat [key transform]) (partition 2)))))
      (last kts&child))))
 
-(defn with-inherited
-  ([key value child]
-   (with-transformed-inherited key (constantly value) child))
+(defn with-merged-inherited
+  "A widget that merges the specified `bindings` with the inherited bindings.
+   
+   Args:
+    - bindings: The bindings to be merged with the inherited bindings.
+    - child: The child widget to be wrapped by the merged inherited widget.
+   
+   ```clojure
+   (->>
+     (text \"Hello, World!\")
+     (with-merged-inherited {:theme :dark}))
+   ```
+   To access the inherited bindings, use `get-inherited` function."
+   [bindings child]
+  (with-transformed-inherited #(merge % bindings) child))
 
+(defn- default-merge-inherited [key value]
+  (if (and (map? key) (contains? key :merge))
+    #((:merge key) % value)
+    (constantly value)))
+
+(defn with-inherited
+  "A widget that provides inherited values to its descendants.
+   
+   Args:
+    - key values pairs to be inherited. Key may be a keyword or a map with the following keys:
+      - `:key` (keyword): The key to be inherited.
+      - `:default-value` (any): The value to be inherited.
+      - `:merge` (fn [old new] new): The function to merge the new value with the existing one.
+    - child: The child widget to be wrapped by the inherited widget.
+   
+   ```clojure
+   (->>
+     (text \"Hello, World!\")
+     (with-inherited :theme :dark))
+   
+   (->>
+     (text \"Hello, World!\")
+     (button tap-fn)
+     (with-inherited inh/enabled false))
+   ```
+   Some default keys are defined in the `flutter-cljd.inherited-keys` namespace.
+
+   To modify the inherited bindings, use `with-transformed-inherited` widget.
+   
+   To access the inherited bindings, use `get-inherited` function."
+  ([key child]
+   (assert (and (map? key) (contains? key :key)) (str "Expected a map with :key but got " key))
+   (with-inherited key (:default-value key) child))
+  ([key value child]
+   (with-transformed-inherited key (default-merge-inherited key value) child))
   ([key0 value0 key1 value1 & kvs&child]
    (apply with-transformed-inherited
-          (concat 
+          (concat
            (apply concat (map 
-                          (fn [[k v]] [k (constantly v)])
+                          (fn [[k v]] [k (default-merge-inherited k v)])
                           (concat [[key0 value0] [key1 value1]]
                                   (partition 2 (butlast kvs&child)))))
            [(last kvs&child)]))))
+
+(defn enabled 
+  "A widget that sets the `flutter-cljd.inherited-keys/enabled` inherited value"
+  ([child] (enabled true child))
+  ([value child]
+   (with-inherited inh/enabled value child)))
 
 (defn shortcuts
   "```clojure
@@ -2195,6 +2282,22 @@
    (flexible {:flex flex :fit fit} child))
   ([child]
    (flexible {} child)))
+
+(defn layout-builder
+  "Builds a widget tree that can depend on the parent widget's size.
+
+   Similar to the `builder` except that the framework calls the builder function at layout time and provides the parent widget's constraints. This is useful when the parent constrains the child's size and doesn't depend on the child's intrinsic size. The LayoutBuilder's final size will match its child's size.
+
+   The builder function is called in the following situations:
+
+   The first time the widget is laid out.
+    - When the parent widget passes different layout constraints.
+    - When the parent widget updates this widget. 
+    - When the dependencies that the builder function subscribes to change. 
+   
+   The builder function is not called during layout if the parent passes the same constraints repeatedly."
+  [builder]
+  (m/LayoutBuilder .builder builder))
 
 (defn row
   "A widget that displays its children in a horizontal array.
