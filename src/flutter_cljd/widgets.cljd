@@ -2140,7 +2140,7 @@
 
    [Flutter docs](https://api.flutter.dev/flutter/widgets/Expanded-class.html)"
   ([child] (expanded 1 child))
-  ([flex child] (m/Expanded .flex (or flex 1) .child child)))
+  ([flex child] (m/Expanded .flex (int (or flex 1)) .child child)))
 
 (defn flex
   "A widget that displays its children in a one-dimensional array.
@@ -2188,7 +2188,7 @@
                       :else [1 args])]
      (m/Flexible 
       .key (when (map? args) (widget-key (:key args)))
-      .flex (int flex) 
+      .flex (int (or flex 1))
       .fit (flex-fit fit) 
       .child child)))
   ([flex fit child]
@@ -2269,6 +2269,7 @@
    Check `box-constraints` function for more information on how to create constraints.
   
    [Flutter docs](https://api.flutter.dev/flutter/widgets/ConstrainedBox-class.html)"
+  ([] (sized {} nil))
   ([value]
    (if (instance? m/Widget value)
      (sized {} value)
@@ -2286,7 +2287,7 @@
    The Spacer widget will take up any available space, so setting the Flex.mainAxisAlignment on a flex container that contains a Spacer to MainAxisAlignment.spaceAround, MainAxisAlignment.spaceBetween, or MainAxisAlignment.spaceEvenly will not have any visible effect: the Spacer has taken up all of the additional space, therefore there is none left to redistribute."
   ([] (spacer 1))
   ([flex]
-   (m/Spacer .flex (int flex))))
+   (m/Spacer .flex (int (or flex 1)))))
 
 (defn stack [& children]
   (let [children (if (map? (first children)) (flatten (rest children)) (flatten children))
