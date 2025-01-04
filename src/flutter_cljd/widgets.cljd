@@ -1222,6 +1222,7 @@
    The functions accepts the following arguments:
     - A BoxConstraints object.
     - A ViewConstraints object.
+    - A Size object.
     - A map with the following keys:
       - :width, :w, :size (number or a map with :max and :min keys): Width constraints. If a number is provided, it is used as the fixed width of the box. 
       - :height, :h, :size (number or a map with :max and :min keys): Height constraints. If a number is provided, it is used as the fixed height of the box.
@@ -1229,7 +1230,7 @@
       - :max-width, :max-w, :max-size (number, default: double.infinity): The maximum width of the box.
       - :min-height, :min-h, :min-size (number, default: 0): The minimum height of the box.
       - :max-height, :max-h, :max-size (number, default: double.infinity): The maximum height of the box.
-    - A number or a vector with two numbers representing the fixed width and height of the box.
+    - A number or a vector with two numbers or maps representing the width and height of the box.
 
    ```clojure
    (box-constraints {:min-width 100 :max-width 200 :min-height 50 :max-height 100})
@@ -1279,7 +1280,7 @@
        .minHeight (compute :h :min)
        .maxHeight (compute :h :max)))
     (number? value) (m/BoxConstraints.tightFor .width (double value) .height (double value))
-    (vector? value) (box-constraints {:w (get value 0) :h (get value 1)})
+    (vector? value) (box-constraints {:w (get value 0) :h (get value 1 (get value 0))})
     (instance? m/Size value) (m/BoxConstraints.tight value)
     (nil? value) (m/BoxConstraints.tightFor .width nil .height nil)
     
