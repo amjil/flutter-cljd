@@ -13,8 +13,7 @@
    [flutter-cljd.utils :as ut]
    [flutter-cljd.drawing :as dr :refer [offset, mat4]]
    [flutter-cljd.color-filters :as clr-f]
-   [flutter-cljd.padding :as pd]
-   ["package:flutter/animation.dart" :as a]))
+   [flutter-cljd.padding :as pd]))
 
 ;; -------------------------
 ;; MARK: Macros
@@ -552,12 +551,28 @@
     (m/Locale locale)))
 
 (defn color
+  "Returns a `Color` object for the specified color.
+   
+   Possible values:
+    - instance of `Color`
+    - a vector of length 3 or 4: [r g b] or [r g b o]
+    - a number: 0xRRGGBB or 0xAARRGGBB
+    - a hex string: \"#RRGGBB\" or \"#AARRGGBB\". Prefer using the number format for better performance.
+    - a keyword: :blue, :red, :green, :yellow, :orange, :purple, :pink, :cyan, :teal, :amber, :lime, :light-blue, :light-green, :deep-orange, :deep-purple, :indigo, :blue-grey, :grey, :black, :white, :transparent
+   
+   [Flutter docs](https://api.flutter.dev/flutter/dart-ui/Color-class.html)"
   ([r g b] (m/Color.fromRGBO r g b 1.0))
   ([r g b o] (m/Color.fromRGBO r g b o))
   ([value]
    (cond
      (instance? m/Color value) value
      (number? value) (m/Color value)
+     (string? value) (let [hex (-> value str/lower-case)]
+                      (if (re-matches #"^#([0-9a-f]{6}|[0-9a-f]{8})$" hex)
+                        (m/Color (if (= (count hex) 7) 
+                                   (c/int.parse (str "0xff" (subs hex 1))) 
+                                   (c/int.parse (str "0x" (subs hex 1)))))
+                        (throw (Exception. (str "Invalid color hex: " value)))))
      
      (keyword? value) (case value
                         :blue m/Colors.blue
@@ -1107,7 +1122,13 @@
       :else
       (throw (Exception. (str "Invalid animation options: " value))))))
 
-(defn widget-key [key]
+(defn widget-key 
+  "Creates a `WidgetKey` object from the specified key.
+   The key can be specified as a string, a keyword, a number, or a `WidgetKey` object.
+   If the key is a string or a keyword, it is converted to a `ValueKey` object.
+   If the key is a number, it is converted to a `ValueKey` object.
+   If the key is a `WidgetKey` object, it is returned as-is."
+  [key]
   (cond
     (nil? key) nil
     (instance? m/Key key) key
@@ -1258,7 +1279,9 @@
        .minHeight (compute :h :min)
        .maxHeight (compute :h :max)))
     (number? value) (m/BoxConstraints.tightFor .width (double value) .height (double value))
-    (vector? value) (m/BoxConstraints.tightFor .width (double (get value 0)) .height (double (get value 1)))
+    (vector? value) (box-constraints {:w (get value 0) :h (get value 1)})
+    (instance? m/Size value) (m/BoxConstraints.tight .size value)
+    (nil? value) (m/BoxConstraints.tightFor .width nil .height nil)
     
     :else 
     (throw (Exception. (str "Invalid box constraints: " value)))))
@@ -1275,6 +1298,20 @@
          (> (.-minWidth constr) 0.0))
       constr
       nil)))
+
+(defn flex-fit 
+  "Converts the specified `fit` value to a `FlexFit` object.\\
+   If `fit` is already a `FlexFit` object, it is returned as-is.\\
+   If `fit` is a keyword (`:tight` or `:loose`), it is converted to a `FlexFit` object.\\
+   If `fit` is not recognized, an exception is thrown."
+  [fit]
+  (cond
+    (instance? m/FlexFit fit) fit
+    (keyword? fit)
+    (case fit
+      :tight m/FlexFit.tight
+      :loose m/FlexFit.loose
+      (throw (Exception. (str "Unknown flex-fit: " fit " (expected :tight or :loose)"))))))
 
 ;; -------------------------
 ;; MARK: Helpers
@@ -1868,10 +1905,8 @@
       .textDirection (text-direction (:text-direction args :ltr))
       .textBaseline (text-baseline (:text-baseline args :alphabetic))
       .verticalDirection (vertical-direction (:vertical-direction args :down))
-      .children
-      (if (> spacing 0)
-        (interpose (m/SizedBox .height spacing) children)
-        children)))))
+      .spacing (double (:spacing args 0))
+      .children children))))
 
 (defn composited-transform-follower
   "A widget that follows a `composited-transform-target`.
@@ -1925,26 +1960,6 @@
    [Flutter docs](https://api.flutter.dev/flutter/widgets/CompositedTransformTarget-class.html)"
   [link child]
    (w/CompositedTransformTarget .link link .child child))
-
-(defn constrained
-  "A widget that imposes additional constraints on its child.
-   
-   Check `box-constraints` function for more information on how to create constraints.
-   
-   ```clojure
-   (constrained {:min-width 100 :max-width 200})
-   (constrained {:min-height 100 :max-height 200})
-   (constrained {:min-width 100 :max-width 200 :min-height 100 :max-height 200})
-   (constrained {:width 100 :max-height 200})
-   ```
-
-   [Flutter docs](https://api.flutter.dev/flutter/widgets/ConstrainedBox-class.html)"
-  ([constraints child]
-   (w/ConstrainedBox .constraints (box-constraints constraints) .child child))
-  ([constraints]
-   (if (instance? m/Widget constraints)
-     (constrained {} constraints)
-     (constrained constraints (:child constraints)))))
 
 ;; TODO: Extend support for .constraintsTransform
 (defn constraints-transformed
@@ -2127,14 +2142,26 @@
   ([flex child] (m/Expanded .flex (or flex 1) .child child)))
 
 (defn flex
+  "A widget that displays its children in a one-dimensional array.
+
+   The Flex widget allows you to control the axis along which the children are placed (horizontal or vertical).
+   This is referred to as the main axis. If you know the main axis in advance, then consider using a Row (if it's horizontal) or Column (if it's vertical) instead, because that will be less verbose.
+
+   To cause a child to expand to fill the available space in the direction of this widget's main axis, wrap the child in an Expanded widget.
+
+   The Flex widget does not scroll (and in general it is considered an error to have more children in a Flex than will fit in the available room). If you have some widgets and want them to be able to scroll if there is insufficient room, consider using a ListView.
+
+   The Flex widget does not allow its children to wrap across multiple horizontal or vertical runs. For a widget that allows its children to wrap, consider using the Wrap widget instead of Flex.
+
+   If you only have one child, then rather than using Flex, Row, or Column, consider using Align or Center to position the child.
+   
+   [Flutter docs](https://api.flutter.dev/flutter/widgets/Flex-class.html)"
   ([direction] (flex direction {}))
   ([direction args & children]
-   (let [[args children] (ut/args-children args children)
-         spacing (:spacing args 0)
-         axis (axis direction)]
+   (let [[args children] (ut/args-children args children)]
      (m/Flex
       .key (widget-key (args :key))
-      .direction axis
+      .direction (axis direction)
       .mainAxisAlignment (main-axis-alignment (:main-axis-alignment args :start))
       .mainAxisSize (main-axis-size (:main-axis-size args :min))
       .crossAxisAlignment (cross-axis-alignment (:cross-axis-alignment args :center))
@@ -2142,20 +2169,72 @@
       .verticalDirection (vertical-direction (:vertical-direction args :down))
       .textBaseline (text-baseline (:text-baseline args :alphabetic))
       .clipBehavior (clip (:clip args :none))
-      .children
-      (if (> spacing 0)
-        (interpose
-         (m/SizedBox
-          .width (if (= axis m/Axis.horizontal) spacing 0.0)
-          .height (if (= axis m/Axis.horizontal) 0.0 spacing))
-         children)
-        children)))))
+      .spacing (double (:spacing args 0))
+      .children children))))
+
+(defn flexible 
+  "A widget that controls how a child of a `row`, `column`, or `flex` flexes.
+   
+   Using a `flexible` widget gives a child of a `row`, `column`, or `flex` 
+   the flexibility to expand to fill the available space in the main axis (e.g., horizontally for a `row` or vertically for a `column`), but, 
+   unlike `expanded`, `flexible` does not require the child to fill the available space.
+   
+   A `flexible` widget must be a descendant of a `row`, `column`, or `flex`, and the path from the `flexible` widget to its enclosing `row`, `column` or `flex` must contain only `StatelessWidget`s or `StatefulWidget`s (not other kinds of widgets, like `RenderObjectWidget`s)."
+  ([args child]
+   (let [[flex fit] (cond
+                      (number? args) [args m/FlexFit.loose] 
+                      (map? args) [(:flex args 1) (:fit args m/FlexFit.loose)]
+                      :else [1 args])]
+     (m/Flexible 
+      .key (when (map? args) (widget-key (:key args)))
+      .flex (int flex) 
+      .fit (flex-fit fit) 
+      .child child)))
+  ([flex fit child]
+   (flexible {:flex flex :fit fit} child))
+  ([child]
+   (flexible {} child)))
 
 (defn row
+  "A widget that displays its children in a horizontal array.
+
+   To cause a child to expand to fill the available horizontal space, wrap the child in an Expanded widget.
+
+   The Row widget does not scroll (and in general it is considered an error to have more children in a Row than will fit in the available room).
+   If you have a line of widgets and want them to be able to scroll if there is insufficient room, consider using a ListView.
+
+   For a vertical variant, see `column`.
+
+   If you only have one child, then consider using Align or Center to position the child.
+
+   By default, `:cross-axis-alignment` is `:center`, which centers the children in the vertical axis. If several of the children contain text, this is likely to make them visually misaligned if they have different font metrics (for example because they differ in TextStyle.fontSize or other TextStyle properties, or because they use different fonts due to being written in different scripts). Consider using `:cross-axis-alignment` `:baseline` instead.
+   
+   Args:
+    - `:key` An identifier for the row.
+    - `:spacing` (number, default: 0): The spacing between each child widget.
+    - `:main-axis-alignment` (keyword or MainAxisAlignment, default: `:start`): The alignment of the children along the main axis.
+      Possible values: `:center`, `:start`, `:end`, `:space-between`, `:space-around`.
+    - `:main-axis-size` (keyword or MainAxisSize, default: :min): The size of the row in the main axis.
+      Possible values: :max, :min.
+    - `:cross-axis-alignment` (keyword or CrossAxisAlignment, default: `:center`): The alignment of the children along the cross axis.
+      Possible values: `:center`, `:start`, `:end`, `:stretch`, `:baseline`.
+    - `:text-direction` (keyword or TextDirection, default: `:ltr`): The direction of the text.
+      Possible values: `:ltr`, `:rtl`.
+    - `:text-baseline` (keyword or TextBaseline, default: `:alphabetic`): The baseline alignment for the text.
+      Possible values: `:alphabetic`, `:ideographic`.
+    - `:vertical-direction` (keyword or VerticalDirection, default: `:down`): The direction in which the children are placed vertically.
+        Possible values: `:top`, `:down`.
+   
+   ```clojure
+    (row {:main-axis-alignment :center :spacing 10} 
+      (text \"Hello, World!\")
+      (text \"This is a row!\"))
+    ```
+   
+   [Flutter docs](https://api.flutter.dev/flutter/widgets/Row-class.html)"
   ([] (row {}))
   ([args & children]
-   (let [[args children] (ut/args-children args children)
-         spacing (:spacing args 0)]
+   (let [[args children] (ut/args-children args children)]
      (m/Row
       .key (widget-key (args :key))
       .mainAxisAlignment (main-axis-alignment (:main-axis-alignment args :start))
@@ -2164,47 +2243,49 @@
       .textDirection (text-direction (:text-direction args :ltr))
       .verticalDirection (vertical-direction (:vertical-direction args :down))
       .textBaseline (text-baseline (:text-baseline args :alphabetic))
-      .children
-      (if (> spacing 0)
-        (interpose (m/SizedBox .width spacing) children)
-        children)))))
+      .spacing (double (:spacing args 0))
+      .children children))))
 
 (defn sized
-  "Creates a SizedBox widget with the specified size and child.
-   The size can be specified as a number, a map of width and height, or two numbers.
+  "Creates a `ConstrainedBox` widget with the specified constraints and child.\\
+   The size can be specified as a number, a map, Size, BoxConstraints or two values.\\
    Examples:
    ```clojure
-   (sized 100) ;; SizedBox(width: 100, height: 100)
-   (sized {:width 100 :height 200}) ;; SizedBox(width: 100, height: 200)
-   (sized 100 200) ;; SizedBox(width: 100, height: 200)
-   (sized {:w 100 :h 200}) ;; SizedBox(width: 100, height: 200)
-   (sized :expand) ;; SizedBox.expand
-   (sized :shrink) ;; SizedBox.shrink
-   (sized [100 200]) ;; SizedBox(width: 100, height: 200)
+   (sized 100)
+   (sized {:width 100 :height 200})
+   (sized 100 200)
+   (sized {:w 100 :h 200})
+   (sized [100 200])
+   (sized {:min-width 100 :max-width 200})
+   (sized {:min-height 100 :max-height 200})
+   (sized {:min-width 100 :max-width 200 :min-height 100 :max-height 200})
+   (sized {:width {:min 100 :max 200}})
    ```
-   If the size argument is a map, the keys :width and :height are used to specify the width and height.
-   If the size argument is a vector of two numbers, the first number is used for the width and the second number is used for the height."
+   If the size argument is a map, the keys `:width`, `:w`, `:height`, `:min-w`, `:max-height`, `:size`, etc are used to specify the width and height.\\
+   If the size argument is a vector of two values, the first number is used for the width and the second number is used for the height.\\
+   Width and height may be a numbers or a map of `:min` and `:max` values.
+    
+   Check `box-constraints` function for more information on how to create constraints.
+  
+   [Flutter docs](https://api.flutter.dev/flutter/widgets/ConstrainedBox-class.html)"
   ([value]
    (if (instance? m/Widget value)
-     (sized nil nil value)
+     (sized {} value)
      (sized value nil)))
   ([value child]
-   (cond
-     (number? child) (sized value child nil)
-     (= value :expand) (m/SizedBox.expand .child child)
-     (= value :shrink) (m/SizedBox.shrink .child child)
-     (number? value) (sized value value child)
-     (map? value) (sized
-                   (some value [:width :w])
-                   (some value [:height :h])
-                   child)
-     (= (count value) 2) (sized (get value 0) (get value 1) child)
-     :else (throw (Exception. (str "Invalid size: " value)))))
+   (m/ConstrainedBox
+    .constraints (box-constraints value)
+    .child child))
   ([width height child]
-   (m/SizedBox
-    .width (double width)
-    .height (double height)
-    .child child)))
+   (sized {:width width :height height} child)))
+
+(defn spacer
+  "Spacer creates an adjustable, empty spacer that can be used to tune the spacing between widgets in a Flex container, like Row or Column.
+
+   The Spacer widget will take up any available space, so setting the Flex.mainAxisAlignment on a flex container that contains a Spacer to MainAxisAlignment.spaceAround, MainAxisAlignment.spaceBetween, or MainAxisAlignment.spaceEvenly will not have any visible effect: the Spacer has taken up all of the additional space, therefore there is none left to redistribute."
+  ([] (spacer 1))
+  ([flex]
+   (m/Spacer .flex (int flex))))
 
 (defn stack [& children]
   (let [children (if (map? (first children)) (flatten (rest children)) (flatten children))
