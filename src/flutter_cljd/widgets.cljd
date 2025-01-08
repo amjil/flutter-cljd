@@ -13,8 +13,10 @@
    [flutter-cljd.utils :as ut :refer [??]]
    [flutter-cljd.drawing :as dr :refer [offset, mat4]]
    [flutter-cljd.color-filters :as clr-f]
-   [flutter-cljd.padding :as pd]
-   [flutter-cljd.inherited-keys :as inh]))
+   ["package:dart_code/padding.dart" :as pd]
+   ["package:dart_code/button.dart" :as bt]
+   [flutter-cljd.inherited-keys :as inh]
+   ["package:flutter/animation.dart" :as a]))
 
 ;; -------------------------
 ;; MARK: Macros
@@ -1327,27 +1329,19 @@
 
      Parameters:
      - `context`: The context to search within.
-     - `key`: The key to look up in the bindings. If not provided, returns the entire bindings map. Key can also be a map with the following keys:
+     - `key`: The key to look up in the bindings. Key can also be a map with the following keys:
        - `:key`: The key to look up in the bindings.
        - `:default-value`: The value to return if `key` is not found. Defaults to `nil`.
      - `default-value`: The value to return if `key` is not found. Defaults to `nil`.
    
    Some default keys are defined in `flutter-cljd.inherited-keys` namespace"
-  ([context] (get-inherited context nil nil))
   ([context key] (get-inherited context key nil))
   ([context key default-value]
-   (let [inherited-elt (#/(.getElementForInheritedWidgetOfExactType f/InheritedBindings) context)
-         bindings (some-> inherited-elt
-                          ^f/InheritedBindings
-                          .-widget
-                          .-bindings)]
-     (cond 
-       (nil? key) bindings
-
-       (and (map? key) (contains? key :key))
-       (get bindings (:key key) (or default-value (:default-value key)))
-       
-       :else (get bindings key default-value)))))
+   (cond
+     (and (map? key) (contains? key :key))
+     (f/get-of context (:key key) (?? default-value (:default-value key)))
+     
+     :else (f/get-of context key default-value))))
 
 ;; -------------------------
 ;; MARK: Widgets
@@ -1846,6 +1840,124 @@
         .dispatcher (some-> dispatcher action-dispatcher)
         .child child))))
   ([actions child] (flutter-cljd.widgets/actions actions nil child)))
+
+(defn button
+  "A universal button.
+ 
+  A button is a widget that responds to touch events. When the user touches the button, 
+  the button is highlighted and then invokes the `on-tap` callback.
+  
+  Args:
+    - args: Either a map of arguments for the button widget or a callback function to be executed when the button is tapped.
+      Core arguments:
+      - :child - The child widget to be displayed on the button
+      - :key - A widget key.
+      
+      Event callbacks:
+      - :on-tap - Executed when the button is tapped
+      - :on-tap-down - Executed when the button is pressed down
+      - :on-tap-up - Executed when the button press is released
+      - :on-tap-cancel - Executed when the button tap is canceled
+      - :on-double-tap - Executed on double-tap
+      - :on-long-press - Executed when button is held down
+      - :on-secondary-tap - Executed on secondary tap (e.g. right click)
+      - :on-secondary-tap-up - Executed when secondary tap is released
+      - :on-secondary-tap-down - Executed when secondary tap begins
+      - :on-secondary-tap-cancel - Executed when secondary tap is canceled
+      - :on-highlight-changed - Executed when button highlight state changes
+      - :on-hover - Executed when pointer hovers over button
+      - :on-focus-change - Executed when focus state changes
+      - :focus-node - Custom focus node for the button
+      - :mouse-cursor - Mouse cursor to display on hover
+  
+    Inherited properties (can be set via `with-inherited` or passed directly):
+    - :enabled - Whether the button is interactive
+    - :enable-feedback - Whether to show visual/haptic feedback
+    - :exclude-from-semantics - Whether to exclude from accessibility tree
+    - :can-request-focus - Whether button can receive focus
+    - :autofocus - Whether button should automatically receive focus
+  
+    Button Context:
+    The :button-context provides state information as a map with:
+    - :context - The BuildContext of the button widget
+    - :state - Set of current WidgetState values
+    - :local-offset - Local coordinates of touch (Offset?)  
+    - :global-offset - Global coordinates of touch (Offset?)
+  
+  Styling:
+  The Button supports custom styling via the :button-modifier key, which accepts a function in this format:
+  (fn [child button-context] modified-child)
+  
+  To avoid unnecessary widget rebuilds, define your modifier functions using `defn` rather than creating anonymous functions inline.
+  
+  Examples:
+  
+  Basic usage with callback function:
+  ```clojure
+  (->> (text \"Click me!\")
+       (button #(print \"Button clicked!\")))
+    
+  (->> (text \"Interact with me\")
+     (button {:on-tap #(print \"Tapped\")
+              :on-long-press #(print \"Long pressed\")
+              :on-hover #(print \"Hovered\")}))
+    
+   (defn custom-style [button btn-ctx]
+     (let [state (:state btn-ctx)
+        disabled? (state m/WidgetState.disable)
+        pressed? (state m/WidgetState.pressed)]
+    (opacity
+     (if disabled? 0.5 (if pressed? 0.8 1.0))
+     button)))
+  
+  (->> (text \"Custom style\")
+      (button #(print \"Button clicked!\"))
+      (with-inherited inh/button-modifier custom-style))
+  
+  (->> (text \"Disabled\")
+     (button #(print \"Won't be called\"))
+     (with-inherited inh/enabled false))
+  ```"
+  [args child]
+  (let [args (cond 
+               (map? args) args
+               (ifn? args) {:on-tap args}
+               :else (throw (Exception. (str "Invalid button arguments: " args ", expected a map or a function."))))]
+    (builder 
+     (fn [ctx]
+       (bt/Button
+        .key (widget-key (args :key)) 
+        .child (fn [btn-ctx-class]
+                 (let [ctx (.-context btn-ctx-class)
+                       modifier (get-inherited ctx inh/button-modifier)
+                       btn-ctx {:context ctx
+                                :state (set (.-state btn-ctx-class))
+                                :local-offset (.-localOffset btn-ctx-class)
+                                :global-offset (.-globalOffset btn-ctx-class)}]
+                   (modifier
+                    (with-inherited inh/button-context btn-ctx child)
+                    btn-ctx)))
+        .isEnabled (get-inherited ctx inh/enabled (:enabled args))
+        .onTap (:on-tap args)
+        .onTapDown (:on-tap-down args)
+        .onTapUp (:on-tap-up args)
+        .onTapCancel (:on-tap-cancel args)
+        .onDoubleTap (:on-double-tap args)
+        .onLongPress (:on-long-press args)
+        .onSecondaryTap (:on-secondary-tap args)
+        .onSecondaryTapUp (:on-secondary-tap-up args)
+        .onSecondaryTapDown (:on-secondary-tap-down args)
+        .onSecondaryTapCancel (:on-secondary-tap-cancel args)
+        .onHighlightChanged (:on-highlight-changed args)
+        .onHover (:on-hover args)
+        .mouseCursor (:mouse-cursor args)
+        .enableFeedback (get-inherited ctx inh/enable-feedback (:enable-feedback args))
+        .excludeFromSemantics (get-inherited ctx inh/exclude-from-semantics (:exclude-from-semantics args))
+        .focusNode (:focus-node args)
+        .canRequestFocus (get-inherited ctx inh/can-request-focus (:can-request-focus args))
+        .onFocusChange (:on-focus-change args)
+        .autofocus (get-inherited ctx inh/autofocus (:autofocus args))
+        .statesController nil)))))
 
 (defn center 
   "A widget that centers its child within itself.
@@ -2459,14 +2571,14 @@
   ([value args child]
    (let [animation (animation-options (get args :animation {}))]
      (pd/AnimatedAnyPadding
-      nil 
-      (insets value) 
-      child
-      (animation :curve) 
-      (animation :duration)
-      (animation :on-end))))
+      .key nil 
+      .padding (insets value) 
+      .child child
+      .curve (animation :curve) 
+      .duration (animation :duration)
+      .onEnd (animation :on-end))))
   ([value child]
-   (pd/AnyPadding (insets value) nil child)))
+   (pd/AnyPadding .padding (insets value) .child child)))
 
 (defn text
   "Creates a text widget with the specified text and arguments.

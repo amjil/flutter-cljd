@@ -1,0 +1,11 @@
+name: dart_code
+description: Dart code for flutter-cljd
+version: 0.0.1
+publish_to: none
+
+environment:
+  sdk: '>=3.2.2 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter

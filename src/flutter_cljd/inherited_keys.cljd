@@ -1,3 +1,22 @@
-(ns flutter-cljd.inherited-keys)
+(ns flutter-cljd.inherited-keys
+  (:require 
+   ["package:flutter/material.dart" :as m]))
 
 (def enabled {:key :enabled :default-value true})
+
+(defn- default-button-modifier [button, btn-ctx] 
+  (let [state (:state btn-ctx)
+        disabled? (state m/WidgetState.disable)
+        pressed? (state m/WidgetState.pressed)]
+    (m/Opacity
+     .opacity (if disabled? 0.5 (if pressed? 0.8 1.0))
+     .child button)))
+
+(def button-modifier
+  {:key :button-modifier :default-value default-button-modifier})
+
+(def button-context {:key :button-context :default-value {}})
+(def enable-feedback {:key :enable-feedback :default-value false})
+(def exclude-from-semantics {:key :exclude-from-semantics :default-value false})
+(def can-request-focus {:key :can-request-focus :default-value true})
+(def autofocus {:key :autofocus :default-value false})
