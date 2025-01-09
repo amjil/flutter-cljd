@@ -4,9 +4,9 @@
 
 (def enabled {:key :enabled :default-value true})
 
-(defn- default-button-modifier [button, btn-ctx] 
+(defn- default-button-modifier [button btn-ctx]
   (let [state (:state btn-ctx)
-        disabled? (state m/WidgetState.disable)
+        disabled? (state m/WidgetState.disabled)
         pressed? (state m/WidgetState.pressed)]
     (m/Opacity
      .opacity (if disabled? 0.5 (if pressed? 0.8 1.0))
