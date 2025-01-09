@@ -43,7 +43,7 @@
 
  (defn- states-controller [this]
    (or (.-states-controller (.-widget this))
-       (.-internal-states-controller this)))
+       (.-internalStatesController this)))
 
 (defn- primary-button-enabled? [this ^Button widget]
   (and (.-is-enabled widget)
@@ -72,8 +72,8 @@
 
 (defn- init-states-controller [this]
   (if (.-states-controller (.-widget this))
-    (set! (.-internal-states-controller this) nil)
-    (set! (.-internal-states-controller this) (w/WidgetStatesController.)))
+    (set! (.-internalStatesController this) nil)
+    (set! (.-internalStatesController this) (w/WidgetStatesController.)))
   (let [controller (states-controller this)]
     (.update controller w/WidgetState.disabled (not (enabled? this)))
     (.addListener controller (.-handleStatesControllerChange this))))
@@ -109,8 +109,8 @@
 (defn- should-show-focus? [this]
   (case (w/MediaQuery.maybeNavigationModeOf (.-context this))
     (nil w/NavigationMode.traditional) (and (enabled? this)
-                                            (.-has-focus this))
-    w/NavigationMode.directional (.-has-focus this)))
+                                            (.-hasFocus this))
+    w/NavigationMode.directional (.-hasFocus this)))
 
 (defn- update-focus-highlights [this]
    (let [show-focus (case (.-highlightMode (.-instance w/FocusManager))
@@ -119,24 +119,24 @@
      (update-highlight this w/WidgetState.focused show-focus)))
 
 (defn- clear-offsets [this]
-  (set! (.-cursor-local-offset this) nil)
-  (set! (.-cursor-global-offset this) nil))
+  (set! (.-cursorLocalOffset this) nil)
+  (set! (.-cursorGlobalOffset this) nil))
 
 ;; Focus handling
 
-(defn- handle-focus-update [this has-focus]
-  (set! (.-has-focus this) has-focus)
+(defn- handle-focus-update [this hasFocus]
+  (set! (.-hasFocus this) hasFocus)
   ; Set directly rather than via updateHighlight because this widget's states 
   ; include focused if it has focus, rather than if showing focus per FocusManager
-  (.update (states-controller this) w/WidgetState.focused has-focus)
+  (.update (states-controller this) w/WidgetState.focused hasFocus)
   (update-focus-highlights this)
   (when-let [on-change (.-on-focus-change (.-widget this))]
-    (on-change has-focus)))
+    (on-change hasFocus)))
 
 ;; Tap handling
 (defn- handle-any-tap-down [this details]
-  (set! (.-cursor-global-offset this) (.-globalPosition details))
-  (set! (.-cursor-local-offset this) (.-localPosition details))
+  (set! (.-cursorGlobalOffset this) (.-globalPosition details))
+  (set! (.-cursorLocalOffset this) (.-localPosition details))
   (.update (states-controller this) w/WidgetState.pressed true)
   (.updateKeepAlive this)
   (update-highlight this w/WidgetState.pressed true))
@@ -180,8 +180,8 @@
     (on-double-tap)))
 
 (defn- handle-long-press-start [this details]
-  (set! (.-cursor-global-offset this) (.-globalPosition details))
-  (set! (.-cursor-local-offset this) (.-localPosition details)))
+  (set! (.-cursorGlobalOffset this) (.-globalPosition details))
+  (set! (.-cursorLocalOffset this) (.-localPosition details)))
 
 (defn- handle-long-press [this]
   (when-let [on-long-press (.-on-long-press (.-widget this))]
@@ -206,14 +206,14 @@
 ;; Mouse handling
 (defn- handle-mouse-enter [this event]
   (set! (.-hovering this) true)
-  (set! (.-cursor-global-offset this) (.-position event))
-  (set! (.-cursor-local-offset this) (.-localPosition event))
+  (set! (.-cursorGlobalOffset this) (.-position event))
+  (set! (.-cursorLocalOffset this) (.-localPosition event))
   (when (enabled? this)
     (handle-hover-change this)))
 
 (defn- handle-mouse-move [this event]
-  (set! (.-cursor-global-offset this) (.-position event))
-  (set! (.-cursor-local-offset this) (.-localPosition event)))
+  (set! (.-cursorGlobalOffset this) (.-position event))
+  (set! (.-cursorLocalOffset this) (.-localPosition event)))
 
 (defn- handle-mouse-exit [this event]
   (set! (.-hovering this) false)
@@ -237,10 +237,10 @@
 
 ;; Button State
 (deftype ButtonState [^:mutable hovering
-                      ^:mutable has-focus
-                      ^:mutable cursor-local-offset
-                      ^:mutable cursor-global-offset
-                      ^:mutable internal-states-controller
+                      ^:mutable hasFocus
+                      ^:mutable cursorLocalOffset
+                      ^:mutable cursorGlobalOffset
+                      ^:mutable internalStatesController
                        ^:mutable handleFocusHighlightModeChange
                        ^:mutable handleStatesControllerChange]
   :extends (#/(w/State Button))
@@ -265,9 +265,9 @@
         (.removeListener old-controller (.-handleStatesControllerChange this)))
 
       (when (.-states-controller (.-widget this))
-        (when-let [internal-controller (.-internal-states-controller this)]
+        (when-let [internal-controller (.-internalStatesController this)]
           (.dispose internal-controller)
-          (set! (.-internal-states-controller this) nil)))
+          (set! (.-internalStatesController this) nil)))
 
       (init-states-controller this))
 
@@ -295,15 +295,14 @@
     (.removeHighlightModeListener (.-instance w/FocusManager)
                                   (.-handleFocusHighlightModeChange this))
     (.removeListener (states-controller this) (.-handleStatesControllerChange this))
-    (when-let [controller (.-internal-states-controller this)]
+    (when-let [controller (.-internalStatesController this)]
       (.dispose controller))
     (.dispose ^super this))
 
   ;; Build method
   (build [this context]
-    (.build ^super this context)
     (let [^Button widget (.-widget this)
-          effective-mouse-cursor (#/(w/WidgetStateProperty.resolveAs s/MouseCursor)
+          ^w/MouseCursor effective-mouse-cursor (w/WidgetStateProperty.resolveAs
                                   (or (.-mouse-cursor widget)
                                       w/WidgetStateMouseCursor.clickable)
                                   (.-value (states-controller this)))
@@ -374,8 +373,8 @@
             ((.-child (.-widget this))
              {:context context
               :state (.-value (states-controller this))
-              :local-offset (.-cursor-local-offset this)
-              :global-offset (.-cursor-global-offset this)})))))))))
+              :local-offset (.-cursorLocalOffset this)
+              :global-offset (.-cursorGlobalOffset this)})))))))))
 
   #/(w/AutomaticKeepAliveClientMixin Button)
   (wantKeepAlive [_] false))
