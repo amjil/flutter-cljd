@@ -14,8 +14,8 @@
    [flutter-cljd.drawing :as dr :refer [offset, mat4]]
    [flutter-cljd.color-filters :as clr-f]
    [flutter-cljd.inherited-keys :as inh]
-   ["package:flutter_cljd/button_dart.dart" :as bt]
-   ["package:flutter_cljd/padding_dart.dart" :as pd]))
+   [flutter-cljd.button :as bt]
+   [flutter-cljd.padding :as pd]))
 
 ;; -------------------------
 ;; MARK: Macros
@@ -1923,39 +1923,35 @@
     ([on-tap args child]
      (builder
       (fn [ctx]
-        (bt/Button
-         .key (widget-key (args :key)) 
-         .child (fn [btn-ctx-class]
-                  (let [ctx (.-context btn-ctx-class)
-                        modifier (get-inherited ctx inh/button-modifier)
-                        btn-ctx {:context ctx
-                                 :state (set (.-state btn-ctx-class))
-                                 :local-offset (.-localOffset btn-ctx-class)
-                                 :global-offset (.-globalOffset btn-ctx-class)}]
+        (bt/Button 
+         (widget-key (args :key)) 
+         (fn [btn-ctx]
+                  (let [ctx (:context btn-ctx ctx)
+                        modifier (get-inherited ctx inh/button-modifier)]
                     (modifier
                      (with-inherited inh/button-context btn-ctx child)
-                     btn-ctx)))
-         .isEnabled (get-inherited ctx inh/enabled (:enabled args))
-         .onTap on-tap
-         .onTapDown (:on-tap-down args)
-         .onTapUp (:on-tap-up args)
-         .onTapCancel (:on-tap-cancel args)
-         .onDoubleTap (:on-double-tap args)
-         .onLongPress (:on-long-press args)
-         .onSecondaryTap (:on-secondary-tap args)
-         .onSecondaryTapUp (:on-secondary-tap-up args)
-         .onSecondaryTapDown (:on-secondary-tap-down args)
-         .onSecondaryTapCancel (:on-secondary-tap-cancel args)
-         .onHighlightChanged (:on-highlight-changed args)
-         .onHover (:on-hover args)
-         .mouseCursor (:mouse-cursor args)
-         .enableFeedback (get-inherited ctx inh/enable-feedback (:enable-feedback args))
-         .excludeFromSemantics (get-inherited ctx inh/exclude-from-semantics (:exclude-from-semantics args))
-         .focusNode (:focus-node args)
-         .canRequestFocus (get-inherited ctx inh/can-request-focus (:can-request-focus args))
-         .onFocusChange (:on-focus-change args)
-         .autofocus (get-inherited ctx inh/autofocus (:autofocus args))
-         .statesController nil)))))
+                     btn-ctx))) 
+         (get-inherited ctx inh/enabled (:enabled args)) 
+         on-tap 
+         (:on-tap-down args)
+         (:on-tap-up args) 
+         (:on-tap-cancel args) 
+         (:on-double-tap args) 
+         (:on-long-press args) 
+         (:on-secondary-tap args) 
+         (:on-secondary-tap-up args) 
+         (:on-secondary-tap-down args) 
+         (:on-secondary-tap-cancel args) 
+         (:on-highlight-changed args) 
+         (:on-hover args) 
+         (:mouse-cursor args) 
+         (get-inherited ctx inh/enable-feedback (:enable-feedback args)) 
+         (get-inherited ctx inh/exclude-from-semantics (:exclude-from-semantics args)) 
+         (:focus-node args) 
+         (get-inherited ctx inh/can-request-focus (:can-request-focus args)) 
+         (:on-focus-change args) 
+         (get-inherited ctx inh/autofocus (:autofocus args)) 
+         nil)))))
 
 (defn center 
   "A widget that centers its child within itself.
@@ -2569,14 +2565,14 @@
   ([value args child]
    (let [animation (animation-options (get args :animation {}))]
      (pd/AnimatedAnyPadding
-      .key nil 
-      .padding (insets value) 
-      .child child
-      .curve (animation :curve) 
-      .duration (animation :duration)
-      .onEnd (animation :on-end))))
+      nil  
+      (insets value)  
+      child 
+      (animation :curve)  
+      (animation :duration) 
+      (animation :on-end))))
   ([value child]
-   (pd/AnyPadding .padding (insets value) .child child)))
+   (pd/AnyPadding (insets value) nil child)))
 
 (defn text
   "Creates a text widget with the specified text and arguments.

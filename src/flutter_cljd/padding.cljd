@@ -1,0 +1,184 @@
+(ns flutter-cljd.padding
+  (:require
+   ["dart:math" :as math]
+   ["package:flutter/foundation.dart" :as f]
+   ["package:flutter/rendering.dart" :as r]
+   ["package:flutter/widgets.dart" :as w]))
+
+(defn- resolvedPadding [this] 
+  (let [cache (.-resolvedPaddingCache this)
+           padding (.-padding this)
+           textDirection (.-textDirection this)] 
+    (if (some? cache)
+      cache
+      (.-resolvedPaddingCache! this (.resolve padding textDirection)))))
+
+(defn- markNeedResolution [this]
+  (.-resolvedPaddingCache! this nil) 
+  (.markNeedsLayout this))
+
+(deftype RenderAnyPadding [^w/EdgeInsetsGeometry ^:mutable padding  
+                           ^w/TextDirection? ^:mutable textDirection
+                           ^:mutable resolvedPaddingCache]
+  :extends (r/RenderShiftedBox nil)
+
+  ;; Intrinsic dimensions methods
+  (computeMinIntrinsicWidth [this height]
+    (let [padding (resolvedPadding this)]
+      (if-let [child (.-child this)]
+        (let [child-width (.getMinIntrinsicWidth 
+                           child 
+                           (math/max 0.0 (- height (.-vertical padding))))]
+          (#/(math/max double) 0.0 (+ child-width (.-horizontal padding))))
+        (#/(math/max double) 0.0 (.-horizontal padding)))))
+
+  (computeMaxIntrinsicWidth [this height]
+    (let [padding (resolvedPadding this)]
+      (if-let [child (.-child this)]
+        (let [child-width (.getMaxIntrinsicWidth 
+                           child 
+                           (math/max 0.0 (- height (.-vertical padding))))]
+          (#/(math/max double) 0.0 (+ child-width (.-horizontal padding))))
+        (#/(math/max double) 0.0 (.-horizontal padding)))))
+
+  (computeMinIntrinsicHeight [this width]
+    (let [padding (resolvedPadding this)]
+      (if-let [child (.-child this)]
+        (let [child-height (.getMinIntrinsicHeight 
+                            child 
+                            (math/max 0.0 (- width (.-horizontal padding))))]
+          (#/(math/max double) 0.0 (+ child-height (.-vertical padding))))
+        (#/(math/max double) 0.0 (.-vertical padding)))))
+
+  (computeMaxIntrinsicHeight [this width]
+    (let [padding (resolvedPadding this)]
+      (if-let [child (.-child this)]
+        (let [child-height (.getMaxIntrinsicHeight 
+                            child 
+                            (math/max 0.0 (- width (.-horizontal padding))))]
+          (#/(math/max double) 0.0 (+ child-height (.-vertical padding))))
+        (#/(math/max double) 0.0 (.-vertical padding)))))
+
+  ;; Layout methods
+  (computeDryLayout [this constraints]
+    (let [padding (resolvedPadding this)]
+      (if-let [child (.-child this)]
+        (let [inner-constraints (.deflate constraints padding)
+              child-size (.getDryLayout child inner-constraints)]
+          (.constrain constraints
+                      (w/Size. (math/max 0.0 (+ (.-width child-size) (.-horizontal padding)))
+                               (math/max 0.0 (+ (.-height child-size) (.-vertical padding))))))
+        (.constrain constraints
+                    (w/Size. (math/max 0.0 (.-horizontal padding))
+                             (math/max 0.0 (.-vertical padding)))))))
+
+  (computeDryBaseline [this constraints baseline]
+    (if-let [child (.-child this)]
+      (let [^w/EdgeInsets padding (resolvedPadding this)
+            ^w/BoxConstraints inner-constraints (.deflate constraints padding)
+            ^r/EdgeInsets result (+ (r/BaselineOffset (.getDryBaseline child inner-constraints baseline))
+                                    (.-top padding))]
+        (.-offset result))
+      nil))
+
+  (performLayout [this]
+    (let [^w/BoxConstraints constraints (.-constraints this)
+          ^w/EdgeInsets padding (resolvedPadding this)]
+      (if-let [child (.-child this)]
+        (let [^w/BoxConstraints inner-constraints (.deflate constraints padding)]
+          (.layout child inner-constraints .parentUsesSize true)
+          (let [^r/BoxParentData child-parent-data (.-parentData child)]
+            (.-offset! child-parent-data (w/Offset. (.-left padding) (.-top padding)))
+            (.-size! this (.constrain constraints
+                                            (w/Size. (math/max 0.0 (+ (.-width (.-size child)) (.-horizontal padding)))
+                                                     (math/max 0.0 (+ (.-height (.-size child)) (.-vertical padding))))))
+            nil))
+        (do (.-size! this (.constrain constraints
+                                            (w/Size. (math/max 0.0 (.-horizontal padding))
+                                                     (math/max 0.0 (.-vertical padding)))))
+            nil))))
+
+  (debugPaintSize [this context offset]
+    (.debugPaintSize ^super this context offset)
+    (when f/kDebugMode
+      (let [outer-rect (w/Rect.fromLTWH (.-dx offset) (.-dy offset) (.-width (.-size this)) (.-height (.-size this)))]
+        (r/debugPaintPadding (.-canvas context)
+                             outer-rect
+                             (when (.-child this)
+                               (.deflateRect (resolvedPadding this) outer-rect))))))
+
+  (debugFillProperties [this properties]
+    (.debugFillProperties ^super this properties)
+    (.add properties (f/DiagnosticsProperty. "padding" padding))
+    (.add properties (f/EnumProperty. "textDirection" textDirection .defaultValue nil))))
+
+  ;; Getters and setters
+(defn- setPadding [this value]
+    (when-not (= (.-padding this) value)
+      (.-padding! this value)
+      (markNeedResolution this)))
+
+(defn- setTextDirection [this value]
+    (when-not (= (.-textDirection this) value)
+      (.-textDirection! this value)
+      (markNeedResolution this)))
+
+(deftype AnyPadding [^w/EdgeInsetsGeometry padding ^w/Key? key ^w/Widget? child]
+  :extends (w/SingleChildRenderObjectWidget .key key .child child)
+
+  (createRenderObject [_ context]
+   (RenderAnyPadding. padding (w/Directionality.maybeOf context) nil))
+
+  (updateRenderObject [_ context renderObject]
+    (setPadding renderObject padding)
+    (setTextDirection renderObject (w/Directionality.maybeOf context)))
+
+  (debugFillProperties [this properties]
+    (.debugFillProperties ^super this properties)
+    (.add properties (f/DiagnosticsProperty. "padding" padding))))
+
+(deftype AnimatedAnyPaddingState []
+  :extends w/AnimatedWidgetBaseState
+
+  (initState [this]
+    (.-_padding! this nil)
+    (.initState ^super this))
+
+  (forEachTween [this visitor]
+                (.-_padding!
+                 this 
+                 (visitor (.-_padding this)
+                          (-> this .-widget .-padding)
+                          (fn [value]
+                            (w/EdgeInsetsGeometryTween.
+                             .begin value)))))
+
+  (build [this _]
+    (let [padding (.evaluate
+                   (.-_padding this)
+                   (.-animation this))]
+      (AnyPadding. 
+       padding 
+       (-> this .-widget .-key)
+       (-> this .-widget .-child))))
+
+  (debugFillProperties [this description]
+    (.debugFillProperties ^super this description)
+    (.add description (f/DiagnosticsProperty.
+                       "padding"
+                       (.-_padding this)
+                       .defaultValue nil))))
+
+(deftype AnimatedAnyPadding [key padding child curve duration onEnd]
+  :extends (w/ImplicitlyAnimatedWidget
+             .key key
+             .curve curve
+             .duration duration
+             .onEnd onEnd)
+
+  (createState [_]
+    (AnimatedAnyPaddingState.))
+
+  (debugFillProperties [this properties]
+    (.debugFillProperties ^super this properties)
+    (.add properties (f/DiagnosticsProperty. "padding" padding))))
