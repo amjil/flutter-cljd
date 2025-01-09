@@ -1744,6 +1744,12 @@
   ([value child]
    (with-inherited inh/enabled value child)))
 
+(defn disabled 
+  "A widget that sets the `flutter-cljd.inherited-keys/enabled` inherited value to false"
+  ([child] (disabled true child))
+  ([value child]
+   (with-inherited inh/enabled (not value) child)))
+
 (defn shortcuts
   "```clojure
    (shortcuts
@@ -1877,7 +1883,8 @@
     Button Context:
     The :button-context provides state information as a map with:
     - :context - The BuildContext of the button widget
-    - :state - Set of current WidgetState values
+    - :state - Set of current button state values. Possible values in the set are `:disable`, `:pressed`, `:hovered`, `:focused`. For example: `#{:hovered :pressed}`
+    - :prev-state - Set of previous button state values
     - :local-offset - Local coordinates of touch (Offset?)  
     - :global-offset - Global coordinates of touch (Offset?)
   
@@ -1900,8 +1907,8 @@
     
    (defn custom-style [button btn-ctx]
      (let [state (:state btn-ctx)
-        disabled? (state m/WidgetState.disable)
-        pressed? (state m/WidgetState.pressed)]
+        disabled? (state :disable)
+        pressed? (state :pressed)]
     (opacity
      (if disabled? 0.5 (if pressed? 0.8 1.0))
      button)))
@@ -1924,13 +1931,13 @@
      (builder
       (fn [ctx]
         (bt/Button 
-         (widget-key (args :key)) 
+         (widget-key (args :key))
          (fn [btn-ctx]
                   (let [ctx (:context btn-ctx ctx)
                         modifier (get-inherited ctx inh/button-modifier)]
                     (modifier
                      (with-inherited inh/button-context btn-ctx child)
-                     btn-ctx))) 
+                     btn-ctx)))
          (get-inherited ctx inh/enabled (:enabled args)) 
          on-tap 
          (:on-tap-down args)
@@ -1950,8 +1957,7 @@
          (:focus-node args) 
          (get-inherited ctx inh/can-request-focus (:can-request-focus args)) 
          (:on-focus-change args) 
-         (get-inherited ctx inh/autofocus (:autofocus args)) 
-         nil)))))
+         (get-inherited ctx inh/autofocus (:autofocus args)))))))
 
 (defn center 
   "A widget that centers its child within itself.
@@ -2513,7 +2519,7 @@
      (let [animation (animation-options (args :animation))]
        (m/AnimatedOpacity
         .key (widget-key (args :key))
-        .opacity opacity
+        .opacity (double opacity)
         .child child
         .duration (animation :duration)
         .curve (animation :curve)
@@ -2521,14 +2527,14 @@
         .alwaysIncludeSemantics (:always-include-semantics args false)))
      (m/Opacity
       .key (widget-key (args :key))
-      .opacity opacity
+      .opacity (double opacity)
       .alwaysIncludeSemantics (:always-include-semantics args false)
       .child child)))
   ([opacity child]
    (if (map? opacity)
      (flutter-cljd.widgets/opacity (:opacity opacity 1.0) opacity child)
      (m/Opacity
-      .opacity opacity
+      .opacity (double opacity)
       .child child))))
 
 (defn decorated
@@ -2666,6 +2672,10 @@
    .builder
    (fn [ctx]
      (let [def-style (m/DefaultTextStyle.of ctx)
+           args (cond
+                  (map? args) args
+                  (ifn? args) (args def-style)
+                  :else (throw (ex-info "Invalid arguments, expected a map or a fn" args)))
            key (widget-key (args :key))
            style (.merge (.-style def-style) (text-style (:style args args)))
            align (or (some-> args :align text-align) (.-textAlign def-style))
@@ -2675,30 +2685,30 @@
            text-width-basis (:text-width-basis args (.-textWidthBasis def-style))
            text-height-behavior (:text-height-behavior args (.-textHeightBehavior def-style))
            animation (some-> args :animation animation-options)]
-       (if (nil? animation)
-         (m/DefaultTextStyle
-          .key key
-          .style style
-          .textAlign align
-          .softWrap soft-wrap
-          .overflow overflow
-          .maxLines max-lines
-          .textWidthBasis text-width-basis
-          .textHeightBehavior text-height-behavior
-          .child child)
-         (m/AnimatedDefaultTextStyle
-          .key key
-          .child child
-          .style style
-          .textAlign align
-          .softWrap soft-wrap
-          .overflow overflow
-          .maxLines max-lines
-          .textWidthBasis text-width-basis
-          .textHeightBehavior text-height-behavior
-          .duration (animation :duration)
-          .curve (animation :curve)
-          .onEnd (animation :on-end)))))))
+          (if (nil? animation)
+            (m/DefaultTextStyle
+             .key key
+             .style style
+             .textAlign align
+             .softWrap soft-wrap
+             .overflow overflow
+             .maxLines max-lines
+             .textWidthBasis text-width-basis
+             .textHeightBehavior text-height-behavior
+             .child child)
+            (m/AnimatedDefaultTextStyle
+             .key key
+             .child child
+             .style style
+             .textAlign align
+             .softWrap soft-wrap
+             .overflow overflow
+             .maxLines max-lines
+             .textWidthBasis text-width-basis
+             .textHeightBehavior text-height-behavior
+             .duration (animation :duration)
+             .curve (animation :curve)
+             .onEnd (animation :on-end)))))))
 
 ;; MARK: Animated
 
