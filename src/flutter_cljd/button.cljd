@@ -1,0 +1,381 @@
+(ns flutter-cljd.button
+  (:require
+   ["dart:core" :as core]
+   ["package:flutter/foundation.dart" :as f]
+   ["package:flutter/widgets.dart" :as w]
+   ["package:flutter/services.dart" :as s]
+   ["package:flutter/gestures.dart" :as g]))
+
+(declare ButtonState)
+
+;; Button widget
+(deftype Button [key child is-enabled on-tap on-tap-down on-tap-up
+                 on-tap-cancel on-double-tap on-long-press on-secondary-tap
+                 on-secondary-tap-up on-secondary-tap-down on-secondary-tap-cancel
+                 on-highlight-changed on-hover mouse-cursor enable-feedback
+                 exclude-from-semantics focus-node can-request-focus
+                 on-focus-change autofocus states-controller]
+  :extends (w/StatefulWidget .key key)
+
+  (createState [_] (ButtonState false false nil nil nil nil nil))
+
+  (debugFillProperties [this properties]
+    (.debugFillProperties ^super this properties)
+    (let [gestures (cond-> []
+                     on-tap (conj "tap")
+                     on-double-tap (conj "double tap")
+                     on-long-press (conj "long press")
+                     on-tap-down (conj "tap down")
+                     on-tap-up (conj "tap up")
+                     on-tap-cancel (conj "tap cancel")
+                     on-secondary-tap (conj "secondary tap")
+                     on-secondary-tap-up (conj "secondary tap up")
+                     on-secondary-tap-down (conj "secondary tap down")
+                     on-secondary-tap-cancel (conj "secondary tap cancel"))]
+      (.add properties (#/(f/IterableProperty String) "gestures" gestures .ifEmpty "<none>"))
+      (.add properties (#/(f/DiagnosticsProperty s/MouseCursor) "mouseCursor" mouse-cursor)))))
+
+(defn- activate-on-intent [this intent]
+  (when-let [on-tap (.-on-tap (.-widget this))]
+    (when (and () (.-enable-feedback (.-widget this)))
+      (w/Feedback.forTap (.-context this)))
+    (on-tap)))
+
+ (defn- states-controller [this]
+   (or (.-states-controller (.-widget this))
+       (.-internal-states-controller this)))
+
+(defn- primary-button-enabled? [this ^Button widget]
+  (and (.-is-enabled widget)
+       (or (.-on-tap widget)
+           (.-on-double-tap widget)
+           (.-on-long-press widget)
+           (.-on-tap-up widget)
+           (.-on-tap-down widget))))
+
+(defn- secondary-button-enabled? [this ^Button widget]
+  (and (.-is-enabled widget)
+       (or (.-on-secondary-tap widget)
+           (.-on-secondary-tap-up widget)
+           (.-on-secondary-tap-down widget))))
+ 
+(defn- widget-enabled? [this ^Button widget]
+  (or (primary-button-enabled? this widget)
+      (secondary-button-enabled? this widget)))
+
+(defn- enabled? [this]
+  (widget-enabled? this (.-widget this)))
+ 
+(defn- handle-states-controller-change [this]
+  ;; Force a rebuild to resolve widget.mouseCursor
+  (.setState this (fn [])))
+
+(defn- init-states-controller [this]
+  (if (.-states-controller (.-widget this))
+    (set! (.-internal-states-controller this) nil)
+    (set! (.-internal-states-controller this) (w/WidgetStatesController.)))
+  (let [controller (states-controller this)]
+    (.update controller w/WidgetState.disabled (not (enabled? this)))
+    (.addListener controller (.-handleStatesControllerChange this))))
+
+(defn- update-highlight
+  ([this type value]
+   (update-highlight this type value true))
+  ([this type value call-on-hover]
+   ;; Update states
+   (case type
+     w/WidgetState.pressed
+     (.update (states-controller this) w/WidgetState.pressed value)
+
+     w/WidgetState.hovered
+     (when call-on-hover
+       (.update (states-controller this) w/WidgetState.hovered value))
+     
+     nil)
+
+   ;; Call event handlers
+   (case type
+     w/WidgetState.pressed
+     (when-let [on-change (.-on-highlight-changed (.-widget this))]
+       (on-change value))
+
+     w/WidgetState.hovered
+     (when (and call-on-hover
+                (.-on-hover (.-widget this)))
+       ((.-on-hover (.-widget this)) value))
+
+     nil)))
+
+(defn- should-show-focus? [this]
+  (case (w/MediaQuery.maybeNavigationModeOf (.-context this))
+    (nil w/NavigationMode.traditional) (and (enabled? this)
+                                            (.-has-focus this))
+    w/NavigationMode.directional (.-has-focus this)))
+
+(defn- update-focus-highlights [this]
+   (let [show-focus (case (.-highlightMode (.-instance w/FocusManager))
+                      w/FocusHighlightMode.touch false
+                      w/FocusHighlightMode.traditional (should-show-focus? this))]
+     (update-highlight this w/WidgetState.focused show-focus)))
+
+(defn- clear-offsets [this]
+  (set! (.-cursor-local-offset this) nil)
+  (set! (.-cursor-global-offset this) nil))
+
+;; Focus handling
+
+(defn- handle-focus-update [this has-focus]
+  (set! (.-has-focus this) has-focus)
+  ; Set directly rather than via updateHighlight because this widget's states 
+  ; include focused if it has focus, rather than if showing focus per FocusManager
+  (.update (states-controller this) w/WidgetState.focused has-focus)
+  (update-focus-highlights this)
+  (when-let [on-change (.-on-focus-change (.-widget this))]
+    (on-change has-focus)))
+
+;; Tap handling
+(defn- handle-any-tap-down [this details]
+  (set! (.-cursor-global-offset this) (.-globalPosition details))
+  (set! (.-cursor-local-offset this) (.-localPosition details))
+  (.update (states-controller this) w/WidgetState.pressed true)
+  (.updateKeepAlive this)
+  (update-highlight this w/WidgetState.pressed true))
+
+(defn- handle-tap-down [this details]
+  (handle-any-tap-down this details)
+  (when-let [on-tap-down (.-on-tap-down (.-widget this))]
+    (on-tap-down details)))
+
+(defn- handle-tap-up [this details]
+  (clear-offsets this)
+  (when-let [on-tap-up (.-on-tap-up (.-widget this))]
+    (on-tap-up details)))
+
+(defn- handle-secondary-tap-down [this details]
+  (handle-any-tap-down this details)
+  (when-let [on-secondary-tap-down (.-on-secondary-tap-down (.-widget this))]
+    (on-secondary-tap-down details)))
+
+(defn- handle-secondary-tap-up [this details]
+  (clear-offsets this)
+  (when-let [on-secondary-tap-up (.-on-secondary-tap-up (.-widget this))]
+    (on-secondary-tap-up details)))
+
+(defn- handle-tap [this]
+  (update-highlight this w/WidgetState.pressed false)
+  (when-let [on-tap (.-on-tap (.-widget this))]
+    (when (.-enable-feedback (.-widget this))
+      (w/Feedback.forTap (.-context this)))
+    (on-tap)))
+
+(defn- handle-tap-cancel [this]
+  (clear-offsets this)
+  (when-let [on-tap-cancel (.-on-tap-cancel (.-widget this))]
+    (on-tap-cancel))
+  (update-highlight this w/WidgetState.pressed false))
+
+(defn- handle-double-tap [this]
+  (update-highlight this w/WidgetState.pressed false)
+  (when-let [on-double-tap (.-on-double-tap (.-widget this))]
+    (on-double-tap)))
+
+(defn- handle-long-press-start [this details]
+  (set! (.-cursor-global-offset this) (.-globalPosition details))
+  (set! (.-cursor-local-offset this) (.-localPosition details)))
+
+(defn- handle-long-press [this]
+  (when-let [on-long-press (.-on-long-press (.-widget this))]
+    (when (.-enable-feedback (.-widget this))
+      (w/Feedback.forLongPress (.-context this)))
+    (on-long-press)))
+
+(defn- handle-secondary-tap [this]
+  (update-highlight this w/WidgetState.pressed false)
+  (when-let [on-secondary-tap (.-on-secondary-tap (.-widget this))]
+    (on-secondary-tap)))
+
+(defn- handle-secondary-tap-cancel [this]
+  (clear-offsets this)
+  (when-let [on-secondary-tap-cancel (.-on-secondary-tap-cancel (.-widget this))]
+    (on-secondary-tap-cancel))
+  (update-highlight this w/WidgetState.pressed false))
+
+(defn- handle-hover-change [this]
+  (update-highlight this w/WidgetState.hovered (.-hovering this)))
+
+;; Mouse handling
+(defn- handle-mouse-enter [this event]
+  (set! (.-hovering this) true)
+  (set! (.-cursor-global-offset this) (.-position event))
+  (set! (.-cursor-local-offset this) (.-localPosition event))
+  (when (enabled? this)
+    (handle-hover-change this)))
+
+(defn- handle-mouse-move [this event]
+  (set! (.-cursor-global-offset this) (.-position event))
+  (set! (.-cursor-local-offset this) (.-localPosition event)))
+
+(defn- handle-mouse-exit [this event]
+  (set! (.-hovering this) false)
+  (clear-offsets this)
+  ; Still update highlights and run onHover even if disabled
+  (handle-hover-change this))
+
+(defn- handle-hover-change [this]
+  (update-highlight this w/WidgetState.hovered (.-hovering this)))
+
+(defn- can-request-focus? [this]
+  (case (w/MediaQuery.maybeNavigationModeOf (.-context this))
+    (nil w/NavigationMode.traditional) (and (enabled? this) 
+                                          (.-can-request-focus (.-widget this)))
+    w/NavigationMode.directional true))
+
+(defn- handle-focus-highlight-mode-change [this _]
+  (when (.-mounted this)
+    (.setState this (fn []
+                      (update-focus-highlights this)))))
+
+;; Button State
+(deftype ButtonState [^:mutable hovering
+                      ^:mutable has-focus
+                      ^:mutable cursor-local-offset
+                      ^:mutable cursor-global-offset
+                      ^:mutable internal-states-controller
+                       ^:mutable handleFocusHighlightModeChange
+                       ^:mutable handleStatesControllerChange]
+  :extends (#/(w/State Button))
+  :with #/(w/AutomaticKeepAliveClientMixin Button)
+
+  (initState [this]
+    (.initState ^super this)
+    (let [weak-this (core/WeakReference this)]
+      (.-handleFocusHighlightModeChange! this #(handle-focus-highlight-mode-change (.-target weak-this) %))
+      (.-handleStatesControllerChange! this #(handle-states-controller-change (.-target weak-this))))
+    (init-states-controller this)
+    (.addHighlightModeListener (.-instance w/FocusManager)
+                               (.-handleFocusHighlightModeChange this)))
+
+  (didUpdateWidget [this old-widget]
+    (.didUpdateWidget ^super this old-widget)
+
+  ;; Handle states controller changes
+    (when (not= (.-states-controller (.-widget this))
+                (.-states-controller old-widget))
+      (when-let [old-controller (.-states-controller old-widget)]
+        (.removeListener old-controller (.-handleStatesControllerChange this)))
+
+      (when (.-states-controller (.-widget this))
+        (when-let [internal-controller (.-internal-states-controller this)]
+          (.dispose internal-controller)
+          (set! (.-internal-states-controller this) nil)))
+
+      (init-states-controller this))
+
+  ;; Handle enabled state changes
+    (when (not= (enabled? this) (widget-enabled? this old-widget))
+      (.update (states-controller this)
+               w/WidgetState.disabled
+               (not (enabled? this)))
+
+      (when-not (enabled? this)
+        (.update (states-controller this)
+                 w/WidgetState.pressed
+                 false))
+
+    ;; Don't call widget.onHover because many widgets, including button
+    ;; widgets, apply setState to an ancestor context from onHover
+      (update-highlight this
+                        w/WidgetState.hovered
+                        (.-hovering this)
+                        false))
+
+    (update-focus-highlights this))
+
+  (dispose [this]
+    (.removeHighlightModeListener (.-instance w/FocusManager)
+                                  (.-handleFocusHighlightModeChange this))
+    (.removeListener (states-controller this) (.-handleStatesControllerChange this))
+    (when-let [controller (.-internal-states-controller this)]
+      (.dispose controller))
+    (.dispose ^super this))
+
+  ;; Build method
+  (build [this context]
+    (.build ^super this context)
+    (let [^Button widget (.-widget this)
+          effective-mouse-cursor (#/(w/WidgetStateProperty.resolveAs s/MouseCursor)
+                                  (or (.-mouse-cursor widget)
+                                      w/WidgetStateMouseCursor.clickable)
+                                  (.-value (states-controller this)))
+          primary-enabled? (primary-button-enabled? this widget)
+          secondary-enabled? (secondary-button-enabled? this widget)
+          action-map {w/ActivateIntent (w/CallbackAction.
+                                        .onInvoke #(activate-on-intent this %))
+                      w/ButtonActivateIntent (w/CallbackAction.
+                                              .onInvoke #(activate-on-intent this %))}]
+      (w/Actions.
+       .actions action-map
+       .child
+       (w/Focus.
+        .focusNode (.-focus-node (.-widget this))
+        .canRequestFocus (can-request-focus? this)
+        .onFocusChange #(handle-focus-update this %)
+        .autofocus (.-autofocus (.-widget this))
+        .child
+        (w/MouseRegion.
+         .cursor effective-mouse-cursor
+         .onEnter #(handle-mouse-enter this %)
+         .onExit #(handle-mouse-exit this %)
+         .onHover #(handle-mouse-move this %)
+         .child
+         (w/DefaultSelectionStyle.merge
+          .mouseCursor effective-mouse-cursor
+          .child
+          (w/Semantics.
+           .onTap (when-not (or (.-exclude-from-semantics (.-widget this))
+                                (nil? (.-on-tap (.-widget this))))
+                    #(handle-tap this))
+           .onLongPress (when-not (or (.-exclude-from-semantics (.-widget this))
+                                      (nil? (.-on-long-press (.-widget this))))
+                          #(handle-long-press this))
+           .child
+           (w/GestureDetector.
+            .onTapDown (when primary-enabled?
+                         #(handle-tap-down this %))
+            .onTapUp (when primary-enabled?
+                       #(handle-tap-up this %))
+            .onTap (when primary-enabled?
+                     #(handle-tap this))
+            .onTapCancel (when primary-enabled?
+                           #(handle-tap-cancel this))
+            .onDoubleTap (when (.-on-double-tap (.-widget this))
+                           #(handle-double-tap this))
+            .onDoubleTapCancel (when (.-on-double-tap (.-widget this))
+                                 #(clear-offsets this))
+            .onLongPressCancel (when (.-on-long-press (.-widget this))
+                                 #(clear-offsets this))
+            .onLongPress (when (.-on-long-press (.-widget this))
+                           #(handle-long-press this))
+            .onLongPressStart (when (.-on-long-press (.-widget this))
+                                #(handle-long-press-start this %))
+            .onLongPressUp (when (.-on-long-press (.-widget this))
+                             #(clear-offsets this))
+            .onSecondaryTapDown (when secondary-enabled?
+                                  #(handle-secondary-tap-down this %))
+            .onSecondaryTapUp (when secondary-enabled?
+                                #(handle-secondary-tap-up this %))
+            .onSecondaryTap (when secondary-enabled?
+                              #(handle-secondary-tap this))
+            .onSecondaryTapCancel (when secondary-enabled?
+                                    #(handle-secondary-tap-cancel this))
+            .behavior w/HitTestBehavior.opaque
+            .excludeFromSemantics true
+            .child
+            ((.-child (.-widget this))
+             {:context context
+              :state (.-value (states-controller this))
+              :local-offset (.-cursor-local-offset this)
+              :global-offset (.-cursor-global-offset this)})))))))))
+
+  #/(w/AutomaticKeepAliveClientMixin Button)
+  (wantKeepAlive [_] false))
