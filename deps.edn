@@ -1,4 +1,4 @@
-{:paths ["src" "test" "dart_code"]
+{:paths ["src" "test"]
  :deps {tensegritics/clojuredart
         {:git/url "https://github.com/tensegritics/ClojureDart.git"
          :sha "6127d8ef23156f2be5b10e97a0932868d175e585"}}

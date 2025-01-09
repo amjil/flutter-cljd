@@ -13,10 +13,9 @@
    [flutter-cljd.utils :as ut :refer [??]]
    [flutter-cljd.drawing :as dr :refer [offset, mat4]]
    [flutter-cljd.color-filters :as clr-f]
-   ["package:dart_code/padding.dart" :as pd]
-   ["package:dart_code/button.dart" :as bt]
-   [flutter-cljd.inherited-keys :as inh]
-   ["package:flutter/animation.dart" :as a]))
+   ["package:flutter_cljd/button.dart" :as bt]
+   ["package:flutter_cljd/padding.dart" :as pd]
+   [flutter-cljd.inherited-keys :as inh]))
 
 ;; -------------------------
 ;; MARK: Macros
