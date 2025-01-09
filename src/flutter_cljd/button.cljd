@@ -107,15 +107,14 @@
      nil)))
 
 (defn- should-show-focus? [this]
-  (case (w/MediaQuery.maybeNavigationModeOf (.-context this))
-    (nil w/NavigationMode.traditional) (and (enabled? this)
-                                            (.-hasFocus this))
-    w/NavigationMode.directional (.-hasFocus this)))
+  (condp = (w/MediaQuery.maybeNavigationModeOf (.-context this))
+     w/NavigationMode.directional (.-hasFocus this) 
+    (and (enabled? this) (.-hasFocus this))))
 
 (defn- update-focus-highlights [this]
-   (let [show-focus (case (.-highlightMode (.-instance w/FocusManager))
-                      w/FocusHighlightMode.touch false
-                      w/FocusHighlightMode.traditional (should-show-focus? this))]
+   (let [show-focus (condp = (.-highlightMode (.-instance w/FocusManager))
+                      w/FocusHighlightMode.traditional (should-show-focus? this)
+                      false)]
      (update-highlight this w/WidgetState.focused show-focus)))
 
 (defn- clear-offsets [this]
