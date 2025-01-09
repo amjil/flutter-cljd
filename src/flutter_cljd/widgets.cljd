@@ -13,11 +13,9 @@
    [flutter-cljd.utils :as ut :refer [??]]
    [flutter-cljd.drawing :as dr :refer [offset, mat4]]
    [flutter-cljd.color-filters :as clr-f]
-   [flutter-cljd.inherited-keys :as inh])
-  (:import 
-   ["button_dart.dart" Button]
-   ["padding_dart.dart" AnyPadding]
-   ["padding_dart.dart" AnimatedAnyPadding]))
+   [flutter-cljd.inherited-keys :as inh]
+   ["package:flutter_cljd/button_dart.dart" :as bt]
+   ["package:flutter_cljd/padding_dart.dart" :as pd]))
 
 ;; -------------------------
 ;; MARK: Macros
@@ -836,7 +834,7 @@
    .end (alignment-geometry (:end args m/AlignmentDirectional.centerEnd))
    .colors (gradient-colors (:colors args))
    .stops (args :stops)
-   .tileMode (some-> (:tile-mode args :clamp) tile-mode)))
+   .tileMode (tile-mode (:tile-mode args :clamp))))
 
 (defn sweep-gradient
   "Creates a SweepGradient object from the specified arguments.
@@ -846,8 +844,7 @@
    - :end-angle (number, default: 2 * Math/PI): The end angle of the gradient.
    - :colors (list of colors, default: [:transparent :transparent]): The colors of the gradient.
    - :stops (list of numbers, default: nil): The stops of the gradient.
-   - :tile-mode (tile-mode, default: :clamp): The tile mode of the gradient.
-   "
+   - :tile-mode (tile-mode, default: :clamp): The tile mode of the gradient."
   [args]
   (m/SweepGradient
    .center (alignment-geometry (:center args m/Alignment.center))
@@ -855,7 +852,7 @@
    .endAngle (:end-angle args (* 2 (.pi double)))
    .colors (gradient-colors (args :colors))
    .stops (args :stops)
-   .tileMode (some-> (:tile-mode args :clamp) tile-mode)))
+   .tileMode (tile-mode (:tile-mode args :clamp))))
 
 (defn radial-gradient
   "Creates a RadialGradient object from the specified arguments.
@@ -864,15 +861,14 @@
    - :radius (number, default: 0.5): The radius of the gradient.
    - :colors (list of colors, default: [:transparent :transparent]): The colors of the gradient.
    - :stops (list of numbers, default: nil): The stops of the gradient.
-   - :tile-mode (tile-mode, default: nil): The tile mode of the gradient.
-   "
+   - :tile-mode (tile-mode, default: nil): The tile mode of the gradient."
   [args]
   (m/RadialGradient
    .center (alignment-geometry (:center args m/Alignment.center))
    .radius (:radius args 0.5)
    .colors (gradient-colors (:colors args))
    .stops (args :stops)
-   .tileMode (some-> (:tile-mode args) tile-mode)))
+   .tileMode (tile-mode (:tile-mode args :clamp))))
 
 (defn gradient [gradient]
   (cond
@@ -1893,13 +1889,12 @@
   
   Examples:
   
-  Basic usage with callback function:
   ```clojure
   (->> (text \"Click me!\")
        (button #(print \"Button clicked!\")))
     
   (->> (text \"Interact with me\")
-     (button {:on-tap #(print \"Tapped\")
+     (button {:on-tap #(print \"Button clicked!\")
               :on-long-press #(print \"Long pressed\")
               :on-hover #(print \"Hovered\")}))
     
@@ -1919,46 +1914,48 @@
      (button #(print \"Won't be called\"))
      (with-inherited inh/enabled false))
   ```"
-  [args child]
-  (let [args (cond 
-               (map? args) args
-               (ifn? args) {:on-tap args}
-               :else (throw (Exception. (str "Invalid button arguments: " args ", expected a map or a function."))))]
-    (builder 
-     (fn [ctx]
-       (Button
-        .key (widget-key (args :key)) 
-        .child (fn [btn-ctx-class]
-                 (let [ctx (.-context btn-ctx-class)
-                       modifier (get-inherited ctx inh/button-modifier)
-                       btn-ctx {:context ctx
-                                :state (set (.-state btn-ctx-class))
-                                :local-offset (.-localOffset btn-ctx-class)
-                                :global-offset (.-globalOffset btn-ctx-class)}]
-                   (modifier
-                    (with-inherited inh/button-context btn-ctx child)
-                    btn-ctx)))
-        .isEnabled (get-inherited ctx inh/enabled (:enabled args))
-        .onTap (:on-tap args)
-        .onTapDown (:on-tap-down args)
-        .onTapUp (:on-tap-up args)
-        .onTapCancel (:on-tap-cancel args)
-        .onDoubleTap (:on-double-tap args)
-        .onLongPress (:on-long-press args)
-        .onSecondaryTap (:on-secondary-tap args)
-        .onSecondaryTapUp (:on-secondary-tap-up args)
-        .onSecondaryTapDown (:on-secondary-tap-down args)
-        .onSecondaryTapCancel (:on-secondary-tap-cancel args)
-        .onHighlightChanged (:on-highlight-changed args)
-        .onHover (:on-hover args)
-        .mouseCursor (:mouse-cursor args)
-        .enableFeedback (get-inherited ctx inh/enable-feedback (:enable-feedback args))
-        .excludeFromSemantics (get-inherited ctx inh/exclude-from-semantics (:exclude-from-semantics args))
-        .focusNode (:focus-node args)
-        .canRequestFocus (get-inherited ctx inh/can-request-focus (:can-request-focus args))
-        .onFocusChange (:on-focus-change args)
-        .autofocus (get-inherited ctx inh/autofocus (:autofocus args))
-        .statesController nil)))))
+  ([args child] 
+   (let [[args on-tap] (cond
+                (map? args) [(assoc args :on-tap nil) (:on-tap args)]
+                (ifn? args) [{} args]
+                :else (throw (Exception. (str "Invalid button arguments: " args ", expected a map or a function."))))]
+     (button on-tap args child)))
+    ([on-tap args child]
+     (builder
+      (fn [ctx]
+        (bt/Button
+         .key (widget-key (args :key)) 
+         .child (fn [btn-ctx-class]
+                  (let [ctx (.-context btn-ctx-class)
+                        modifier (get-inherited ctx inh/button-modifier)
+                        btn-ctx {:context ctx
+                                 :state (set (.-state btn-ctx-class))
+                                 :local-offset (.-localOffset btn-ctx-class)
+                                 :global-offset (.-globalOffset btn-ctx-class)}]
+                    (modifier
+                     (with-inherited inh/button-context btn-ctx child)
+                     btn-ctx)))
+         .isEnabled (get-inherited ctx inh/enabled (:enabled args))
+         .onTap on-tap
+         .onTapDown (:on-tap-down args)
+         .onTapUp (:on-tap-up args)
+         .onTapCancel (:on-tap-cancel args)
+         .onDoubleTap (:on-double-tap args)
+         .onLongPress (:on-long-press args)
+         .onSecondaryTap (:on-secondary-tap args)
+         .onSecondaryTapUp (:on-secondary-tap-up args)
+         .onSecondaryTapDown (:on-secondary-tap-down args)
+         .onSecondaryTapCancel (:on-secondary-tap-cancel args)
+         .onHighlightChanged (:on-highlight-changed args)
+         .onHover (:on-hover args)
+         .mouseCursor (:mouse-cursor args)
+         .enableFeedback (get-inherited ctx inh/enable-feedback (:enable-feedback args))
+         .excludeFromSemantics (get-inherited ctx inh/exclude-from-semantics (:exclude-from-semantics args))
+         .focusNode (:focus-node args)
+         .canRequestFocus (get-inherited ctx inh/can-request-focus (:can-request-focus args))
+         .onFocusChange (:on-focus-change args)
+         .autofocus (get-inherited ctx inh/autofocus (:autofocus args))
+         .statesController nil)))))
 
 (defn center 
   "A widget that centers its child within itself.
@@ -2571,7 +2568,7 @@
      If the padding argument is a vector of four numbers, the numbers are used for the left, top, right, and bottom padding."
   ([value args child]
    (let [animation (animation-options (get args :animation {}))]
-     (AnimatedAnyPadding
+     (pd/AnimatedAnyPadding
       .key nil 
       .padding (insets value) 
       .child child
@@ -2579,7 +2576,7 @@
       .duration (animation :duration)
       .onEnd (animation :on-end))))
   ([value child]
-   (AnyPadding .padding (insets value) .child child)))
+   (pd/AnyPadding .padding (insets value) .child child)))
 
 (defn text
   "Creates a text widget with the specified text and arguments.

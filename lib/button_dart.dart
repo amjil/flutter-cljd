@@ -94,8 +94,8 @@ class ButtonContext {
 class ButtonState extends State<Button>
     with AutomaticKeepAliveClientMixin<Button> {
   bool _hovering = false;
-  Offset? _cursorLocalOffset = null;
-  Offset? _cursorGlobalOffset = null;
+  Offset? _cursorLocalOffset;
+  Offset? _cursorGlobalOffset;
 
   late final Map<Type, Action<Intent>> _actionMap = <Type, Action<Intent>>{
     ActivateIntent: CallbackAction<ActivateIntent>(onInvoke: activateOnIntent),
