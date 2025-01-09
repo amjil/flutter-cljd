@@ -8,7 +8,8 @@ class RenderAnyPadding extends RenderShiftedBox {
   TextDirection? _textDirection;
   EdgeInsets? _resolvedPaddingCache;
 
-  RenderAnyPadding(this._padding, this._textDirection, [RenderBox? child]) : super(child);
+  RenderAnyPadding(this._padding, this._textDirection, [RenderBox? child])
+      : super(child);
 
   EdgeInsets get resolvedPadding {
     if (_resolvedPaddingCache != null) return _resolvedPaddingCache!;
@@ -38,18 +39,18 @@ class RenderAnyPadding extends RenderShiftedBox {
   @override
   double computeMinIntrinsicWidth(double height) {
     final EdgeInsets padding = resolvedPadding;
-    final double childWidth = child?.getMinIntrinsicWidth(
-      math.max(0.0, height - padding.vertical)
-    ) ?? 0.0;
+    final double childWidth =
+        child?.getMinIntrinsicWidth(math.max(0.0, height - padding.vertical)) ??
+            0.0;
     return math.max(0.0, childWidth + padding.horizontal);
   }
 
   @override
   double computeMaxIntrinsicWidth(double height) {
     final EdgeInsets padding = resolvedPadding;
-    final double childWidth = child?.getMaxIntrinsicWidth(
-      math.max(0.0, height - padding.vertical)
-    ) ?? 0.0;
+    final double childWidth =
+        child?.getMaxIntrinsicWidth(math.max(0.0, height - padding.vertical)) ??
+            0.0;
     return math.max(0.0, childWidth + padding.horizontal);
   }
 
@@ -57,8 +58,8 @@ class RenderAnyPadding extends RenderShiftedBox {
   double computeMinIntrinsicHeight(double width) {
     final EdgeInsets padding = resolvedPadding;
     final double childHeight = child?.getMinIntrinsicHeight(
-      math.max(0.0, width - padding.horizontal)
-    ) ?? 0.0;
+            math.max(0.0, width - padding.horizontal)) ??
+        0.0;
     return math.max(0.0, childHeight + padding.vertical);
   }
 
@@ -66,8 +67,8 @@ class RenderAnyPadding extends RenderShiftedBox {
   double computeMaxIntrinsicHeight(double width) {
     final EdgeInsets padding = resolvedPadding;
     final double childHeight = child?.getMaxIntrinsicHeight(
-      math.max(0.0, width - padding.horizontal)
-    ) ?? 0.0;
+            math.max(0.0, width - padding.horizontal)) ??
+        0.0;
     return math.max(0.0, childHeight + padding.vertical);
   }
 
@@ -91,7 +92,7 @@ class RenderAnyPadding extends RenderShiftedBox {
   @override
   double? computeDistanceToActualBaseline(TextBaseline baseline) {
     final EdgeInsets padding = resolvedPadding;
-    if (child == null) { 
+    if (child == null) {
       return null;
     }
     final distance = child!.getDistanceToActualBaseline(baseline);
@@ -195,7 +196,8 @@ class AnimatedAnyPadding extends ImplicitlyAnimatedWidget {
   }
 }
 
-class AnimatedAnyPaddingState extends AnimatedWidgetBaseState<AnimatedAnyPadding> {
+class AnimatedAnyPaddingState
+    extends AnimatedWidgetBaseState<AnimatedAnyPadding> {
   EdgeInsetsGeometryTween? _padding;
 
   @override
@@ -209,7 +211,8 @@ class AnimatedAnyPaddingState extends AnimatedWidgetBaseState<AnimatedAnyPadding
     _padding = visitor(
       _padding,
       widget.padding,
-      (dynamic value) => EdgeInsetsGeometryTween(begin: value as EdgeInsetsGeometry),
+      (dynamic value) =>
+          EdgeInsetsGeometryTween(begin: value as EdgeInsetsGeometry),
     ) as EdgeInsetsGeometryTween?;
   }
 
@@ -224,6 +227,8 @@ class AnimatedAnyPaddingState extends AnimatedWidgetBaseState<AnimatedAnyPadding
   @override
   void debugFillProperties(DiagnosticPropertiesBuilder properties) {
     super.debugFillProperties(properties);
-    properties.add(DiagnosticsProperty<EdgeInsetsGeometryTween>('padding', _padding, defaultValue: null));
+    properties.add(DiagnosticsProperty<EdgeInsetsGeometryTween>(
+        'padding', _padding,
+        defaultValue: null));
   }
 }
