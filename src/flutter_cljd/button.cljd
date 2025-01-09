@@ -137,7 +137,7 @@
   (set! (.-cursorGlobalOffset this) (.-globalPosition details))
   (set! (.-cursorLocalOffset this) (.-localPosition details))
   (.update (states-controller this) w/WidgetState.pressed true)
-  (.updateKeepAlive this)
+  ;; (.updateKeepAlive this)
   (update-highlight this w/WidgetState.pressed true))
 
 (defn- handle-tap-down [this details]
