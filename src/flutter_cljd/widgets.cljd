@@ -13,9 +13,11 @@
    [flutter-cljd.utils :as ut :refer [??]]
    [flutter-cljd.drawing :as dr :refer [offset, mat4]]
    [flutter-cljd.color-filters :as clr-f]
-   ["button_dart.dart" :as bt]
-   ["padding_dart.dart" :as pd]
-   [flutter-cljd.inherited-keys :as inh]))
+   [flutter-cljd.inherited-keys :as inh])
+  (:import 
+   ["button_dart.dart" Button]
+   ["padding_dart.dart" AnyPadding]
+   ["padding_dart.dart" AnimatedAnyPadding]))
 
 ;; -------------------------
 ;; MARK: Macros
@@ -1924,7 +1926,7 @@
                :else (throw (Exception. (str "Invalid button arguments: " args ", expected a map or a function."))))]
     (builder 
      (fn [ctx]
-       (bt/Button
+       (Button
         .key (widget-key (args :key)) 
         .child (fn [btn-ctx-class]
                  (let [ctx (.-context btn-ctx-class)
@@ -2569,7 +2571,7 @@
      If the padding argument is a vector of four numbers, the numbers are used for the left, top, right, and bottom padding."
   ([value args child]
    (let [animation (animation-options (get args :animation {}))]
-     (pd/AnimatedAnyPadding
+     (AnimatedAnyPadding
       .key nil 
       .padding (insets value) 
       .child child
@@ -2577,7 +2579,7 @@
       .duration (animation :duration)
       .onEnd (animation :on-end))))
   ([value child]
-   (pd/AnyPadding .padding (insets value) .child child)))
+   (AnyPadding .padding (insets value) .child child)))
 
 (defn text
   "Creates a text widget with the specified text and arguments.
