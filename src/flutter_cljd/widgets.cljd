@@ -13,8 +13,8 @@
    [flutter-cljd.utils :as ut :refer [??]]
    [flutter-cljd.drawing :as dr :refer [offset, mat4]]
    [flutter-cljd.color-filters :as clr-f]
-   ["button_dart.dart" :as bt]
-   ["padding_dart.dart" :as pd]
+   ["package:flutter_cljd/button_dart.dart" :as bt]
+   ["package:flutter_cljd/padding_dart.dart" :as pd]
    [flutter-cljd.inherited-keys :as inh]))
 
 ;; -------------------------
