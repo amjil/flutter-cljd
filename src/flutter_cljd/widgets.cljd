@@ -2095,8 +2095,7 @@
   A column widget with the specified arguments and children."
   ([] (column {}))
   ([args & children]
-   (let [[args children] (ut/args-children args children)
-         spacing (:spacing args 0)]
+   (let [[args children] (ut/args-children args children)]
      (m/Column
       .key (widget-key (args :key))
       .mainAxisAlignment (main-axis-alignment (:main-axis-alignment args :start))
@@ -2105,7 +2104,7 @@
       .textDirection (text-direction (:text-direction args :ltr))
       .textBaseline (text-baseline (:text-baseline args :alphabetic))
       .verticalDirection (vertical-direction (:vertical-direction args :down))
-      .spacing (double (:spacing args 0))
+      .spacing (double (or (:spacing args) 0))
       .children children))))
 
 (defn composited-transform-follower
@@ -2369,7 +2368,7 @@
       .verticalDirection (vertical-direction (:vertical-direction args :down))
       .textBaseline (text-baseline (:text-baseline args :alphabetic))
       .clipBehavior (clip (:clip args :none))
-      .spacing (double (:spacing args 0))
+      .spacing (double (or (:spacing args) 0))
       .children children))))
 
 (defn flexible 
@@ -2459,7 +2458,7 @@
       .textDirection (text-direction (:text-direction args :ltr))
       .verticalDirection (vertical-direction (:vertical-direction args :down))
       .textBaseline (text-baseline (:text-baseline args :alphabetic))
-      .spacing (double (:spacing args 0))
+      .spacing (double (or (:spacing args) 0))
       .children children))))
 
 (defn sized
@@ -2667,7 +2666,9 @@
         .selectionColor selection-color))))
   ([string] (text string {})))
 
-(defn with-text-style [args child]
+(defn with-text-style
+  ""
+  [args child]
   (m/Builder
    .builder
    (fn [ctx]
@@ -2685,30 +2686,30 @@
            text-width-basis (:text-width-basis args (.-textWidthBasis def-style))
            text-height-behavior (:text-height-behavior args (.-textHeightBehavior def-style))
            animation (some-> args :animation animation-options)]
-          (if (nil? animation)
-            (m/DefaultTextStyle
-             .key key
-             .style style
-             .textAlign align
-             .softWrap soft-wrap
-             .overflow overflow
-             .maxLines max-lines
-             .textWidthBasis text-width-basis
-             .textHeightBehavior text-height-behavior
-             .child child)
-            (m/AnimatedDefaultTextStyle
-             .key key
-             .child child
-             .style style
-             .textAlign align
-             .softWrap soft-wrap
-             .overflow overflow
-             .maxLines max-lines
-             .textWidthBasis text-width-basis
-             .textHeightBehavior text-height-behavior
-             .duration (animation :duration)
-             .curve (animation :curve)
-             .onEnd (animation :on-end)))))))
+       (if (nil? animation)
+         (m/DefaultTextStyle
+          .key key
+          .style style
+          .textAlign align
+          .softWrap soft-wrap
+          .overflow overflow
+          .maxLines max-lines
+          .textWidthBasis text-width-basis
+          .textHeightBehavior text-height-behavior
+          .child child)
+         (m/AnimatedDefaultTextStyle
+          .key key
+          .child child
+          .style style
+          .textAlign align
+          .softWrap soft-wrap
+          .overflow overflow
+          .maxLines max-lines
+          .textWidthBasis text-width-basis
+          .textHeightBehavior text-height-behavior
+          .duration (animation :duration)
+          .curve (animation :curve)
+          .onEnd (animation :on-end)))))))
 
 ;; MARK: Animated
 

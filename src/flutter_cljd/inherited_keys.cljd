@@ -1,24 +1,25 @@
 (ns flutter-cljd.inherited-keys
   (:require 
-   ["package:flutter/material.dart" :as m]))
+   ["package:flutter/material.dart" :as m]
+   ["dart:core" :as core]))
 
 (def enabled {:key :enabled :default-value true})
 
-(defn- default-button-modifier [button btn-ctx]
-  button
-  ;; (let [states (:state btn-ctx)]
-  ;;   (->> button
-  ;;        (w/opacity
-  ;;         (if (states :pressed) 0.5 (if (states :hovered) 0.8 1))
-  ;;         {:animation {:duration (if-not (states :hovered) 0.3 0.1)}})
-  ;;        (w/with-text-style
-  ;;          (fn [style]
-  ;;            (let [color (some-> style .-style .-color)
-  ;;                  alpha (some-> color .-a)]
-  ;;              (if (some? color)
-  ;;                {:color (.withOpacity color (if (states :disabled) (/ alpha 2) alpha))}
-  ;;                {}))))))
-  )
+(defn- default-button-modifier [button btn-ctx] 
+  (let [states (:state btn-ctx)
+        ctx (:context btn-ctx)
+        text-style (m/DefaultTextStyle.of ctx)
+        color (some-> text-style .-style .-color)
+        alpha (some-> color .-a)]
+    (->> button
+         (m/AnimatedOpacity
+          .opacity (if (states :pressed) 0.5 (if (states :hovered) 0.8 1.0))
+          .duration (core/Duration .milliseconds (if-not (states :hovered) 500 50))
+          .child)
+         (m/DefaultTextStyle.merge
+          .style (when color
+                   (m/TextStyle .color (.withOpacity color (if (states :disabled) (/ alpha 2.0) alpha))))
+          .child))))
 
 (def button-modifier
   {:key :button-modifier :default-value default-button-modifier})
