@@ -437,7 +437,7 @@
     (insets 4 8 4 8) ;; EdgeInsetsDirectional.fromSTEB(4, 8, 4, 8)
     (insets {:t 4 :b 2 :h 8}) ;; EdgeInsetsDirectional.only(start: 8, top: 4, end: 8, bottom: 2)
    ```
-   By default `EdgeInsetsDirectional` class is used, but `EdgeInsets` class is used if the insets contains a key :left or :right.
+   By default `EdgeInsetsDirectional` class is used, but `EdgeInsets` class is used if the insets contains a key `:left` or `:right`.
 
    If the insets contains a key :all, the value is used for all not explicitly specified edges.
 
@@ -665,32 +665,32 @@
   "An immutable style describing how to format and paint text.
 
    Args:
-    - :inherit (boolean, default: true): Whether the style is inherited from the parent. 
-    - :color (Color, default: nil): The color of the text.
-    - :background-color (Color, default: nil): The background color of the text.
-    - :font-size (number, default: nil): The size of the font.
-    - :font-weight (number or FontWeight, default: nil): The weight of the font.
-    - :font-style (keyword or FontStyle, default: nil): The style of the font.
-    - :letter-spacing (number, default: nil): The spacing between letters.
-    - :word-spacing (number, default: nil): The spacing between words.
-    - :text-baseline (keyword or TextBaseline, default: nil): The baseline alignment for the text.
-    - :height or :h (number, default: nil): The height of the text.
-    - :leading-distribution (keyword or TextLeadingDistribution, default: nil): The leading distribution of the text.
-    - :locale (Locale, default: nil): The locale to use for the text.
-    - :foreground (Paint, default: nil): The foreground paint of the text.
-    - :background (Paint, default: nil): The background paint of the text.
-    - :shadows (list of Shadow, default: nil): The shadows of the text.
-    - :font-features (list of FontFeature, default: nil): The font features of the text.
-    - :font-variations (list of FontVariation, default: nil): The font variations of the text.
-    - :decoration (TextDecoration, default: nil): The decoration of the text.
-    - :decoration-color (Color, default: nil): The color of the decoration.
-    - :decoration-style (TextDecorationStyle, default: nil): The style of the decoration.
-    - :decoration-thickness (number, default: nil): The thickness of the decoration.
-    - :debug-label (string, default: nil): The debug label of the text.
-    - :font-family (string, default: nil): The font family of the text.
-    - :font-family-fallback (list of string, default: nil): The font family fallback of the text.
-    - :package (string, default: nil): The package of the font family.
-    - :overflow (TextOverflow, default: nil): How the text should behave when it overflows."
+    - `:inherit` (boolean, default: true): Whether the style is inherited from the parent. 
+    - `:color` (Color, default: nil): The color of the text.
+    - `:background-color` (Color, default: nil): The background color of the text.
+    - `:font-size` (number, default: nil): The size of the font.
+    - `:font-weight` (number or FontWeight, default: nil): The weight of the font.
+    - `:font-style` (keyword or FontStyle, default: nil): The style of the font.
+    - `:letter-spacing` (number, default: nil): The spacing between letters.
+    - `:word-spacing` (number, default: nil): The spacing between words.
+    - `:text-baseline` (keyword or TextBaseline, default: nil): The baseline alignment for the text.
+    - `:height` or `:h` (number, default: nil): The height of the text.
+    - `:leading-distribution` (keyword or TextLeadingDistribution, default: nil): The leading distribution of the text.
+    - `:locale` (Locale, default: nil): The locale to use for the text.
+    - `:foreground` (Paint, default: nil): The foreground paint of the text.
+    - `:background` (Paint, default: nil): The background paint of the text.
+    - `:shadows` (list of Shadow, default: nil): The shadows of the text.
+    - `:font-features` (list of FontFeature, default: nil): The font features of the text.
+    - `:font-variations` (list of FontVariation, default: nil): The font variations of the text.
+    - `:decoration` (TextDecoration, default: nil): The decoration of the text.
+    - `:decoration-color` (Color, default: nil): The color of the decoration.
+    - `:decoration-style` (TextDecorationStyle, default: nil): The style of the decoration.
+    - `:decoration-thickness` (number, default: nil): The thickness of the decoration.
+    - `:debug-label` (string, default: nil): The debug label of the text.
+    - `:font-family` (string, default: nil): The font family of the text.
+    - `:font-family-fallback` (list of string, default: nil): The font family fallback of the text.
+    - `:package` (string, default: nil): The package of the font family.
+    - `:overflow` (TextOverflow, default: nil): How the text should behave when it overflows."
   [args]
   (m/TextStyle
    .inherit (:inherit args true)
@@ -735,16 +735,16 @@
    - An optional text as the first argument.
    - An optional style map as the first or second argument.
    - An optional map of arguments as the first or second argument. The map can contain the following keys:
-     - :text (any, default: nil): The text to display.
-     - :style (map, default: nil): The style to apply to the text.
-     - :children (list of InlineSpan, default: nil): The children of the text span.
-     - :recognizer (GestureRecognizer, default: nil): The gesture recognizer to use for this span of text.
-     - :mouse-cursor (MouseCursor, default: nil): The mouse cursor to use for this span of text.
-     - :on-enter (function, default: nil): The callback function to be called when the mouse enters this span of text.
-     - :on-exit (function, default: nil): The callback function to be called when the mouse exits this span of text.
-     - :semantics-label (string, default: nil): The semantics label to use for this span of text.
-     - :locale (Locale, default: nil): The locale to use for this span of text.
-     - :spell-out (bool, default: nil): Whether to spell out the text. 
+     - `:text` (any, default: nil): The text to display.
+     - `:style` (map, default: nil): The style to apply to the text.
+     - `:children` (list of InlineSpan, default: nil): The children of the text span.
+     - `:recognizer` (GestureRecognizer, default: nil): The gesture recognizer to use for this span of text.
+     - `:mouse-cursor` (MouseCursor, default: nil): The mouse cursor to use for this span of text.
+     - `:on-enter` (function, default: nil): The callback function to be called when the mouse enters this span of text.
+     - `:on-exit` (function, default: nil): The callback function to be called when the mouse exits this span of text.
+     - `:semantics-label` (string, default: nil): The semantics label to use for this span of text.
+     - `:locale` (Locale, default: nil): The locale to use for this span of text.
+     - `:spell-out` (bool, default: nil): Whether to spell out the text. 
    - Any remaining arguments are treated as children unless children are defined in the arguments map.
    Children can be InlineSpan objects or any value that will be converted to a string.
 
@@ -823,11 +823,11 @@
 (defn linear-gradient
   "Creates a LinearGradient object from the specified arguments.
    The arguments can be specified as a map with the following keys:
-   - :begin (alignment, default: :center-start): The alignment of the gradient's start point.
-   - :end (alignment, default: :center-end): The alignment of the gradient's end point.
-   - :colors (list of colors, default: [:transparent :transparent]): The colors of the gradient.
-   - :stops (list of numbers, default: nil): The stops of the gradient.
-   - :tile-mode (tile-mode, default: :clamp): The tile mode of the gradient."
+   - `:begin` (alignment, default: :center-start): The alignment of the gradient's start point.
+   - `:end` (alignment, default: :center-end): The alignment of the gradient's end point.
+   - `:colors` (list of colors, default: [:transparent :transparent]): The colors of the gradient.
+   - `:stops` (list of numbers, default: nil): The stops of the gradient.
+   - `:tile-mode` (tile-mode, default: :clamp): The tile mode of the gradient."
   [args]
   (m/LinearGradient
    .begin (alignment-geometry (:begin args m/AlignmentDirectional.centerStart))
@@ -839,12 +839,12 @@
 (defn sweep-gradient
   "Creates a SweepGradient object from the specified arguments.
    The arguments can be specified as a map with the following keys:
-   - :center (alignment, default: :center): The alignment of the gradient's center point.
-   - :start-angle (number, default: 0): The start angle of the gradient.
-   - :end-angle (number, default: 2 * Math/PI): The end angle of the gradient.
-   - :colors (list of colors, default: [:transparent :transparent]): The colors of the gradient.
-   - :stops (list of numbers, default: nil): The stops of the gradient.
-   - :tile-mode (tile-mode, default: :clamp): The tile mode of the gradient."
+   - `:center` (alignment, default: :center): The alignment of the gradient's center point.
+   - `:start-angle` (number, default: 0): The start angle of the gradient.
+   - `:end-angle` (number, default: 2 * Math/PI): The end angle of the gradient.
+   - `:colors` (list of colors, default: [:transparent :transparent]): The colors of the gradient.
+   - `:stops` (list of numbers, default: nil): The stops of the gradient.
+   - `:tile-mode` (tile-mode, default: :clamp): The tile mode of the gradient."
   [args]
   (m/SweepGradient
    .center (alignment-geometry (:center args m/Alignment.center))
@@ -857,11 +857,11 @@
 (defn radial-gradient
   "Creates a RadialGradient object from the specified arguments.
    The arguments can be specified as a map with the following keys:
-   - :center (alignment, default: Alignment.center): The alignment of the gradient's center point.
-   - :radius (number, default: 0.5): The radius of the gradient.
-   - :colors (list of colors, default: [:transparent :transparent]): The colors of the gradient.
-   - :stops (list of numbers, default: nil): The stops of the gradient.
-   - :tile-mode (tile-mode, default: nil): The tile mode of the gradient."
+   - `:center` (alignment, default: Alignment.center): The alignment of the gradient's center point.
+   - `:radius` (number, default: 0.5): The radius of the gradient.
+   - `:colors` (list of colors, default: [:transparent :transparent]): The colors of the gradient.
+   - `:stops` (list of numbers, default: nil): The stops of the gradient.
+   - `:tile-mode` (tile-mode, default: nil): The tile mode of the gradient."
   [args]
   (m/RadialGradient
    .center (alignment-geometry (:center args m/Alignment.center))
@@ -1053,10 +1053,10 @@
    Arity:
     1. [control-points] - Creates a `CatmullRomCurve` object with the specified control points.
     2. [control-points args] - Creates a `CatmullRomCurve` object with the specified control points and arguments. The arguments can be specified as a map with the following keys:
-        - :tension (number, default: 0): The tension of the curve.
+        - `:tension` (number, default: 0): The tension of the curve.
     3. [args] - Creates a `CatmullRomCurve` object with the specified arguments. The arguments can be specified as a map with the following keys:
-        - :control-points (list of Offset, default: []): The control points of the curve.
-        - :tension (number, default: 0): The tension of the curve.
+        - `:control-points` (list of Offset, default: []): The control points of the curve.
+        - `:tension` (number, default: 0): The tension of the curve.
    ```clojure
    (catmull-rom-curve [[0 0] [100 100] [200 200]]) ;; CatmullRomCurve.precompute([Offset(0.0, 0.0), Offset(100.0, 100.0), Offset(200.0, 200.0)], 0.0)
    ```" 
@@ -1093,9 +1093,9 @@
 (defn animation-options
   "Creates an animation options object from the specified value.
    The value can be specified as a map with the following keys:
-   - :duration (number, map, default: 0.25): The duration of the animation.
-   - :curve (keyword, default: :ease-in-out): The curve of the animation.
-   - :on-end (function, default: nil): The callback function to be called when the animation ends.
+   - `:duration` (number, map, default: 0.25): The duration of the animation.
+   - `:curve` (keyword, default: :ease-in-out): The curve of the animation.
+   - `:on-end` (function, default: nil): The callback function to be called when the animation ends.
    The value can also be specified as a vector with the following elements:
    - The duration of the animation.
    - The curve of the animation.
@@ -1224,12 +1224,12 @@
     - A ViewConstraints object.
     - A Size object.
     - A map with the following keys:
-      - :width, :w, :size (number or a map with :max and :min keys): Width constraints. If a number is provided, it is used as the fixed width of the box. 
-      - :height, :h, :size (number or a map with :max and :min keys): Height constraints. If a number is provided, it is used as the fixed height of the box.
-      - :min-width, :min-w, :min-size (number, default: 0): The minimum width of the box.
-      - :max-width, :max-w, :max-size (number, default: double.infinity): The maximum width of the box.
-      - :min-height, :min-h, :min-size (number, default: 0): The minimum height of the box.
-      - :max-height, :max-h, :max-size (number, default: double.infinity): The maximum height of the box.
+      - `:width`, :w, :size (number or a map with :max and :min keys): Width constraints. If a number is provided, it is used as the fixed width of the box. 
+      - `:height`, :h, :size (number or a map with :max and :min keys): Height constraints. If a number is provided, it is used as the fixed height of the box.
+      - `:min-width`, :min-w, :min-size (number, default: 0): The minimum width of the box.
+      - `:max-width`, :max-w, :max-size (number, default: double.infinity): The maximum width of the box.
+      - `:min-height`, :min-h, :min-size (number, default: 0): The minimum height of the box.
+      - `:max-height`, :max-h, :max-size (number, default: double.infinity): The maximum height of the box.
     - A number or a vector with two numbers or maps representing the width and height of the box.
 
    ```clojure
@@ -1546,17 +1546,17 @@
 
    Args:
     - args: A map of arguments for the banner widget.
-      - :key An identifier for the banner.
-      - :child The widget to show behind the banner.
-      - :message The message to show in the banner.
-      - :location (keyword or BannerLocation, default: :top-start): The location of the banner.
+      - `:key` An identifier for the banner.
+      - `:child` The widget to show behind the banner.
+      - `:message` The message to show in the banner.
+      - `:location` (keyword or BannerLocation, default: :top-start): The location of the banner.
         Possible values: :top-start, :top-end, :bottom-start, :bottom-end.
-      - :layout-direction (keyword or TextDirection, default: :ltr): The layout direction of the banner.
+      - `:layout-direction` (keyword or TextDirection, default: :ltr): The layout direction of the banner.
         Possible values: :ltr, :rtl.
-      - :text-direction (keyword or TextDirection, default: :ltr): The direction of the text.
+      - `:text-direction` (keyword or TextDirection, default: :ltr): The direction of the text.
         Possible values: :ltr, :rtl.
-      - :color (Color, default: 0xA0B71C1C): The color of the banner.
-      - :text-style (TextStyle, default: TextStyle(color: Colors.white, fontSize: 12.0 * 0.85, fontWeight: FontWeight.w900, height: 1.0)): The text style of the banner.
+      - `:color` (Color, default: 0xA0B71C1C): The color of the banner.
+      - `:text-style` (TextStyle, default: TextStyle(color: Colors.white, fontSize: 12.0 * 0.85, fontWeight: FontWeight.w900, height: 1.0)): The text style of the banner.
    
    [Flutter docs](https://api.flutter.dev/flutter/widgets/Banner-class.html)"
   [args child]
@@ -1603,11 +1603,11 @@
    
    Args:
     - args: A map of arguments for the bottom navigation bar item widget.
-      - :icon The icon of the bottom navigation bar item. Required.
-      - :label The label of the bottom navigation bar item.
-      - :active-icon The active icon of the bottom navigation bar item.
-      - :background-color The background color of the bottom navigation bar item.
-      - :tooltip The tooltip of the bottom navigation bar item.
+      - `:icon` The icon of the bottom navigation bar item. Required.
+      - `:label` The label of the bottom navigation bar item.
+      - `:active-icon` The active icon of the bottom navigation bar item.
+      - `:background-color` The background color of the bottom navigation bar item.
+      - `:tooltip` The tooltip of the bottom navigation bar item.
    
    [Flutter docs](https://api.flutter.dev/flutter/material/BottomNavigationBarItem-class.html)"
   [args]
@@ -1704,7 +1704,7 @@
    
    Args:
     - key values pairs to be inherited. Key may be a keyword or a map with the following keys:
-      - `:key` (keyword): The key to be inherited.
+      - `:key`: The key to be inherited.
       - `:default-value` (any): The value to be inherited.
       - `:merge` (fn [old new] new): The function to merge the new value with the existing one.
     - child: The child widget to be wrapped by the inherited widget.
@@ -1850,50 +1850,49 @@
   A button is a widget that responds to touch events. When the user touches the button, 
   the button is highlighted and then invokes the `on-tap` callback.
   
-  Args:
-    - args: Either a map of arguments for the button widget or a callback function to be executed when the button is tapped.
-      Core arguments:
-      - :child - The child widget to be displayed on the button
-      - :key - A widget key.
-      
-      Event callbacks:
-      - :on-tap - Executed when the button is tapped
-      - :on-tap-down - Executed when the button is pressed down
-      - :on-tap-up - Executed when the button press is released
-      - :on-tap-cancel - Executed when the button tap is canceled
-      - :on-double-tap - Executed on double-tap
-      - :on-long-press - Executed when button is held down
-      - :on-secondary-tap - Executed on secondary tap (e.g. right click)
-      - :on-secondary-tap-up - Executed when secondary tap is released
-      - :on-secondary-tap-down - Executed when secondary tap begins
-      - :on-secondary-tap-cancel - Executed when secondary tap is canceled
-      - :on-highlight-changed - Executed when button highlight state changes
-      - :on-hover - Executed when pointer hovers over button
-      - :on-focus-change - Executed when focus state changes
-      - :focus-node - Custom focus node for the button
-      - :mouse-cursor - Mouse cursor to display on hover
+  Args: a map of arguments or a function called when the button is tapped.
+
+    - `:key` - A widget key.
+    - `:on-tap` - Executed when the button is tapped
+    - `:on-tap-down` - Executed when the button is pressed down
+    - `:on-tap-up` - Executed when the button press is released
+    - `:on-tap-cancel` - Executed when the button tap is canceled
+    - `:on-double-tap` - Executed on double-tap
+    - `:on-long-press` - Executed when button is held down
+    - `:on-secondary-tap` - Executed on secondary tap (e.g. right click)
+    - `:on-secondary-tap-up` - Executed when secondary tap is released
+    - `:on-secondary-tap-down` - Executed when secondary tap begins
+    - `:on-secondary-tap-cancel` - Executed when secondary tap is canceled
+    - `:on-highlight-changed` - Executed when button highlight state changes
+    - `:on-hover` - Executed when pointer hovers over button
+    - `:on-focus-change` - Executed when focus state changes
+    - `:focus-node` - Custom focus node for the button
+    - `:mouse-cursor` - Mouse cursor to display on hover
   
     Inherited properties (can be set via `with-inherited` or passed directly):
-    - :enabled - Whether the button is interactive
-    - :enable-feedback - Whether to show visual/haptic feedback
-    - :exclude-from-semantics - Whether to exclude from accessibility tree
-    - :can-request-focus - Whether button can receive focus
-    - :autofocus - Whether button should automatically receive focus
+    - `:enabled` - Whether the button is interactive
+    - `:enable-feedback` - Whether to show visual/haptic feedback
+    - `:exclude-from-semantics` - Whether to exclude from accessibility tree
+    - `:can-request-focus` - Whether button can receive focus
+    - `:autofocus` - Whether button should automatically receive focus
   
     Button Context:
-    The :button-context provides state information as a map with:
-    - :context - The BuildContext of the button widget
-    - :state - Set of current button state values. Possible values in the set are `:disable`, `:pressed`, `:hovered`, `:focused`. For example: `#{:hovered :pressed}`
-    - :prev-state - Set of previous button state values
-    - :local-offset - Local coordinates of touch (Offset?)  
-    - :global-offset - Global coordinates of touch (Offset?)
+    The `:button-context` provides state information as a map with:
+    - `:context` - The BuildContext of the button widget
+    - `:state` - Set of current button state values. Possible values in the set are `:disable`, `:pressed`, `:hovered`, `:focused`. For example: `#{:hovered :pressed}`
+    - `:prev-state` - Set of previous button state values
+    - `:local-offset` - Local coordinates of touch (Offset?)  
+    - `:global-offset` - Global coordinates of touch (Offset?)
   
   Styling:
-  The Button supports custom styling via the :button-modifier key, which accepts a function in this format:
-  (fn [child button-context] modified-child)
+  The Button supports custom styling via the `flutter-cljd.inherited-keys/button-modifier` inherited key, which accepts a function in this format:
+  (fn [child button-context] modified-child). 
+  You can set the button modifier using the `with-button-modifier` widget.
   
   To avoid unnecessary widget rebuilds, define your modifier functions using `defn` rather than creating anonymous functions inline.
   
+  Also button injects `flutter-cljd.inherited-keys/button-context` into its child widget, so you can access the button context in your child widget and use it for custom styling or other purposes.
+
   Examples:
   
   ```clojure
@@ -1915,11 +1914,21 @@
   
   (->> (text \"Custom style\")
       (button #(print \"Button clicked!\"))
-      (with-inherited inh/button-modifier custom-style))
+      (with-button-modifier custom-style))
   
   (->> (text \"Disabled\")
      (button #(print \"Won't be called\"))
-     (with-inherited inh/enabled false))
+     (disabled))
+  
+  (defn my-button [title on-tap]
+     (->>
+       (widget->>
+         :get {:button-context btn-ctx}
+         :let [state (:state btn-ctx)]
+         (text title)
+         (opacity (if (state :pressed) 0.8 1)))
+       (button on-tap)
+       (without-button-modifier)))
   ```"
   ([args child] 
    (let [[args on-tap] (cond
@@ -1958,6 +1967,46 @@
          (get-inherited ctx inh/can-request-focus (:can-request-focus args)) 
          (:on-focus-change args) 
          (get-inherited ctx inh/autofocus (:autofocus args)))))))
+
+(defn with-button-modifier
+  "A widget that provides a custom button modifier to its descendants.
+  
+   The `modifier` function is called with the child widget and the button context as arguments and should return a modified child widget.
+  
+   Args:
+    - modifier: The function to modify the button widget. The function should have the following signature:
+      (fn [child button-context] modified-child)
+    - child: The child widget to be wrapped by the modified button widget.
+
+    Button Context:
+    The button context provides state information as a map with:
+    - `:context` - The BuildContext of the button widget
+    - `:state` - Set of current button state values. Possible values in the set are `:disable`, `:pressed`, `:hovered`, `:focused`. For example: `#{:hovered :pressed}`
+    - `:prev-state` - Set of previous button state values
+    - `:local-offset` - Local coordinates of touch (Offset?)  
+    - `:global-offset` - Global coordinates of touch (Offset?)
+
+   ```clojure
+   (defn highlighted-button [button btn-ctx]
+     (let [state (:state btn-ctx)
+           pressed? (state :pressed)]
+       (opacity (if pressed? 0.8 1) button)))
+
+   (->>
+     (text \"Click me!\")
+     (button #(print \"Button clicked!\"))
+     (with-button-modifier highlighted-button))
+   ```
+   To avoid unnecessary widget rebuilds, define your modifier functions using `defn` rather than creating anonymous functions inline."
+  [modifier child]
+  (with-inherited inh/button-modifier modifier child))
+
+(defn- no-styled-button [button _] button)
+
+(defn without-button-modifier
+  "A widget that removes the button modifier from its descendants."
+  [child] 
+  (with-inherited inh/button-modifier no-styled-button child))
 
 (defn center 
   "A widget that centers its child within itself.
@@ -2069,19 +2118,19 @@
 
   Args:
   - args: A map of arguments for the column widget.
-    - :key An identifier for the column. 
-    - :spacing (number, default: 0): The spacing between each child widget.
-    - :main-axis-alignment (keyword, default: :start): The alignment of the children along the main axis.
+    - `:key` An identifier for the column. 
+    - `:spacing` (number, default: 0): The spacing between each child widget.
+    - `:main-axis-alignment` (keyword, default: :start): The alignment of the children along the main axis.
       Possible values: :center, :start, :end, :space-between, :space-around.
-    - :main-axis-size (keyword, default: :min): The size of the column in the main axis.
+    - `:main-axis-size` (keyword, default: :min): The size of the column in the main axis.
       Possible values: :max, :min.
-    - :cross-axis-alignment (keyword, default: :center): The alignment of the children along the cross axis.
+    - `:cross-axis-alignment` (keyword, default: :center): The alignment of the children along the cross axis.
       Possible values: :center, :start, :end, :stretch, :baseline.
-    - :text-direction (keyword, default: :ltr): The direction of the text.
+    - `:text-direction` (keyword, default: :ltr): The direction of the text.
       Possible values: :ltr, :rtl.
-    - :text-baseline (keyword, default: :alphabetic): The baseline alignment for the text.
+    - `:text-baseline` (keyword, default: :alphabetic): The baseline alignment for the text.
       Possible values: :alphabetic, :ideographic.
-    - :vertical-direction (keyword, default: :down): The direction in which the children are placed vertically.
+    - `:vertical-direction` (keyword, default: :down): The direction in which the children are placed vertically.
       Possible values: :top, :down.
 
   - children: The child widgets to be placed in the column. Can contain nested lists of children.
@@ -2122,12 +2171,12 @@
    
    Args:
    - args: A map of arguments for the composited transform follower widget or a `LayerLink` object.
-     - :key An identifier for the composited transform follower.
-     - :link The LayerLink object that the follower will follow.
-     - :show-when-unlinked (boolean, default: true): Whether to show the child when the link is not linked.
-     - :offset (Offset, default: Offset.zero): The offset to apply to the link's target anchor.
-     - :target-anchor (Alignment, default: Alignment.topLeft): The alignment of the target anchor relative to the size of the linked `composited-transform-target`
-     - :follower-anchor (Alignment, default: Alignment.topLeft): The alignment of this widget's anchor relative to its size.
+     - `:key` An identifier for the composited transform follower.
+     - `:link` The LayerLink object that the follower will follow.
+     - `:show-when-unlinked` (boolean, default: true): Whether to show the child when the link is not linked.
+     - `:offset` (Offset, default: Offset.zero): The offset to apply to the link's target anchor.
+     - `:target-anchor` (Alignment, default: Alignment.topLeft): The alignment of the target anchor relative to the size of the linked `composited-transform-target`
+     - `:follower-anchor` (Alignment, default: Alignment.topLeft): The alignment of this widget's anchor relative to its size.
    
    ```clojure
    (composited-transform-follower link (text \"Hello, World!\"))
@@ -2591,24 +2640,24 @@
    The text can be specified as a string or an InlineSpan object.
 
    The arguments can be specified as a map with the following keys:
-    - :key (any, default: nil): An identifier for the text.
-    - :style (map or TextStyle, default: nil): The style to apply to the text.
+    - `:key` (any, default: nil): An identifier for the text.
+    - `:style` (map or TextStyle, default: nil): The style to apply to the text.
       Style map also can be passed directly instead of the arguments map.
       Check text-style function for more details.
-    - :strut-style (StrutStyle, default: nil): The strut style to use for the text.
-    - :align (keyword or TextAlign, default: nil): The alignment of the text.
+    - `:strut-style` (StrutStyle, default: nil): The strut style to use for the text.
+    - `:align` (keyword or TextAlign, default: nil): The alignment of the text.
       Possible values: :left, :right, :center, :justify, :start, :end.
-    - :text-direction (keyword or TextDirection, default: nil): The direction of the text.
+    - `:text-direction` (keyword or TextDirection, default: nil): The direction of the text.
       Possible values: :ltr, :rtl.
-    - :locale (Locale, default: nil): The locale to use for the text.
-    - :soft-wrap (bool, default: true): Whether the text should wrap at the end of the line.
-    - :overflow (TextOverflow, default: nil): How the text should behave when it overflows.
-    - :text-scaler (TextScaler, default: nil): The text scaler to use for the text.
-    - :max-lines (int, default: nil): The maximum number of lines to display.
-    - :semantics-label (string, default: nil): The semantics label to use for the text.
-    - :text-width-basis (TextWidthBasis, default: nil): The basis for the text width.
-    - :text-height-behavior (TextHeightBehavior, default: nil): The behavior of the text height.
-    - :selection-color (Color, default: nil): The color to use for the text selection.
+    - `:locale` (Locale, default: nil): The locale to use for the text.
+    - `:soft-wrap` (bool, default: true): Whether the text should wrap at the end of the line.
+    - `:overflow` (TextOverflow, default: nil): How the text should behave when it overflows.
+    - `:text-scaler` (TextScaler, default: nil): The text scaler to use for the text.
+    - `:max-lines` (int, default: nil): The maximum number of lines to display.
+    - `:semantics-label` (string, default: nil): The semantics label to use for the text.
+    - `:text-width-basis` (TextWidthBasis, default: nil): The basis for the text width.
+    - `:text-height-behavior` (TextHeightBehavior, default: nil): The behavior of the text height.
+    - `:selection-color` (Color, default: nil): The color to use for the text selection.
    
    Examples:
    ```clojure
@@ -2667,7 +2716,58 @@
   ([string] (text string {})))
 
 (defn with-text-style
-  ""
+  "The text style to apply to descendant `text` widgets which don't have an explicit style.
+
+   The arguments can be specified as a map with the following keys:
+    - `:key` (any, default: nil): An identifier for the text.
+    - `:style` (map or `TextStyle`, default: nil): The style to apply to the text.
+      Style map also can be passed directly instead of the arguments map with following keys:
+      - `:inherit` (boolean, default: true): Whether the style is inherited from the parent. 
+      - `:color` (Color, default: nil): The color of the text.
+      - `:background-color` (Color, default: nil): The background color of the text.
+      - `:font-size` (number, default: nil): The size of the font.
+      - `:font-weight` (number or FontWeight, default: nil): The weight of the font.
+      - `:font-style` (keyword or FontStyle, default: nil): The style of the font.
+      - `:letter-spacing` (number, default: nil): The spacing between letters.
+      - `:word-spacing` (number, default: nil): The spacing between words.
+      - `:text-baseline` (keyword or TextBaseline, default: nil): The baseline alignment for the text.
+      - `:height` or `:h` (number, default: nil): The height of the text.
+      - `:leading-distribution` (keyword or TextLeadingDistribution, default: nil): The leading distribution of the text.
+      - `:locale` (Locale, default: nil): The locale to use for the text.
+      - `:foreground` (Paint, default: nil): The foreground paint of the text.
+      - `:background` (Paint, default: nil): The background paint of the text.
+      - `:shadows` (list of Shadow, default: nil): The shadows of the text.
+      - `:font-features` (list of FontFeature, default: nil): The font features of the text.
+      - `:font-variations` (list of FontVariation, default: nil): The font variations of the text.
+      - `:decoration` (TextDecoration, default: nil): The decoration of the text.
+      - `:decoration-color` (Color, default: nil): The color of the decoration.
+      - `:decoration-style` (TextDecorationStyle, default: nil): The style of the decoration.
+      - `:decoration-thickness` (number, default: nil): The thickness of the decoration.
+      - `:debug-label` (string, default: nil): The debug label of the text.
+      - `:font-family` (string, default: nil): The font family of the text.
+      - `:font-family-fallback` (list of string, default: nil): The font family fallback of the text.
+      - `:package` (string, default: nil): The package of the font family.
+      - `:overflow` (TextOverflow, default: nil): How the text should behave when it overflows.
+      Check text-style function for more details.
+    - `:align` (keyword or `TextAlign`, default: nil): The alignment of the text.
+      Possible values: `:left`, `:right`, `:center`, `:justify`, `:start`, `:end`.
+    - `:soft-wrap` (bool, default: true): Whether the text should wrap at the end of the line.
+    - `:overflow` (TextOverflow, default: nil): How the text should behave when it overflows.
+    - `:max-lines` (int, default: nil): The maximum number of lines to display.
+    - `:text-width-basis` (TextWidthBasis, default: nil): The basis for the text width.
+    - `:text-height-behavior` (TextHeightBehavior, default: nil): The behavior of the text height.
+    - `:animation` (map, default: nil): The animation options for the text style changes.
+      - `:duration` (number, default: 0.25): The duration of the animation.
+      - `:curve` (Curve, default: Curves.linear): The curve of the animation.
+      - `:on-end` (fn, default: nil): The callback function to call when the animation ends.
+      
+   ```clojure
+   (-> (column
+         {:spacing 5}
+         (text \"Hello, World!\")
+         (text \"This is a column!\"))
+      (with-text-style {:color :red, :font-size 20}))
+   ```"
   [args child]
   (m/Builder
    .builder

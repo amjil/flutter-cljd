@@ -6,9 +6,9 @@
    ["package:flutter/widgets.dart" :as w]))
 
 (defn- resolvedPadding [this] 
-  (let [cache (.-resolvedPaddingCache this)
-           padding (.-padding this)
-           textDirection (.-textDirection this)] 
+  (let [cache (.-resolvedPaddingCache this) 
+        padding (.-padding this)
+        textDirection (.-textDirection this)] 
     (if (some? cache)
       cache
       (.-resolvedPaddingCache! this (.resolve padding textDirection)))))
@@ -17,7 +17,8 @@
   (.-resolvedPaddingCache! this nil) 
   (.markNeedsLayout this))
 
-(deftype RenderAnyPadding [^w/EdgeInsetsGeometry ^:mutable padding  
+(deftype RenderAnyPadding [^w/EdgeInsetsGeometry ^:mutable padding 
+                            ^w/BuildContext context
                            ^w/TextDirection? ^:mutable textDirection
                            ^:mutable resolvedPaddingCache]
   :extends (r/RenderShiftedBox nil)
@@ -127,7 +128,7 @@
   :extends (w/SingleChildRenderObjectWidget .key key .child child)
 
   (createRenderObject [_ context]
-   (RenderAnyPadding. padding (w/Directionality.maybeOf context) nil))
+   (RenderAnyPadding padding context (w/Directionality.maybeOf context) nil))
 
   (updateRenderObject [_ context renderObject]
     (setPadding renderObject padding)
