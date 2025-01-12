@@ -1,0 +1,17 @@
+(ns flutter-cljd.internal.sized
+  (:require
+   ["package:flutter/material.dart" :as m]
+   [flutter-cljd.types :as t]))
+
+(defn sized*
+  ([] (sized* {} nil))
+  ([value]
+   (if (instance? m/Widget value)
+     (sized* {} value)
+     (sized* value nil)))
+  ([value child]
+   (m/ConstrainedBox
+    .constraints (t/box-constraints value)
+    .child child))
+  ([width height child]
+   (sized* {:width width :height height} child)))

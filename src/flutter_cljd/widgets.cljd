@@ -34,7 +34,8 @@
    [flutter-cljd.internal.spacer :as sp]
    [flutter-cljd.internal.opacity :as op]
    [flutter-cljd.internal.padding :as pd]
-   [flutter-cljd.internal.stack :as st]))
+   [flutter-cljd.internal.stack :as st]
+   [flutter-cljd.internal.sized :as sz]))
 
 ;; -------------------------
 ;; MARK: Widgets
