@@ -302,26 +302,8 @@
    Some default keys are defined in the `flutter-cljd.inherited-keys` namespace.
 
    To access the inherited bindings, use `c/get-inherited` function."
-  ([transform child]
-   (builder
-    (fn [context]
-      (let [inherited-elt (#/(.getElementForInheritedWidgetOfExactType f/InheritedBindings) context)
-            bindings (or (some-> inherited-elt
-                                 ^f/InheritedBindings (.-widget)
-                                 .-bindings) {})
-            transformed-value (transform bindings)]
-        (f/InheritedBindings. transformed-value child)))))
-  ([key transform & kts&child]
-   (with-transformed-inherited
-     (fn [bindings]
-       (let [update (fn [b [k t]] 
-                      (let [[key dflt] (if (and (map? k) (contains? k :key)) [(:key k) (:default-value k)] [k nil])]
-                        (assoc b key (t (get b key dflt)))))]
-         (reduce 
-          update 
-          bindings
-          (->> kts&child butlast (concat [key transform]) (partition 2)))))
-     (last kts&child))))
+  ([transform child] (wi/with-transformed-inherited* transform child))
+  ([key transform & kts&child] (apply wi/with-transformed-inherited* key transform kts&child)))
 
 (defn with-merged-inherited
   "A widget that merges the specified `bindings` with the inherited bindings.
@@ -337,12 +319,7 @@
    ```
    To access the inherited bindings, use `c/get-inherited` function."
    [bindings child]
-  (with-transformed-inherited #(merge % bindings) child))
-
-(defn- default-merge-inherited [key value]
-  (if (and (map? key) (contains? key :merge))
-    #((:merge key) % value)
-    (constantly value)))
+  (wi/with-merged-inherited* bindings child))
 
 (defn with-inherited
   "A widget that provides inherited values to its descendants.
@@ -565,8 +542,8 @@
        (button on-tap)
        (without-button-modifier)))
   ```"
-  ([args child] (bt/button* args child))
-    ([on-tap args child] (bt/button* on-tap args child)))
+  ([args child] (bt/button* args child)) 
+  ([on-tap args child] (bt/button* on-tap args child)))
 
 (defn with-button-modifier
   "A widget that provides a custom button modifier to its descendants.
