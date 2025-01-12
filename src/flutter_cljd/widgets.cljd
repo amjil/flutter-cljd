@@ -406,23 +406,6 @@
   ([shortcuts child] 
    (shortcuts shortcuts {} child)))
 
-(deftype ^:private AnyActionDispatcher [invoke]
-  :extends w/ActionDispatcher
-  (invokeAction [action intent context]
-                (let [result (invoke action intent context)]
-                  (.invokeAction ^super action intent context)
-                  result))
-  (invokeActionIfEnabled [action intent context]
-                         (let [result (invoke action intent context)
-                               enabled (.-$1 (.invokeActionIfEnabled ^super action intent context))]
-                           (list enabled result)))) ;; TODO create a tuple
-
-(defn action-dispatcher [dispatcher]
-  (cond
-    (instance? w/ActionDispatcher dispatcher) dispatcher
-    ;; TODO (fn? dispatcher) (AnyActionDispatcher dispatcher)
-    :else (throw (Exception. (str "Invalid dispatcher: " dispatcher ", `ActionDispatcher` was expected.")))))
-
 (defn actions
   "A widget that establishes an Actions widget scope in which the given actions are available.
 
