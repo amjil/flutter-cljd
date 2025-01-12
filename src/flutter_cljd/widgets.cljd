@@ -29,7 +29,8 @@
    [flutter-cljd.internal.flex :as fx]
    [flutter-cljd.internal.expanded :as ex]
    [flutter-cljd.internal.action-listener :as al]
-   [flutter-cljd.internal.text :as txt]))
+   [flutter-cljd.internal.text :as txt]
+   [flutter-cljd.internal.container :as cnt]))
 
 ;; -------------------------
 ;; MARK: Widgets
@@ -904,82 +905,9 @@
 
    The margin and padding properties also affect the layout, as described in the documentation for those properties. (Their effects merely augment the rules described above.)
    The decoration can implicitly increase the padding (e.g. borders in a BoxDecoration contribute to the padding); see Decoration.padding."
-  ([] (container {} nil))
-  ([child] (if (instance? m/Widget child) (container {} child) (container child nil)))
-  ([args child]
-   (let [key (t/widget-key (args :key))
-         alignment (some-> args :alignment t/alignment-geometry)
-         padding (some-> args :padding t/insets)
-         color (some-> args :color t/color)
-         decor (cond
-                 (contains? args :decoration)
-                 (let [decor (t/decoration (:decoration args))]
-                   (if (nil? color)
-                     decor
-                     (.copyWith decor .color color)))
-                 
-                 (some? color)
-                 (m/BoxDecoration .color color)
-                 
-                 :else nil)
-         foreground-decoration (some-> args :foreground-decoration t/decoration)
-         hug-height (= (some args [:height :h :size]) :hug) 
-         hug-width (= (some args [:width :w :size]) :hug)
-         constraints (some-> (:constraints args args)
-                             t/some-box-constraints
-                             .normalize)
-         margin (some-> args :margin t/insets)
-         transform (some-> args :transform mat4)
-         transform-alignment (some-> args :transform-alignment t/alignment-geometry)
-         clip-behavior (t/clip (or (some args [:clip :clip-behavior]) m/Clip.none))
-         container (if
-                    (contains? args :animation)
-                     (let [animation (t/animation-options (:animation args {}))]
-                       (m/AnimatedContainer
-                        .key key
-                        .alignment alignment
-                        .padding padding
-                        .color nil
-                        .decoration decor
-                        .foregroundDecoration foreground-decoration
-                        .width nil
-                        .height nil
-                        .constraints constraints
-                        .margin margin
-                        .transform transform
-                        .transformAlignment transform-alignment
-                        .clipBehavior clip-behavior
-                        .child child
-                        .duration (animation :duration)
-                        .curve (animation :curve)
-                        .onEnd (animation :on-end)))
-
-                     (m/Container
-                      .key key
-                      .alignment alignment
-                      .padding padding
-                      .color nil
-                      .decoration decor
-                      .foregroundDecoration foreground-decoration
-                      .width nil
-                      .height nil
-                      .constraints constraints
-                      .margin margin
-                      .transform transform
-                      .transformAlignment transform-alignment
-                      .clipBehavior clip-behavior
-                      .child child))]
-     (cond
-       (and hug-height hug-width)
-       (m/IntrinsicWidth .child (m/IntrinsicHeight .child container))
-
-       hug-width
-       (m/IntrinsicWidth .child container)
-
-       hug-height
-       (m/IntrinsicHeight .child container) 
-
-       :else container))))
+  ([] (cnt/container* {} nil))
+  ([child] (if (instance? m/Widget child) (cnt/container* {} child) (cnt/container* child nil)))
+  ([args child] (cnt/container* args child)))
 
 ;; TODO: Wrap delegate
 (defn custom-multi-child-layout [delegate & children]
