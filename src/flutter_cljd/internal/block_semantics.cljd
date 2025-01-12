@@ -1,0 +1,7 @@
+(ns flutter-cljd.internal.block-semantics
+  (:require
+   ["package:flutter/material.dart" :as m]))
+
+(defn block-semantics*
+  [blocking child]
+  (m/BlockSemantics .blocking blocking .child child))

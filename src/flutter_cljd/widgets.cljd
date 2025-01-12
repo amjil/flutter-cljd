@@ -16,7 +16,8 @@
    [flutter-cljd.internal.absorb-pointer :as ap]
    [flutter-cljd.internal.ignore-pointer :as ip]
    [flutter-cljd.internal.align :as al]
-   [flutter-cljd.internal.aspect-ratio :as ar]))
+   [flutter-cljd.internal.aspect-ratio :as ar]
+   [flutter-cljd.internal.block-semantics :as bs]))
 
 ;; -------------------------
 ;; MARK: Widgets
@@ -240,7 +241,7 @@
    
    [Flutter docs](https://api.flutter.dev/flutter/widgets/BlockSemantics-class.html)"
   ([blocking child]
-   (m/BlockSemantics .blocking blocking .child child))
+   (bs/block-semantics* blocking child))
   ([child] (block-semantics true child)))
 
 (defn bottom-navigation-bar-item 
