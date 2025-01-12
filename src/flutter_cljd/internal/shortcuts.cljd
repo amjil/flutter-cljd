@@ -1,0 +1,59 @@
+(ns flutter-cljd.internal.shortcuts
+  (:require
+   ["package:flutter/material.dart" :as m]
+   ["package:flutter/services.dart" :as s]
+   [flutter-cljd.types :as t]
+   [flutter-cljd.core :as c]))
+
+(defn shortcuts*
+  [shortcuts args child]
+  (let [{:keys [debug-label modal include-semantics]} args]
+    (cond
+      (instance? m/ShortcutManager shortcuts)
+      (m/Shortcuts.manager .manager shortcuts .child child .debugLabel debug-label)
+
+      (map? shortcuts)
+      (m/Focus
+       .debugLabel debug-label
+       .canRequestFocus false
+       .onKeyEvent
+       (fn [node event]
+         (if (nil? (.-context node))
+           m/KeyEventResult.ignored
+           (t/key-event-result
+            (let [ctx (some-> m/primaryFocus .-context)
+                  keyboard s/HardwareKeyboard.instance]
+              (or
+               (when (some? ctx)
+                 (let [kv (first 
+                           (filter   
+                            (fn [[k _]] (.accepts (t/shortcut-activator k) event keyboard)) 
+                            shortcuts))]
+                   (when (some? kv)
+                     (let [value (last kv)
+                           invoke (fn [action]
+                                    (let [result (action)]
+                                      (if (false? result)
+                                        nil
+                                        (or result m/KeyEventResult.handled))))]
+                       (cond
+                         (fn? value) (invoke value)
+
+                         (instance? m/Intent value)
+                         (let [action (m/Actions.maybeFind ctx .intent value)]
+                           (when (some? action)
+                             (let [result (.invokeActionIfEnabled (m/Actions.of ctx) action value ctx)]
+                               (when (.-$1 result) (.toKeyEventResult action value (.-$2 result))))))
+                         
+                         :else 
+                         (let [actions-element (c/get-inherited ctx ::actions {}) 
+                               has-value (> (count value) 1)
+                               action (get actions-element (if has-value (first value) value))]
+                           (when (fn? action)
+                             (invoke
+                              (if has-value #(apply action (rest value)) action)))))))))
+               (if modal m/KeyEventResult.skipRemainingHandlers m/KeyEventResult.ignored))))))
+       .includeSemantics (or include-semantics true)
+       .child child)
+      
+      :else (throw (Exception. (str "Invalid shortcuts: " shortcuts))))))

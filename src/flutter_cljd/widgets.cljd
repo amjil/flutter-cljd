@@ -43,7 +43,8 @@
    [flutter-cljd.internal.keep-alive :as ka]
    [flutter-cljd.internal.on-back-button :as obb]
    [flutter-cljd.internal.baseline :as bl]
-   [flutter-cljd.internal.bottom-navigation-bar-item :as bnbi]))
+   [flutter-cljd.internal.bottom-navigation-bar-item :as bnbi]
+   [flutter-cljd.internal.shortcuts :as sc]))
 
 (defn absorb-pointer 
   "A widget that absorbs pointers during hit testing. 
@@ -363,67 +364,46 @@
    (with-inherited inh/enabled (not value) child)))
 
 (defn shortcuts
-  "```clojure
+  "A widget that creates keyboard shortcuts for its descendants.
+   
+   Shortcuts are key bindings that become actions when triggered. They are typically used to implement keyboard shortcuts for common operations.
+   
+   The shortcuts widget can be used in two ways:
+   1. With a ShortcutManager instance that manages the shortcuts directly
+   2. With a map of key combinations to actions
+   
+   Args:
+    - shortcuts: A ShortcutManager instance or a map of key combinations to actions
+    - args: A map of arguments for the shortcuts widget
+      - `:debug-label` (string): A label used for debugging purposes
+      - `:modal` (boolean): If true, prevents shortcuts from being handled by ancestors
+      - `:include-semantics` (boolean, default: true): Whether to include semantics information
+    - child: The widget below this widget in the tree
+   
+   The shortcuts map can contain:
+   - Key combinations as vectors: `[:control \\W]`
+   - Function keys as keywords: `:f1`
+   - Values can be:
+     - Intent instances
+     - Keywords representing intents
+     - Vectors with an intent and arguments: `[:some-intent arg1 arg2]`
+     - Functions to be called directly: `#(print \"Key pressed\")`
+   
+   Example:
+   ```clojure
    (shortcuts
      {[:control \\W] :some-intent
       [:control \\C] [:some-intent some-arg]
       [:alt \\c] #(print \"ALT-C is pressed\")
       :f1 #(print \"F1 is pressed\")}
      (text \"Hello, Shortcuts!\"))
-   ```"
+   ```
+   
+   [Flutter docs](https://api.flutter.dev/flutter/widgets/Shortcuts-class.html)"
   ([shortcuts args child]
-   (let [{:keys [debug-label modal include-semantics]} args]
-    (cond
-      (instance? m/ShortcutManager shortcuts)
-      (m/Shortcuts.manager .manager shortcuts .child child .debugLabel debug-label)
-
-      (map? shortcuts)
-      (m/Focus
-       .debugLabel debug-label
-       .canRequestFocus false
-       .onKeyEvent
-       (fn [node event]
-         (if (nil? (.-context node))
-           m/KeyEventResult.ignored
-           (t/key-event-result
-            (let [ctx (some-> m/primaryFocus .-context)
-                  keyboard s/HardwareKeyboard.instance]
-              (or
-               (when (some? ctx)
-                 (let [kv (first 
-                           (filter   
-                            (fn [[k _]] (.accepts (t/shortcut-activator k) event keyboard)) 
-                            shortcuts))]
-                   (when (some? kv)
-                     (let [value (last kv)
-                           invoke (fn [action]
-                                    (let [;; TODO: dispatcher (c/get-inherited ctx ::action-dispatcher)
-                                          result (action)]
-                                      (if (false? result)
-                                        nil
-                                        (or result m/KeyEventResult.handled))))]
-                       (cond
-                         (fn? value) (invoke value)
-
-                         (instance? m/Intent value)
-                         (let [action (m/Actions.maybeFind ctx .intent value)]
-                           (when (some? action)
-                             (let [result (.invokeActionIfEnabled (m/Actions.of ctx) action value ctx)]
-                               (when (.-$1 result) (.toKeyEventResult action value (.-$2 result))))))
-                         
-                         :else 
-                         (let [actions-element (c/get-inherited ctx ::actions {}) 
-                               has-value (> (count value) 1)
-                               action (get actions-element (if has-value (first value) value))]
-                           (when (fn? action)
-                             (invoke
-                              (if has-value #(apply action (rest value)) action)))))))))
-               (if modal m/KeyEventResult.skipRemainingHandlers m/KeyEventResult.ignored))))))
-       .includeSemantics (or include-semantics true)
-       .child child)
-      
-      :else (throw (Exception. (str "Invalid shortcuts: " shortcuts))))))
-  ([shortcuts child] (flutter-cljd.widgets/shortcuts shortcuts {} child)))
+   (sc/shortcuts* shortcuts args child))
+  ([shortcuts child] 
+   (shortcuts shortcuts {} child)))
 
 (deftype ^:private AnyActionDispatcher [invoke]
   :extends w/ActionDispatcher
