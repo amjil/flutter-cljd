@@ -575,43 +575,8 @@
        (button on-tap)
        (without-button-modifier)))
   ```"
-  ([args child] 
-   (let [[args on-tap] (cond
-                (map? args) [(assoc args :on-tap nil) (:on-tap args)]
-                (ifn? args) [{} args]
-                :else (throw (Exception. (str "Invalid button arguments: " args ", expected a map or a function."))))]
-     (button on-tap args child)))
-    ([on-tap args child]
-     (builder
-      (fn [ctx]
-        (bt/Button 
-         (t/widget-key (args :key))
-         (fn [btn-ctx]
-                  (let [ctx (:context btn-ctx ctx)
-                        modifier (c/get-inherited ctx inh/button-modifier)]
-                    (modifier
-                     (with-inherited inh/button-context btn-ctx child)
-                     btn-ctx)))
-         (c/get-inherited ctx inh/enabled (:enabled args)) 
-         on-tap 
-         (:on-tap-down args)
-         (:on-tap-up args) 
-         (:on-tap-cancel args) 
-         (:on-double-tap args) 
-         (:on-long-press args) 
-         (:on-secondary-tap args) 
-         (:on-secondary-tap-up args) 
-         (:on-secondary-tap-down args) 
-         (:on-secondary-tap-cancel args) 
-         (:on-highlight-changed args) 
-         (:on-hover args) 
-         (:mouse-cursor args) 
-         (c/get-inherited ctx inh/enable-feedback (:enable-feedback args)) 
-         (c/get-inherited ctx inh/exclude-from-semantics (:exclude-from-semantics args)) 
-         (:focus-node args) 
-         (c/get-inherited ctx inh/can-request-focus (:can-request-focus args)) 
-         (:on-focus-change args) 
-         (c/get-inherited ctx inh/autofocus (:autofocus args)))))))
+  ([args child] (bt/button* args child))
+    ([on-tap args child] (bt/button* on-tap args child)))
 
 (defn with-button-modifier
   "A widget that provides a custom button modifier to its descendants.
@@ -644,14 +609,12 @@
    ```
    To avoid unnecessary widget rebuilds, define your modifier functions using `defn` rather than creating anonymous functions inline."
   [modifier child]
-  (with-inherited inh/button-modifier modifier child))
-
-(defn- no-styled-button [button _] button)
+  (bt/with-button-modifier* modifier child))
 
 (defn without-button-modifier
   "A widget that removes the button modifier from its descendants."
   [child] 
-  (with-inherited inh/button-modifier no-styled-button child))
+  (bt/without-button-modifier* child))
 
 (defn center 
   "A widget that centers its child within itself.
