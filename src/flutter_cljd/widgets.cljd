@@ -30,7 +30,8 @@
    [flutter-cljd.internal.expanded :as ex]
    [flutter-cljd.internal.action-listener :as al]
    [flutter-cljd.internal.text :as txt]
-   [flutter-cljd.internal.container :as cnt]))
+   [flutter-cljd.internal.container :as cnt]
+   [flutter-cljd.internal.spacer :as sp]))
 
 ;; -------------------------
 ;; MARK: Widgets
@@ -1079,9 +1080,8 @@
   "Spacer creates an adjustable, empty spacer that can be used to tune the spacing between widgets in a Flex container, like Row or Column.
 
    The Spacer widget will take up any available space, so setting the Flex.mainAxisAlignment on a flex container that contains a Spacer to MainAxisAlignment.spaceAround, MainAxisAlignment.spaceBetween, or MainAxisAlignment.spaceEvenly will not have any visible effect: the Spacer has taken up all of the additional space, therefore there is none left to redistribute."
-  ([] (spacer 1))
-  ([flex]
-   (m/Spacer .flex (int (or flex 1)))))
+  ([] (sp/spacer* 1))
+  ([flex] (sp/spacer* flex)))
 
 (defn stack
   "A widget that positions its children relative to the edges of its box.

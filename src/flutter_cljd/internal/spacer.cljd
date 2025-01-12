@@ -1,0 +1,8 @@
+(ns flutter-cljd.internal.spacer
+  (:require
+   ["package:flutter/material.dart" :as m]))
+
+(defn spacer* 
+  ([] (spacer* 1))
+  ([flex]
+   (m/Spacer .flex (int (or flex 1)))))
