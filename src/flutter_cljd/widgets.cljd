@@ -25,7 +25,8 @@
    [flutter-cljd.internal.colored :as cd]
    [flutter-cljd.internal.color-filtered :as cf]
    [flutter-cljd.internal.composited-transform :as ct]
-   [flutter-cljd.internal.constraints-transformed :as ctr]))
+   [flutter-cljd.internal.constraints-transformed :as ctr]
+   [flutter-cljd.internal.flex :as fx]))
 
 ;; -------------------------
 ;; MARK: Widgets
@@ -1017,19 +1018,7 @@
    [Flutter docs](https://api.flutter.dev/flutter/widgets/Flex-class.html)"
   ([direction] (flex direction {}))
   ([direction args & children]
-   (let [[args children] (ut/args-children args children)]
-     (m/Flex
-      .key (t/widget-key (args :key))
-      .direction (t/axis direction)
-      .mainAxisAlignment (t/main-axis-alignment (:main-axis-alignment args :start))
-      .mainAxisSize (t/main-axis-size (:main-axis-size args :min))
-      .crossAxisAlignment (t/cross-axis-alignment (:cross-axis-alignment args :center))
-      .textDirection (t/text-direction (:text-direction args :ltr))
-      .verticalDirection (t/vertical-direction (:vertical-direction args :down))
-      .textBaseline (t/text-baseline (:text-baseline args :alphabetic))
-      .clipBehavior (t/clip (:clip args :none))
-      .spacing (double (or (:spacing args) 0))
-      .children children))))
+   (apply fx/flex* direction args children)))
 
 (defn flexible 
   "A widget that controls how a child of a `row`, `column`, or `flex` flexes.
