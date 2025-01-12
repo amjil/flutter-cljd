@@ -1,0 +1,9 @@
+(ns flutter-cljd.internal.custom-multi-child-layout
+  (:require
+   ["package:flutter/widgets.dart" :as w]
+   [flutter-cljd.utils :as ut]))
+
+(defn custom-multi-child-layout* [delegate & children]
+  (w/CustomMultiChildLayout 
+   .delegate delegate 
+   .children (ut/flatten-children children)))

@@ -47,7 +47,8 @@
    [flutter-cljd.internal.shortcuts :as sc]
    [flutter-cljd.internal.actions :as act]
    [flutter-cljd.internal.checked-mode-banner :as cmb]
-   [flutter-cljd.internal.clip-corners :as cc]))
+   [flutter-cljd.internal.clip-corners :as cc]
+   [flutter-cljd.internal.custom-multi-child-layout :as cml]))
 
 (defn absorb-pointer 
   "A widget that absorbs pointers during hit testing. 
@@ -858,11 +859,41 @@
   ([child] (if (instance? m/Widget child) (cnt/container* {} child) (cnt/container* child nil)))
   ([args child] (cnt/container* args child)))
 
-;; TODO: Wrap delegate
-(defn custom-multi-child-layout [delegate & children]
-  (w/CustomMultiChildLayout 
-   .delegate delegate 
-   .children (ut/flatten-children children)))
+(defn custom-multi-child-layout
+  "A widget that uses a delegate to size and position multiple children.
+
+  The delegate can determine the layout constraints for each child and can
+  decide where to position each child. The delegate can also determine the size of
+  the parent, but the size of the parent cannot depend on the children's sizes.
+
+  Args:
+   - delegate: A MultiChildLayoutDelegate that controls the layout of the children
+   - children: The widgets below this widget in the tree
+
+  The delegate argument must not be null.
+
+  Example:
+  ```clojure
+  (deftype MyDelegate []
+    :extends m/MultiChildLayoutDelegate
+    
+    (performLayout [size]
+      (let [child1-size (.layoutChild this \"child1\" size)
+            child2-size (.layoutChild this \"child2\" size)]
+        (.positionChild this \"child1\" (m/Offset 0 0))
+        (.positionChild this \"child2\" (m/Offset 100 100))))
+    
+    (shouldRelayout [_ old-delegate] true))
+
+  (custom-multi-child-layout
+    (MyDelegate.)
+    (positioned {:key \"child1\"} (text \"Child 1\"))
+    (positioned {:key \"child2\"} (text \"Child 2\")))
+  ```
+
+  [Flutter docs](https://api.flutter.dev/flutter/widgets/CustomMultiChildLayout-class.html)"
+  [delegate & children]
+  (apply cml/custom-multi-child-layout* delegate children))
 
 (defn expanded 
   "A widget that expands a child of a Row, Column, or Flex so that the child fills the available space.
