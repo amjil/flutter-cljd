@@ -1,7 +1,6 @@
 (ns flutter-cljd.utils
   "Core utilities and helpers for flutter-cljd."
   (:require
-    [cljd.flutter :as f]
    ["package:flutter/widgets.dart" :as w]))
 
 (defmacro ??
