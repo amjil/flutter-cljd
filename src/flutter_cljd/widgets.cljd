@@ -41,7 +41,8 @@
    [flutter-cljd.internal.autocomplete-highlighted-index :as ahi]
    [flutter-cljd.internal.autofill-group :as afg]
    [flutter-cljd.internal.keep-alive :as ka]
-   [flutter-cljd.internal.on-back-button :as obb]))
+   [flutter-cljd.internal.on-back-button :as obb]
+   [flutter-cljd.internal.baseline :as bl]))
 
 (defn absorb-pointer 
   "A widget that absorbs pointers during hit testing. 
@@ -230,8 +231,8 @@
    If baseline is less than the distance from the top of the child to the baseline of the child, then the child is top-aligned instead.
    
    [Flutter docs](https://api.flutter.dev/flutter/widgets/Baseline-class.html)"
-  ([offset type child] (m/Baseline .baseline (double offset) .baselineType (t/text-baseline type) .child child))
-  ([offset child] (baseline offset m/TextBaseline.alphabetic child)))
+  ([offset type child] (bl/baseline* offset type child))
+  ([offset child] (bl/baseline* offset child)))
 
 (defn block-semantics
   "A widget that drops the semantics of all widget that were painted before it in the same semantic container.

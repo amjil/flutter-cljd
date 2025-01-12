@@ -1,0 +1,13 @@
+(ns flutter-cljd.internal.baseline
+  (:require
+   ["package:flutter/material.dart" :as m]
+   [flutter-cljd.types :as t]))
+
+(defn baseline*
+  ([offset type child]
+   (m/Baseline 
+    .baseline (double offset) 
+    .baselineType (t/text-baseline type) 
+    .child child))
+  ([offset child]
+   (baseline* offset m/TextBaseline.alphabetic child)))
