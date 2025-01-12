@@ -1,0 +1,42 @@
+(ns flutter-cljd.internal.on-change
+  (:require
+   ["package:flutter/foundation.dart" :as f]
+   ["package:flutter/widgets.dart" :as w]))
+
+(declare ^:private OnChangeState)
+
+(deftype ^:private OnChange
+         [value
+          onChange
+          equals
+          ^f/Key? key
+          ^w/Widget child]
+  :extends (w/StatefulWidget .key key)
+
+  (^#/(State OnChange) createState [_] (OnChangeState)))
+
+(defn- equal? [state a b]
+  (let [equals (or 
+                (some-> state .-widget .-equals)
+                (fn [a b]
+                  (or (identical? a b) (= a b))))]
+    (equals a b)))
+
+(deftype ^:private OnChangeState []   
+  :extends (#(State OnChange>)) 
+  
+  (didUpdateWidget [this oldWidget] 
+    (.didUpdateWidget ^super this oldWidget)  
+    (let [widget (.-widget this)
+          old (.-value oldWidget)
+          new (.-value widget)
+          on-change (.-onChange widget)]
+      (when-not (equal? this old new) 
+        (on-change old new (.-context widget)))))
+  
+  (build [this _]  
+    (this .-widget .-child)))
+
+(defn on-change-of*
+  [value equal? on-change child]
+  (OnChange value on-change equal? nil child))

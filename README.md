@@ -19,7 +19,7 @@ The library simplifies certain Dart APIs, making them easier to use and more exp
 ```clojure
 ;; Basic button with styling
 (->> (text "Click me!")
-     (with-style {:color :blue, :size 16})
+     (with-text-style {:color :blue, :size 16})
      (padding {:h 16 :v 8})
      (button #(println "Clicked!")))
 ```
@@ -36,7 +36,7 @@ The library simplifies certain Dart APIs, making them easier to use and more exp
 ```clojure
 ;; Applying styles and layouts
 (->> (text "Styled Text")
-     (with-style {:color :blue
+     (with-text-style {:color :blue
                   :size 20
                   :weight :bold})
      (padding {:all 16})
@@ -87,7 +87,7 @@ The library simplifies certain Dart APIs, making them easier to use and more exp
          (ui/column {:spacing 10}
            (ui/text name {:size 18, :weight :bold})
            (ui/text role {:size 14})))
-       (ui/with-style {:color :gray})
+       (ui/with-text-style {:color :gray})
        (ui/padding 16)
        (ui/card {:elevation 4 :radius 12})
        (ui/center)))

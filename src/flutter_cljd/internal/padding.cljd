@@ -1,4 +1,4 @@
-(ns ^:internal flutter-cljd.internal.padding
+(ns flutter-cljd.internal.padding
   (:require
    [flutter-cljd.types :as t]
    ["dart:math" :as math]

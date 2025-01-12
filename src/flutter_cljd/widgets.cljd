@@ -43,7 +43,8 @@
    [flutter-cljd.internal.custom-multi-child-layout :as cml]
    [flutter-cljd.internal.decorated :as dec]
    [flutter-cljd.internal.keyed :as kyd]
-   [flutter-cljd.internal.with-text-style :as wts]))
+   [flutter-cljd.internal.with-text-style :as wts]
+   [flutter-cljd.internal.on-change :as oc]))
 
 (defn absorb-pointer 
   "A widget that absorbs pointers during hit testing. 
@@ -1258,52 +1259,23 @@
   [args child]
   (wts/with-text-style* args child))
 
-;; MARK: Animated
-
-;; (defn animated
-;;   ([child-fn] (animated {} child-fn))
-;;   ([animation? child-fn]
-;;    (if (fn? animation?)
-;;      (animated {} animation? child-fn)
-;;      (animated animation? child-fn :none)))
-;;   ([animation? child-fn child]
-;;    (f/widget
-;;     :vsync vsync
-;;     :managed [anim-contr (m/AnimationController 
-;;                           .vsync vsync 
-;;                           .value 0.0 
-;;                           .duration (:duration (animation-options animation?)))]
-;;     :let [animation (if (instance? m/Listenable animation?) 
-;;                       animation?
-;;                       (let [options (animation-options animation?)]
-;;                         (set! (.duration anim-contr) (options :duration))
-;;                         anim-contr))]
-;;     (m/AnimatedBuilder
-;;      .animation animation
-;;      .child (if (instance? m/Widget child) child nil)
-;;      .builder (fn [ctx child]
-;;                 (binding [*anim-ctx* (assoc *anim-ctx* :is-animated? true)]
-;;                   (if (= child :none)
-;;                     (child-fn (.-value animation) ctx)
-;;                     (child-fn child (.-value animation) ctx))))))))
-
-;; (defn tt []
-;;   (animated
-;;    {:duration 0.25 :curve :linear}
-;;    (fn [t, ctx]
-;;      (->>
-;;       (text "Text" {:color (color :white)})
-;;       (padding (insets 10))
-;;       (colored :red))))
+(defn on-change-of 
+  "A widget that calls a function when the given value changes.
   
-;;   (->>
-;;    (text "Text" {:color :red})
-;;    (animated
-;;     ;; [insets (insets 10)]
-;;     {:duration 0.25 :curve :linear}
-;;     #(padding 4 %)))
-  
-;;   (->>
-;;    (text "Text" {:color :red})
-;;    (padding 10 {:animation {:duration 0.25 :curve :linear}}))
-;;   )
+   Args:
+    - `value`: The value to listen for changes.
+    - `equal?`: The function to compare the old and new values.
+    - `on-change`: The function to call when the value changes. (fn [old new context])
+    - `child`: The child widget to rebuild when the value changes.
+   
+   Example:
+   ```clojure
+   (->> (text string))
+     (on-change-of string #(print %2)))
+   ```
+   
+   - Note: The `on-change-of` doesn't listen atoms or ValueListenable objects."
+  ([value equal? on-change child]
+   (oc/on-change-of* value equal? on-change child))
+  ([value on-change child]
+   (oc/on-change-of* value nil on-change child)))
