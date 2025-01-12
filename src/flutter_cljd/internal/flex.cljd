@@ -40,3 +40,35 @@
       .textBaseline (t/text-baseline (:text-baseline args :alphabetic))
       .spacing (double (or (:spacing args) 0))
       .children children))))
+(ns flutter-cljd.internal.flex
+  (:require
+   ["package:flutter/material.dart" :as m]
+   [flutter-cljd.types :as t]
+   [flutter-cljd.utils :as ut]))
+
+(defn flex* [direction args & children]
+  (let [[args children] (ut/args-children args children)]
+    (m/Flex
+     .key (t/widget-key (args :key))
+     .direction (t/axis direction)
+     .mainAxisAlignment (t/main-axis-alignment (:main-axis-alignment args :start))
+     .mainAxisSize (t/main-axis-size (:main-axis-size args :min))
+     .crossAxisAlignment (t/cross-axis-alignment (:cross-axis-alignment args :center))
+     .textDirection (t/text-direction (:text-direction args :ltr))
+     .verticalDirection (t/vertical-direction (:vertical-direction args :down))
+     .textBaseline (t/text-baseline (:text-baseline args :alphabetic))
+     .children children)))
+
+(defn flexible* [args child]
+  (let [[flex fit] (cond
+                     (number? args) [args m/FlexFit.loose] 
+                     (map? args) [(:flex args 1) (:fit args m/FlexFit.loose)]
+                     :else [1 args])]
+    (m/Flexible 
+     .key (when (map? args) (t/widget-key (:key args)))
+     .flex (int (or flex 1))
+     .fit (t/flex-fit fit) 
+     .child child)))
+
+(defn layout-builder* [builder]
+  (m/LayoutBuilder .builder builder))
