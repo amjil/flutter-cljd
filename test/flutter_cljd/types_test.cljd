@@ -1,0 +1,211 @@
+(ns flutter-cljd.types-test
+  (:require [clojure.test :refer [deftest is testing]]
+            [flutter-cljd.types :as t]
+            ["package:flutter/material.dart" :as m]
+            ["package:flutter/widgets.dart" :as w]))
+
+(deftest test-axis
+  (testing "Valid axis values"
+    (is (= (t/axis :horizontal) m/Axis.horizontal))
+    (is (= (t/axis :h) m/Axis.horizontal))
+    (is (= (t/axis :vertical) m/Axis.vertical))
+    (is (= (t/axis :v) m/Axis.vertical)))
+  
+  (testing "Passing an Axis instance"
+    (is (= (t/axis m/Axis.horizontal) m/Axis.horizontal)))
+  
+  (testing "Invalid axis"
+    (is (thrown? Exception (t/axis :invalid)))))
+
+(deftest test-axis-direction
+  (testing "Valid axis directions"
+    (is (= (t/axis-direction :up) m/AxisDirection.up))
+    (is (= (t/axis-direction :u) m/AxisDirection.up))
+    (is (= (t/axis-direction :down) m/AxisDirection.down))
+    (is (= (t/axis-direction :d) m/AxisDirection.down))
+    (is (= (t/axis-direction :left) m/AxisDirection.left))
+    (is (= (t/axis-direction :l) m/AxisDirection.left))
+    (is (= (t/axis-direction :right) m/AxisDirection.right))
+    (is (= (t/axis-direction :r) m/AxisDirection.right)))
+  
+  (testing "Passing an AxisDirection instance"
+    (is (= (t/axis-direction m/AxisDirection.up) m/AxisDirection.up)))
+  
+  (testing "Invalid axis direction"
+    (is (thrown? Exception (t/axis-direction :invalid)))))
+
+(deftest test-blend-mode
+  (testing "Valid blend modes"
+    (is (= (t/blend-mode :clear) m/BlendMode.clear))
+    (is (= (t/blend-mode :src) m/BlendMode.src))
+    (is (= (t/blend-mode :dst) m/BlendMode.dst))
+    (is (= (t/blend-mode :src-over) m/BlendMode.srcOver))
+    (is (= (t/blend-mode :color) m/BlendMode.color))
+    (is (= (t/blend-mode :luminosity) m/BlendMode.luminosity)))
+  
+  (testing "Passing a BlendMode instance"
+    (is (= (t/blend-mode m/BlendMode.clear) m/BlendMode.clear)))
+  
+  (testing "Invalid blend mode"
+    (is (thrown? Exception (t/blend-mode :invalid)))))
+
+(deftest test-blur-style
+  (testing "Valid blur styles"
+    (is (= (t/blur-style :normal) m/BlurStyle.normal))
+    (is (= (t/blur-style :solid) m/BlurStyle.solid))
+    (is (= (t/blur-style :outer) m/BlurStyle.outer))
+    (is (= (t/blur-style :inner) m/BlurStyle.inner)))
+  
+  (testing "Passing a BlurStyle instance"
+    (is (= (t/blur-style m/BlurStyle.normal) m/BlurStyle.normal)))
+  
+  (testing "Invalid blur style"
+    (is (thrown? Exception (t/blur-style :invalid)))))
+
+(deftest test-alignment
+  (testing "Alignment with keywords"
+    (is (= (t/alignment :center) m/Alignment.center))
+    (is (= (t/alignment :top-left) m/Alignment.topLeft))
+    (is (= (t/alignment :bottom-right) m/Alignment.bottomRight)))
+  
+  (testing "Alignment with vector"
+    (is (= (.-x (t/alignment [1.0 -1.0])) 1.0))
+    (is (= (.-y (t/alignment [1.0 -1.0])) -1.0)))
+  
+  (testing "Alignment with single number"
+    (let [align (t/alignment 0.5)]
+      (is (= (.-x align) 0.5))
+      (is (= (.-y align) 0.5))))
+  
+  (testing "Invalid alignment"
+    (is (thrown? Exception (t/alignment :invalid)))))
+
+(deftest test-color
+  (testing "Color from keywords"
+    (is (= (t/color :red) m/Colors.red))
+    (is (= (t/color :blue) m/Colors.blue))
+    (is (= (t/color :green) m/Colors.green)))
+  
+  (testing "Color from RGB values"
+    (let [color (t/color 255 128 0)]
+      (is (= (.-red color) 255))
+      (is (= (.-green color) 128))
+      (is (= (.-blue color) 0))
+      (is (= (.-alpha color) 255))))
+  
+  (testing "Color from RGBA values"
+    (let [color (t/color 255 128 0 0.5)]
+      (is (= (.-red color) 255))
+      (is (= (.-green color) 128))
+      (is (= (.-blue color) 0))
+      (is (= (.-alpha color) 128))))
+  
+  (testing "Color from hex string"
+    (is (= (t/color "#FF0000") (t/color 255 0 0)))
+    (is (= (t/color "#80FF0000") (t/color 255 0 0 0.5))))
+  
+  (testing "Invalid color"
+    (is (thrown? Exception (t/color :invalid)))))
+
+(deftest test-text-style
+  (testing "Basic text style properties"
+    (let [style (t/text-style {:color :red
+                              :font-size 20
+                              :font-weight :bold})]
+      (is (= (.-color style) m/Colors.red))
+      (is (= (.-fontSize style) 20.0))
+      (is (= (.-fontWeight style) m/FontWeight.bold))))
+  
+  (testing "Text style with inheritance"
+    (let [style (t/text-style {:inherit false})]
+      (is (false? (.-inherit style)))))
+  
+  (testing "Text style with multiple properties"
+    (let [style (t/text-style {:color :blue
+                              :background-color :white
+                              :font-size 16
+                              :letter-spacing 1.5
+                              :height 1.2})]
+      (is (= (.-color style) m/Colors.blue))
+      (is (= (.-backgroundColor style) m/Colors.white))
+      (is (= (.-fontSize style) 16.0))
+      (is (= (.-letterSpacing style) 1.5))
+      (is (= (.-height style) 1.2)))))
+
+(deftest test-text-span
+  (testing "Basic text span"
+    (let [span (t/text-span "Hello")]
+      (is (= (.-text span) "Hello"))))
+  
+  (testing "Text span with style"
+    (let [span (t/text-span "Hello" {:color :red})]
+      (is (= (.-text span) "Hello"))
+      (is (= (-> span .-style .-color) m/Colors.red))))
+  
+  (testing "Text span with children"
+    (let [span (t/text-span 
+                {:text "Parent"
+                 :style {:color :blue}}
+                (t/text-span "Child" {:color :red}))]
+      (is (= (.-text span) "Parent"))
+      (is (= (-> span .-style .-color) m/Colors.blue))
+      (is (= (count (.-children span)) 1)))))
+
+(deftest test-duration
+  (testing "Duration from seconds"
+    (let [dur (t/duration 2)]
+      (is (= (.-inSeconds dur) 2))))
+  
+  (testing "Duration from fractional seconds"
+    (let [dur (t/duration 0.5)]
+      (is (= (.-inMilliseconds dur) 500))))
+  
+  (testing "Duration from map"
+    (let [dur (t/duration {:seconds 1 
+                          :minutes 2
+                          :hours 3})]
+      (is (= (.-inSeconds dur) 
+             (+ 1 (* 2 60) (* 3 60 60))))))
+  
+  (testing "Default duration"
+    (let [dur (t/duration nil)]
+      (is (= (.-inMilliseconds dur) 250)))))
+
+(deftest test-curve
+  (testing "Standard curves"
+    (is (= (t/curve :linear) m/Curves.linear))
+    (is (= (t/curve :ease-in) m/Curves.easeIn))
+    (is (= (t/curve :ease-out) m/Curves.easeOut))
+    (is (= (t/curve :ease-in-out) m/Curves.easeInOut)))
+  
+  (testing "Passing a Curve instance"
+    (is (= (t/curve m/Curves.bounceIn) m/Curves.bounceIn)))
+  
+  (testing "Invalid curve"
+    (is (thrown? Exception (t/curve :invalid)))))
+
+(deftest test-box-constraints
+  (testing "Fixed size constraints"
+    (let [constraints (t/box-constraints 100)]
+      (is (= (.-minWidth constraints) 100.0))
+      (is (= (.-maxWidth constraints) 100.0))
+      (is (= (.-minHeight constraints) 100.0))
+      (is (= (.-maxHeight constraints) 100.0))))
+  
+  (testing "Width and height constraints"
+    (let [constraints (t/box-constraints {:width 200 :height 150})]
+      (is (= (.-minWidth constraints) 200.0))
+      (is (= (.-maxWidth constraints) 200.0))
+      (is (= (.-minHeight constraints) 150.0))
+      (is (= (.-maxHeight constraints) 150.0))))
+  
+  (testing "Min/max constraints"
+    (let [constraints (t/box-constraints 
+                      {:min-width 100
+                       :max-width 200
+                       :min-height 150
+                       :max-height 300})]
+      (is (= (.-minWidth constraints) 100.0))
+      (is (= (.-maxWidth constraints) 200.0))
+      (is (= (.-minHeight constraints) 150.0))
+      (is (= (.-maxHeight constraints) 300.0)))))
