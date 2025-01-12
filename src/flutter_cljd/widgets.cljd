@@ -17,7 +17,8 @@
    [flutter-cljd.internal.ignore-pointer :as ip]
    [flutter-cljd.internal.align :as al]
    [flutter-cljd.internal.aspect-ratio :as ar]
-   [flutter-cljd.internal.block-semantics :as bs]))
+   [flutter-cljd.internal.block-semantics :as bs]
+   [flutter-cljd.internal.banner :as bn]))
 
 ;; -------------------------
 ;; MARK: Widgets
@@ -208,20 +209,7 @@
    
    [Flutter docs](https://api.flutter.dev/flutter/widgets/Banner-class.html)"
   [args child]
-  (let [message (if (string? args) args (:message args ""))]
-    (m/Banner 
-     .key (t/widget-key (args :key))
-     .child child
-     .message message
-     .textDirection (some-> (args :text-direction) t/text-direction)
-     .location (or (some-> (args :location) t/banner-location) m/BannerLocation.topEnd)
-     .layoutDirection (some-> (args :layout-direction) t/text-direction)
-     .color (or (some-> (args :color) t/color) (m/Color 0xA0B71C1C))
-     .textStyle (or (some-> (args :text-style) t/text-style) (m/TextStyle
-                                                            .color m/Colors.white
-                                                            .fontSize (* 12.0 0.85)
-                                                            .fontWeight m/FontWeight.w900
-                                                            .height 1.0)))))
+  (bn/banner* args child))
 
 (defn baseline
   "A widget that positions its child according to the child's baseline.

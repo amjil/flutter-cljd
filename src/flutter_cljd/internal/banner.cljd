@@ -1,0 +1,21 @@
+(ns flutter-cljd.internal.banner
+  (:require
+   ["package:flutter/material.dart" :as m]
+   [flutter-cljd.types :as t]))
+
+(defn banner*
+  [args child]
+  (let [message (if (string? args) args (:message args ""))]
+    (m/Banner 
+     .key (t/widget-key (args :key))
+     .child child
+     .message message
+     .textDirection (some-> (args :text-direction) t/text-direction)
+     .location (or (some-> (args :location) t/banner-location) m/BannerLocation.topEnd)
+     .layoutDirection (some-> (args :layout-direction) t/text-direction)
+     .color (or (some-> (args :color) t/color) (m/Color 0xA0B71C1C))
+     .textStyle (or (some-> (args :text-style) t/text-style) (m/TextStyle
+                                                           .color m/Colors.white
+                                                           .fontSize (* 12.0 0.85)
+                                                           .fontWeight m/FontWeight.w900
+                                                           .height 1.0)))))
