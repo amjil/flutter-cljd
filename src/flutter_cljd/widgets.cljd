@@ -46,7 +46,8 @@
    [flutter-cljd.internal.bottom-navigation-bar-item :as bnbi]
    [flutter-cljd.internal.shortcuts :as sc]
    [flutter-cljd.internal.actions :as act]
-   [flutter-cljd.internal.checked-mode-banner :as cmb]))
+   [flutter-cljd.internal.checked-mode-banner :as cmb]
+   [flutter-cljd.internal.clip-corners :as cc]))
 
 (defn absorb-pointer 
   "A widget that absorbs pointers during hit testing. 
@@ -621,23 +622,63 @@
   ([child] (clip-rect {} child)))
 
 (defn clip-corners
-  "Clips the child widget with rounded corners.
-     The radius can be specified as a radius. or a map of corner names to a radius.
-     Each corner can be specified separately using the keys `:top-left`, `:top-right`, `:bottom-left`, `:bottom-right`, `:left-top`, `:right-top`, `:left-bottom`, `:right-bottom`, `:left`, `:right`, `:top`, `:bottom`, `:start`, `:end`, `:t`, `:b`, `:l`, `:r`, `:s`, `:e`, `:all`.
-     Each radius can be specified as a number or a map of x and y or a XY sequence.
-     Examples:
-     ```clojure
-     (clip-corners 4) ;; BorderRadius.all(Radius.circular(4))
-     (clip-corners {:top-left 4 :top-right 8}) ;; BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(8))
-     (clip-corners {:l 4 :r 8}) ;; BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(8), bottomLeft: Radius.circular(4), bottomRight: Radius.circular(8))
-     (clip-corners {:x 4 :y 8}) ;; BorderRadius.all(Radius.elliptical(4, 8))
-     (clip-corners [4 8]) ;; BorderRadius.all(Radius.elliptical(4, 8))
-     (clip-corners {:top-left 4 :all 8}) ;; BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(8), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8))
-     ```"
+  "A widget that clips its child using rounded corners.
+
+   This widget takes a child and clips it using a rounded rectangle border radius.
+   It's useful for creating rounded corners on any widget.
+
+   Args:
+    - radius: The border radius specification. Can be provided in several formats:
+      - A single number for uniform circular corners
+      - A map specifying individual corners
+      - A sequence of [x y] values for elliptical corners
+    
+   The radius map supports these keys:
+    - Individual corners: `:top-left`, `:top-right`, `:bottom-left`, `:bottom-right`
+    - Shorthand pairs: `:left-top`, `:right-top`, `:left-bottom`, `:right-bottom`  
+    - Side groups: `:left`, `:right`, `:top`, `:bottom`
+    - Directional: `:start`, `:end`
+    - Single letter: `:t`, `:b`, `:l`, `:r`, `:s`, `:e`
+    - `:all` for all corners
+    - `:x`/`:y` for elliptical corners
+
+   Examples:
+   ```clojure
+   ;; Uniform circular corners
+   (clip-corners 4 
+     (colored :blue 
+       (sized 100 
+         (center (text \"Hello\")))))
+
+   ;; Different corners
+   (clip-corners {:top-left 4 :top-right 8}
+     (container {:color :blue}
+       (text \"Hello\")))
+
+   ;; Shorthand for sides
+   (clip-corners {:l 4 :r 8} 
+     (colored :blue
+       (text \"Hello\")))
+
+   ;; Elliptical corners
+   (clip-corners {:x 4 :y 8}
+     (container {:color :blue}
+       (text \"Hello\")))
+
+   ;; Using a sequence
+   (clip-corners [4 8]
+     (colored :blue
+       (text \"Hello\")))
+
+   ;; Mixed radii with fallback
+   (clip-corners {:top-left 4 :all 8}
+     (container {:color :blue}
+       (text \"Hello\")))
+   ```
+
+   [Flutter docs](https://api.flutter.dev/flutter/widgets/ClipRRect-class.html)"
   [radius child]
-  (m/ClipRRect
-   .borderRadius (t/border-radius radius)
-   .child child))
+  (cc/clip-corners* radius child))
 
 (defn colored 
   "A widget that paints its child with a specified color.

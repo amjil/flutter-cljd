@@ -1,0 +1,10 @@
+(ns flutter-cljd.internal.clip-corners
+  (:require
+   ["package:flutter/material.dart" :as m]
+   [flutter-cljd.types :as t]))
+
+(defn clip-corners*
+  [radius child]
+  (m/ClipRRect
+   .borderRadius (t/border-radius radius)
+   .child child))
