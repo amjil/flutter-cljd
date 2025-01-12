@@ -1,0 +1,18 @@
+(ns flutter-cljd.internal.actions
+  (:require
+   ["package:flutter/material.dart" :as m]
+   [flutter-cljd.core :as c]))
+
+(defn actions*
+  ([actions dispatcher child]
+   (let [grouped-actions (group-by (fn [[k v]] (and (instance? c/Type k) (instance? m/Action v))) actions)
+         flutter-actions (get grouped-actions true {})
+         clojure-actions (get grouped-actions false {})]
+     (with-transformed-inherited
+       ::actions #(merge (or % {}) clojure-actions)
+       ;; TODO: ::action-dispatcher #(or (action-dispatcher-fn dispatcher?) %)
+       (m/Actions
+        .actions flutter-actions
+        .dispatcher (some-> dispatcher action-dispatcher)
+        .child child))))
+  ([actions child] (actions* actions nil child)))

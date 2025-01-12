@@ -44,7 +44,8 @@
    [flutter-cljd.internal.on-back-button :as obb]
    [flutter-cljd.internal.baseline :as bl]
    [flutter-cljd.internal.bottom-navigation-bar-item :as bnbi]
-   [flutter-cljd.internal.shortcuts :as sc]))
+   [flutter-cljd.internal.shortcuts :as sc]
+   [flutter-cljd.internal.actions :as act]))
 
 (defn absorb-pointer 
   "A widget that absorbs pointers during hit testing. 
@@ -423,18 +424,32 @@
     :else (throw (Exception. (str "Invalid dispatcher: " dispatcher ", `ActionDispatcher` was expected.")))))
 
 (defn actions
+  "A widget that establishes an Actions widget scope in which the given actions are available.
+
+  Actions are mapping of Intent keys to Action objects that defines how keys and other inputs map to actions.
+  
+  Args:
+   - actions: A map of Intent keys to Action objects
+   - dispatcher: Optional ActionDispatcher that invokes actions
+   - child: The widget below this widget in the tree
+  
+  The actions map can contain:
+   - Intent instances as keys
+   - Action instances as values
+   - Functions as values that will be wrapped in Actions
+   
+  Example:
+  ```clojure
+  (actions
+    {some-intent (m/CallbackAction .onInvoke #(print \"Action invoked\"))}
+    (text \"Hello, Actions!\"))
+  ```
+
+  [Flutter docs](https://api.flutter.dev/flutter/widgets/Actions-class.html)"
   ([actions dispatcher child]
-   (let [grouped-actions (group-by (fn [[k v]] (and (instance? c/Type k) (instance? m/Action v))) actions)
-         flutter-actions (get grouped-actions true {})
-         clojure-actions (get grouped-actions false {})]
-     (with-transformed-inherited
-       ::actions #(merge (or % {}) clojure-actions)
-       ;; TODO: ::action-dispatcher #(or (action-dispatcher-fn dispatcher?) %)
-       (m/Actions
-        .actions flutter-actions
-        .dispatcher (some-> dispatcher action-dispatcher)
-        .child child))))
-  ([actions child] (flutter-cljd.widgets/actions actions nil child)))
+   (act/actions* actions dispatcher child))
+  ([actions child] 
+   (actions actions nil child)))
 
 (defn button
   "A universal button.
