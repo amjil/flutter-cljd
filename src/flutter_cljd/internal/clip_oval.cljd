@@ -1,0 +1,12 @@
+(ns flutter-cljd.internal.clip-oval
+  (:require
+   ["package:flutter/widgets.dart" :as w]
+   [flutter-cljd.types :as t]))
+
+(defn clip-oval*
+  [{:keys [key clipper clip-behavior] :or {clip-behavior :anti-alias}} child]
+  (w/ClipOval 
+   .key (some-> key t/widget-key)
+   .clipper clipper
+   .clipBehavior (t/clip clip-behavior)
+   .child child))

@@ -19,7 +19,8 @@
    [flutter-cljd.internal.aspect-ratio :as ar]
    [flutter-cljd.internal.block-semantics :as bs]
    [flutter-cljd.internal.banner :as bn]
-   [flutter-cljd.internal.center :as ct]))
+   [flutter-cljd.internal.center :as ct]
+   [flutter-cljd.internal.clip-oval :as co]))
 
 ;; -------------------------
 ;; MARK: Widgets
@@ -679,12 +680,7 @@
    By default, inscribes an axis-aligned oval into its layout dimensions and prevents its child from painting outside that oval, but the size and location of the clip oval can be customized using a custom clipper.
 
    [Flutter docs](https://api.flutter.dev/flutter/widgets/ClipOval-class.html)"
-  ([{:keys [key clipper clip-behavior] :or {clip-behavior :anti-alias}} child]
-   (w/ClipOval 
-    .key (some-> key t/widget-key)
-    .clipper clipper
-    .clipBehavior (t/clip clip-behavior)
-    .child child))
+  ([args child] (co/clip-oval* args child))
   ([child] (clip-oval {} child)))
 
 (defn clip-rect 
