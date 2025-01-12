@@ -21,7 +21,8 @@
    [flutter-cljd.internal.banner :as bn]
    [flutter-cljd.internal.center :as ct]
    [flutter-cljd.internal.clip-oval :as co]
-   [flutter-cljd.internal.clip-rect :as cr]))
+   [flutter-cljd.internal.clip-rect :as cr]
+   [flutter-cljd.internal.colored :as cd]))
 
 ;; -------------------------
 ;; MARK: Widgets
@@ -725,9 +726,8 @@
      (colored 0xFF0000FF (text \"Hello, World!\"))
      ```
      [Flutter docs](https://api.flutter.dev/flutter/widgets/ColoredBox-class.html)"
-  ([value] (if (instance? m/Widget value) (colored m/Colors.transparent value) (colored value nil)))
-  ([clr child]
-   (m/ColoredBox .color (t/color clr) .child child)))
+  ([value] (cd/colored* value))
+  ([clr child] (cd/colored* clr child)))
 
 (defn color-filtered
   "Applies a ColorFilter to its child.

@@ -1,0 +1,11 @@
+(ns flutter-cljd.internal.colored
+  (:require
+   ["package:flutter/material.dart" :as m]
+   [flutter-cljd.types :as t]))
+
+(defn colored*
+  ([value] (if (instance? m/Widget value) 
+             (colored* m/Colors.transparent value) 
+             (colored* value nil)))
+  ([clr child]
+   (m/ColoredBox .color (t/color clr) .child child)))
