@@ -540,7 +540,7 @@
                         :black m/Colors.black
                         :white m/Colors.white
                         :transparent m/Colors.transparent
-                        (m/Color value))
+                        (throw (Exception. (str "Unknown color keyword: " value))))
      :else (m/Color value))))
 
 (defn color-filter
@@ -704,18 +704,22 @@
     (let [a0 (first value)
           a1 (second value)
           first-is-text (not (or (map? a0) (instance? m/InlineSpan a0) (vector? a0)))
-          args (some map? [a0 a1 {}])
+          args (some #(when (map? %) %) [a0 a1 {}])
           text (if first-is-text a0 (args :text))
           style (get args :style args)
-          children (flatten
-                    (cond
-                      (contains? args :children) (args :children)
-                      (map? a1) (drop 2 value)
-                      (or (map? a0) first-is-text) (rest value)
-                      :else value))]
+          children (->> (cond
+                         (contains? args :children) (args :children)
+                         (map? a1) (drop 2 value)
+                         (or (map? a0) first-is-text) (rest value)
+                         :else value) 
+                        (flatten)
+                        (filter some?)
+                        (map #(if (instance? m/InlineSpan %) 
+                                % 
+                                (m/TextSpan .text (str %)))))]
       (m/TextSpan
        .text (str text)
-       .children (if (empty? children) nil (map #(if (instance? m/InlineSpan %) % (m/TextSpan .text (str %))) children))
+       .children (if (empty? children) nil children)
        .style (some-> style text-style)
        .recognizer (args :recognizer)
        .mouseCursor (args :mouse-cursor)

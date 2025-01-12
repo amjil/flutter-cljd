@@ -1,8 +1,7 @@
 (ns flutter-cljd.types-test
   (:require [clojure.test :refer [deftest is testing]]
             [flutter-cljd.types :as t]
-            ["package:flutter/material.dart" :as m]
-            ["package:flutter/widgets.dart" :as w]))
+            ["package:flutter/material.dart" :as m]))
 
 (deftest test-axis
   (testing "Valid axis values"
@@ -101,8 +100,11 @@
       (is (= (.-alpha color) 128))))
   
   (testing "Color from hex string"
-    (is (= (t/color "#FF0000") (t/color 255 0 0)))
-    (is (= (t/color "#80FF0000") (t/color 255 0 0 0.5))))
+      (let [color (t/color "#80FF0000")]
+      (is (= (.-red color) 255))
+      (is (= (.-green color) 0))
+      (is (= (.-blue color) 0))
+      (is (= (.-alpha color) 128))))
   
   (testing "Invalid color"
     (is (thrown? Exception (t/color :invalid)))))

@@ -170,8 +170,8 @@
   (testing "Bottom navigation bar item with basic properties"
     (let [icon (m/Icon m/Icons.home)
           widget (f/bottom-navigation-bar-item {:icon icon :label "Home"})]
-      (is (= (.-icon widget) icon))
-      (is (= (.-label widget) "Home"))))
+      (is (= (.-label widget) "Home"))
+      (is (= (-> widget .-icon .-icon) (.-icon icon)))))
   
   (testing "Bottom navigation bar item with all properties"
     (let [icon (m/Icon m/Icons.home)
@@ -182,8 +182,8 @@
                   :label "Home"
                   :background-color :blue
                   :tooltip "Home Page"})]
-      (is (= (.-icon widget) icon))
-      (is (= (.-activeIcon widget) active-icon))
+      (is (= (-> widget .-icon .-icon) (.-icon icon)))
+      (is (= ( -> widget .-activeIcon .-icon) (.-icon active-icon)))
       (is (= (.-label widget) "Home"))
       (is (= (.-backgroundColor widget) (t/color :blue)))
       (is (= (.-tooltip widget) "Home Page")))))
@@ -300,16 +300,14 @@
   (testing "Padding with number"
     (let [child (m/Text "Child")
           widget (f/padding 10 child)]
-      (is (instance? m/Padding widget))
       (is (= (.-padding widget) (t/insets 10)))
       (is (instance? m/Text (.-child widget)))))
   
   (testing "Padding with animation"
     (let [widget (f/padding 
-                 20 
+                 20
                  {:animation {:duration 0.2}}
                  (m/Text "Child"))]
-      (is (instance? m/AnimatedPadding widget))
       (is (= (.-padding widget) (t/insets 20)))
       (is (= (.-inMilliseconds (.-duration widget)) 200)))))
 

@@ -1226,13 +1226,22 @@
   ([flex]
    (m/Spacer .flex (int (or flex 1)))))
 
-(defn stack [& children]
-  (let [children (if (map? (first children)) (flatten (rest children)) (flatten children))
-        params (if (map? (first children)) (first children) {})]
+(defn stack
+  "A widget that positions its children relative to the edges of its box.
+   
+   This class is useful if you want to overlap several children in a simple way, for example having some text and an image, overlaid with a gradient and a button attached to the bottom.
+   
+   [Flutter doc](https://api.flutter.dev/flutter/widgets/Stack-class.html)"
+  [& children]
+  (let [params (if (map? (first children)) (first children) {})
+        children (ut/flatten-children  
+                  (if (map? (first children)) (rest children) children))]
     (m/Stack
      .key (t/widget-key (:key params))
      .alignment (t/alignment-geometry (:alignment params m/AlignmentDirectional.topStart))
+     .textDirection (some-> (:text-direction params) t/text-direction)
      .fit (t/stack-fit (:fit params m/StackFit.loose))
+     .clipBehavior (t/clip (:clip params m/Clip.hardEdge))
      .children children)))
 
 (defn opacity
