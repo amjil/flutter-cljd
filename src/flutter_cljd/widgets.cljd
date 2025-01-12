@@ -1,14 +1,6 @@
 (ns flutter-cljd.widgets
   "The Flutter widgets framework. [Docs](https://api.flutter.dev/flutter/widgets/widgets-library.html)"
   (:require
-   ["package:flutter/material.dart" :as m]
-   ["package:flutter/services.dart" :as s]
-   ["package:flutter/widgets.dart" :as w]
-   ["dart:async" :as async] 
-   [cljd.flutter :as f]
-   [flutter-cljd.core :as c]
-   [flutter-cljd.types :as t]
-   [flutter-cljd.utils :as ut]
    [flutter-cljd.inherited-keys :as inh]
    [flutter-cljd.internal.builder :as bd]
    [flutter-cljd.internal.layout-builder :as lbd]
@@ -859,7 +851,7 @@
    The margin and padding properties also affect the layout, as described in the documentation for those properties. (Their effects merely augment the rules described above.)
    The decoration can implicitly increase the padding (e.g. borders in a BoxDecoration contribute to the padding); see Decoration.padding."
   ([] (cnt/container* {} nil))
-  ([child] (if (instance? m/Widget child) (cnt/container* {} child) (cnt/container* child nil)))
+  ([child] (cnt/container* child))
   ([args child] (cnt/container* args child)))
 
 (defn custom-multi-child-layout
