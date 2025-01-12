@@ -28,7 +28,8 @@
    [flutter-cljd.internal.constraints-transformed :as ctr]
    [flutter-cljd.internal.flex :as fx]
    [flutter-cljd.internal.expanded :as ex]
-   [flutter-cljd.internal.action-listener :as al]))
+   [flutter-cljd.internal.action-listener :as al]
+   [flutter-cljd.internal.text :as txt]))
 
 ;; -------------------------
 ;; MARK: Widgets
@@ -1278,52 +1279,7 @@
   ```
    "
   ([string args]
-   (let [key (t/widget-key (args :key))
-         strut-style (args :strut-style)
-         text-align (some-> args :align t/text-align)
-         text-direction (some-> args :text-direction t/text-direction)
-         locale (some-> args :locale t/locale)
-         soft-wrap (args :soft-wrap true)
-         overflow (args :overflow)
-         text-scaler (args :text-scaler)
-         max-lines (args :max-lines)
-         semantics-label (args :semantics-label)
-         text-width-basis (args :text-width-basis)
-         text-height-behavior (args :text-height-behavior)
-         selection-color (some-> args :selection-color t/color)]
-     (if (instance? m/InlineSpan string)
-       (m/RichText
-        .text string
-        .key key
-        .textAlign text-align
-        .textDirection text-direction
-        .softWrap soft-wrap
-        .overflow overflow
-        .textScaler text-scaler
-        .maxLines max-lines
-        .locale locale
-        .strutStyle strut-style
-        .textWidthBasis text-width-basis
-        .textHeightBehavior text-height-behavior
-        .selectionRegistrar (args :selection-registrar)
-        .selectionColor selection-color)
-
-       (m/Text
-        (str string)
-        .key key
-        .style (t/text-style (:style args args))
-        .strutStyle strut-style
-        .textAlign text-align
-        .textDirection text-direction
-        .locale locale
-        .softWrap soft-wrap
-        .overflow overflow
-        .textScaler text-scaler
-        .maxLines max-lines
-        .semanticsLabel semantics-label
-        .textWidthBasis text-width-basis
-        .textHeightBehavior text-height-behavior
-        .selectionColor selection-color))))
+   (txt/text* string args))
   ([string] (text string {})))
 
 (defn with-text-style
