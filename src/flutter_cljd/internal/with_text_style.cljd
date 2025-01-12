@@ -1,0 +1,48 @@
+(ns flutter-cljd.internal.with-text-style
+  (:require
+   ["package:flutter/material.dart" :as m]
+   [flutter-cljd.types :as t]))
+
+(defn with-text-style*
+  [args child]
+  (m/Builder
+   .builder
+   (fn [ctx]
+     (let [def-style (m/DefaultTextStyle.of ctx)
+           args (cond
+                  (map? args) args
+                  (ifn? args) (args def-style)
+                  :else (throw (ex-info "Invalid arguments, expected a map or a fn" args)))
+           key (t/widget-key (args :key))
+           style (.merge (.-style def-style) (t/text-style (:style args args)))
+           align (or (some-> args :align t/text-align) (.-textAlign def-style))
+           soft-wrap (:soft-wrap args (if (nil? (.-softWrap def-style)) true (.-softWrap def-style)))
+           overflow (:overflow args (.-overflow def-style))
+           max-lines (:max-lines args (.-maxLines def-style))
+           text-width-basis (:text-width-basis args (.-textWidthBasis def-style))
+           text-height-behavior (:text-height-behavior args (.-textHeightBehavior def-style))
+           animation (some-> args :animation t/animation-options)]
+       (if (nil? animation)
+         (m/DefaultTextStyle
+          .key key
+          .style style
+          .textAlign align
+          .softWrap soft-wrap
+          .overflow overflow
+          .maxLines max-lines
+          .textWidthBasis text-width-basis
+          .textHeightBehavior text-height-behavior
+          .child child)
+         (m/AnimatedDefaultTextStyle
+          .key key
+          .child child
+          .style style
+          .textAlign align
+          .softWrap soft-wrap
+          .overflow overflow
+          .maxLines max-lines
+          .textWidthBasis text-width-basis
+          .textHeightBehavior text-height-behavior
+          .duration (animation :duration)
+          .curve (animation :curve)
+          .onEnd (animation :on-end)))))))
