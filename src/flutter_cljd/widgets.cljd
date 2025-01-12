@@ -40,7 +40,8 @@
    [flutter-cljd.internal.with-inherited :as wi]
    [flutter-cljd.internal.autocomplete-highlighted-index :as ahi]
    [flutter-cljd.internal.autofill-group :as afg]
-   [flutter-cljd.internal.keep-alive :as ka]))
+   [flutter-cljd.internal.keep-alive :as ka]
+   [flutter-cljd.internal.on-back-button :as obb]))
 
 (defn absorb-pointer 
   "A widget that absorbs pointers during hit testing. 
@@ -196,13 +197,8 @@
     - child: The child widget to be displayed.
 
    [Flutter docs](https://api.flutter.dev/flutter/widgets/BackButtonListener-class.html)"
-  [action child] 
-  (m/BackButtonListener .child child .onBackButtonPressed (fn [] 
-                                                            (let [result (action)]
-                                                              (cond
-                                                                (instance? async/Future result) (.then result #(boolean %))
-                                                                (boolean? result) (async/Future.value result)
-                                                                :else (async/Future.value true))))))
+  [action child]
+  (obb/on-back-button* action child))
 
 (defn banner 
   "Displays a diagonal message above the corner of another widget.

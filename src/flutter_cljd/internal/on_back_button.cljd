@@ -1,0 +1,15 @@
+(ns flutter-cljd.internal.on-back-button
+  (:require
+   ["package:flutter/material.dart" :as m]
+   ["dart:async" :as async]))
+
+(defn on-back-button*
+  [action child]
+  (m/BackButtonListener 
+   .child child 
+   .onBackButtonPressed (fn [] 
+                         (let [result (action)]
+                           (cond
+                             (instance? async/Future result) (.then result #(boolean %))
+                             (boolean? result) (async/Future.value result)
+                             :else (async/Future.value true))))))
