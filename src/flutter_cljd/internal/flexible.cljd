@@ -1,0 +1,15 @@
+(ns flutter-cljd.internal.flexible
+  (:require
+   ["package:flutter/material.dart" :as m]
+   [flutter-cljd.types :as t]))
+
+(defn flexible* [args child]
+  (let [[flex fit] (cond
+                     (number? args) [args m/FlexFit.loose]
+                     (map? args) [(:flex args 1) (:fit args m/FlexFit.loose)]
+                     :else [1 args])]
+    (m/Flexible
+     .key (when (map? args) (t/widget-key (:key args)))
+     .flex (int (or flex 1))
+     .fit (t/flex-fit fit)
+     .child child)))

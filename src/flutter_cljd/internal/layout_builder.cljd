@@ -1,0 +1,6 @@
+(ns flutter-cljd.internal.layout-builder
+  (:require
+   ["package:flutter/material.dart" :as m]))
+
+(defn layout-builder* [builder]
+  (m/LayoutBuilder .builder builder))

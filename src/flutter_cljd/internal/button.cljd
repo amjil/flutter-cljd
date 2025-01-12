@@ -4,13 +4,16 @@
    ["package:flutter/foundation.dart" :as f]
    ["package:flutter/widgets.dart" :as w]
    ["package:flutter/services.dart" :as s]
-   ["package:flutter/gestures.dart" :as g]
+   [flutter-cljd.core :as c]
+   [flutter-cljd.types :as t]
+   [flutter-cljd.internal.with-inherited :as wi]
+   [flutter-cljd.internal.builder :as bd]
    [flutter-cljd.inherited-keys :as inh]))
 
 (declare ^:private ButtonState)
 
 ;; Button widget
-(deftype Button [key child is-enabled on-tap on-tap-down on-tap-up
+(deftype ^:private Button [key child is-enabled on-tap on-tap-down on-tap-up
                  on-tap-cancel on-double-tap on-long-press on-secondary-tap
                  on-secondary-tap-up on-secondary-tap-down on-secondary-tap-cancel
                  on-highlight-changed on-hover mouse-cursor enable-feedback
@@ -368,3 +371,54 @@
 
   #/(w/AutomaticKeepAliveClientMixin Button)
   (wantKeepAlive [_] false))
+
+
+(defn button*
+  ([args child]
+   (let [[args on-tap] (cond
+                         (map? args) [(assoc args :on-tap nil) (:on-tap args)]
+                         (ifn? args) [{} args]
+                         :else (throw (Exception. (str "Invalid button arguments: " args ", expected a map or a function."))))]
+     (button* on-tap args child)))
+  ([on-tap args child]
+   (bd/builder*
+    (fn [ctx]
+      (Button
+       (t/widget-key (args :key))
+       (fn [btn-ctx]
+         (let [ctx (:context btn-ctx ctx)
+               modifier (c/get-inherited ctx inh/button-modifier)]
+           (modifier
+            (wi/with-inherited* inh/button-context btn-ctx child)
+            btn-ctx)))
+       (c/get-inherited ctx inh/enabled (:enabled args))
+       on-tap
+       (:on-tap-down args)
+       (:on-tap-up args)
+       (:on-tap-cancel args)
+       (:on-double-tap args)
+       (:on-long-press args)
+       (:on-secondary-tap args)
+       (:on-secondary-tap-up args)
+       (:on-secondary-tap-down args)
+       (:on-secondary-tap-cancel args)
+       (:on-highlight-changed args)
+       (:on-hover args)
+       (:mouse-cursor args)
+       (c/get-inherited ctx inh/enable-feedback (:enable-feedback args))
+       (c/get-inherited ctx inh/exclude-from-semantics (:exclude-from-semantics args))
+       (:focus-node args)
+       (c/get-inherited ctx inh/can-request-focus (:can-request-focus args))
+       (:on-focus-change args)
+       (c/get-inherited ctx inh/autofocus (:autofocus args)))))))
+
+(defn with-button-modifier*
+  [modifier child]
+  (wi/with-inherited* inh/button-modifier modifier child))
+
+(defn- no-styled-button [button _] button)
+
+(defn without-button-modifier*
+  "A widget that removes the button modifier from its descendants."
+  [child]
+  (with-button-modifier* no-styled-button child))

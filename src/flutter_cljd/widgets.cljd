@@ -9,8 +9,9 @@
    [flutter-cljd.core :as c]
    [flutter-cljd.types :as t]
    [flutter-cljd.utils :as ut]
-   [flutter-cljd.drawing :as dr :refer [offset, mat4]]
    [flutter-cljd.inherited-keys :as inh]
+   [flutter-cljd.internal.builder :as bd]
+   [flutter-cljd.internal.layout-builder :as lbd]
    [flutter-cljd.internal.button :as bt]
    [flutter-cljd.internal.padding :as pd]
    [flutter-cljd.internal.absorb-pointer :as ap]
@@ -19,25 +20,24 @@
    [flutter-cljd.internal.aspect-ratio :as ar]
    [flutter-cljd.internal.block-semantics :as bs]
    [flutter-cljd.internal.banner :as bn]
-   [flutter-cljd.internal.center :as ct]
+   [flutter-cljd.internal.center :as cntr]
    [flutter-cljd.internal.clip-oval :as co]
    [flutter-cljd.internal.clip-rect :as cr]
    [flutter-cljd.internal.colored :as cd]
    [flutter-cljd.internal.color-filtered :as cf]
    [flutter-cljd.internal.composited-transform :as ct]
    [flutter-cljd.internal.constraints-transformed :as ctr]
-   [flutter-cljd.internal.flex :as fx]
+   [flutter-cljd.internal.flexible :as fx]
    [flutter-cljd.internal.expanded :as ex]
-   [flutter-cljd.internal.flex :as fx]
-   [flutter-cljd.internal.column-row :as cr]
-   [flutter-cljd.internal.action-listener :as al]
+   [flutter-cljd.internal.column-row-flex :as crf]
+   [flutter-cljd.internal.action-listener :as aclr]
    [flutter-cljd.internal.text :as txt]
    [flutter-cljd.internal.container :as cnt]
    [flutter-cljd.internal.spacer :as sp]
    [flutter-cljd.internal.opacity :as op]
-   [flutter-cljd.internal.padding :as pd]
    [flutter-cljd.internal.stack :as st]
-   [flutter-cljd.internal.sized :as sz]))
+   [flutter-cljd.internal.sized :as sz]
+   [flutter-cljd.internal.with-inherited :as wi]))
 
 ;; -------------------------
 ;; MARK: Widgets
@@ -125,7 +125,7 @@
    
    [Flutter docs](https://api.flutter.dev/flutter/widgets/ActionListener-class.html)"
   [listener action child]
-  (al/action-listener* listener action child))
+  (aclr/action-listener* listener action child))
 
 (defn with-autocomplete-highlighted-index 
   "An inherited widget used to indicate which autocomplete option should be highlighted for keyboard navigation.
@@ -289,8 +289,8 @@
      (builder #(padding 10 %)))
    ```
    [Flutter docs](https://api.flutter.dev/flutter/widgets/Builder-class.html)"
-  ([builder] (m/Builder .builder builder))
-  ([builder child] (m/Builder .builder (fn [ctx] (builder child ctx)))))
+  ([builder] (bd/builder* builder))
+  ([builder child] (bd/builder* builder child)))
 
 (defn with-transformed-inherited
   "A widget that transforms inherited bindings using the specified `transform` function.
@@ -379,19 +379,9 @@
    To modify the inherited bindings, use `with-transformed-inherited` widget.
    
    To access the inherited bindings, use `c/get-inherited` function."
-  ([key child]
-   (assert (and (map? key) (contains? key :key)) (str "Expected a map with :key but got " key))
-   (with-inherited key (:default-value key) child))
-  ([key value child]
-   (with-transformed-inherited key (default-merge-inherited key value) child))
-  ([key0 value0 key1 value1 & kvs&child]
-   (apply with-transformed-inherited
-          (concat
-           (apply concat (map 
-                          (fn [[k v]] [k (default-merge-inherited k v)])
-                          (concat [[key0 value0] [key1 value1]]
-                                  (partition 2 (butlast kvs&child)))))
-           [(last kvs&child)]))))
+  ([key child] (wi/with-inherited* key child))
+  ([key value child] (wi/with-inherited* key value child))
+  ([key0 value0 key1 value1 & kvs&child] (apply wi/with-inherited* key0 value0 key1 value1 kvs&child)))
 
 (defn enabled 
   "A widget that sets the `flutter-cljd.inherited-keys/enabled` inherited value"
@@ -677,7 +667,7 @@
    ```
 
    [Flutter docs](https://api.flutter.dev/flutter/widgets/Center-class.html)"
-  ([args child] (ct/center* args child))
+  ([args child] (cntr/center* args child))
   ([child] (center {} child)))
 
 (defn checked-mode-banner
@@ -784,7 +774,7 @@
   A column widget with the specified arguments and children."
   ([] (column {}))
   ([args & children]
-   (apply cr/column* args children)))
+   (apply crf/column* args children)))
 
 (defn composited-transform-follower
   "A widget that follows a `composited-transform-target`.
@@ -946,7 +936,7 @@
    [Flutter docs](https://api.flutter.dev/flutter/widgets/Flex-class.html)"
   ([direction] (flex direction {}))
   ([direction args & children]
-   (apply fx/flex* direction args children)))
+   (apply crf/flex* direction args children)))
 
 (defn flexible 
   "A widget that controls how a child of a `row`, `column`, or `flex` flexes.
@@ -977,7 +967,7 @@
    
    The builder function is not called during layout if the parent passes the same constraints repeatedly."
   [builder]
-  (fx/layout-builder* builder))
+  (lbd/layout-builder* builder))
 
 (defn row
   "A widget that displays its children in a horizontal array.
@@ -1018,7 +1008,7 @@
    [Flutter docs](https://api.flutter.dev/flutter/widgets/Row-class.html)"
   ([] (row {}))
   ([args & children]
-   (apply cr/row* args children)))
+   (apply crf/row* args children)))
 
 (defn sized
   "Creates a `ConstrainedBox` widget with the specified constraints and child.\\

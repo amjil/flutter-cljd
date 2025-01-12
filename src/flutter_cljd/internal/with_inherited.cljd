@@ -1,0 +1,50 @@
+(ns flutter-cljd.internal.with-inherited 
+  (:require
+   [cljd.flutter :as f]
+   [flutter-cljd.internal.builder :as bd]))
+
+(defn with-transformed-inherited*
+  ([transform child]
+   (bd/builder*
+    (fn [context]
+      (let [inherited-elt (#/(.getElementForInheritedWidgetOfExactType f/InheritedBindings) context)
+            bindings (or (some-> inherited-elt
+                                 ^f/InheritedBindings (.-widget)
+                                 .-bindings) {})
+            transformed-value (transform bindings)]
+        (f/InheritedBindings. transformed-value child)))))
+  ([key transform & kts&child]
+   (with-transformed-inherited*
+     (fn [bindings]
+       (let [update (fn [b [k t]]
+                      (let [[key dflt] (if (and (map? k) (contains? k :key)) [(:key k) (:default-value k)] [k nil])]
+                        (assoc b key (t (get b key dflt)))))]
+         (reduce
+          update
+          bindings
+          (->> kts&child butlast (concat [key transform]) (partition 2)))))
+     (last kts&child))))
+
+(defn with-merged-inherited*
+  [bindings child]
+  (with-transformed-inherited* #(merge % bindings) child))
+
+(defn- default-merge-inherited [key value]
+  (if (and (map? key) (contains? key :merge))
+    #((:merge key) % value)
+    (constantly value)))
+
+(defn with-inherited*
+  ([key child]
+   (assert (and (map? key) (contains? key :key)) (str "Expected a map with :key but got " key))
+   (with-inherited* key (:default-value key) child))
+  ([key value child]
+   (with-transformed-inherited* key (default-merge-inherited key value) child))
+  ([key0 value0 key1 value1 & kvs&child]
+   (apply with-transformed-inherited*
+          (concat
+           (apply concat (map
+                          (fn [[k v]] [k (default-merge-inherited k v)])
+                          (concat [[key0 value0] [key1 value1]]
+                                  (partition 2 (butlast kvs&child)))))
+           [(last kvs&child)]))))
