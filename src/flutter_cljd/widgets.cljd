@@ -32,7 +32,7 @@
    
    [Flutter docs](https://api.flutter.dev/flutter/widgets/AbsorbPointer-class.html)"
   ([absorbing child]
-   (m/AbsorbPointer .absorbing (true? absorbing) .child child))
+   (ap/absorb-pointer* absorbing child))
   ([child] (absorb-pointer true child)))
 
 (defn ignore-pointer
@@ -44,7 +44,7 @@
   
    [Flutter docs](https://api.flutter.dev/flutter/widgets/IgnorePointer-class.html)"
   ([ignoring child]
-   (m/IgnorePointer .ignoring (true? ignoring) .child child))
+   (ip/ignore-pointer* ignoring child))
   ([child] (ignore-pointer true child)))
 
 (defn align 
