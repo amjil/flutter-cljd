@@ -31,12 +31,51 @@ The library simplifies certain Dart APIs, making them easier to use and more exp
      (padding 16)
      (card {:elevation 2 :radius 8}))
 ```
+
+### Styling and Layout
 ```clojure
-;; Simple UI components with functional composition
+;; Applying styles and layouts
+(->> (text "Styled Text")
+     (with-style {:color :blue
+                  :size 20
+                  :weight :bold})
+     (padding {:all 16})
+     (center))
+
+;; Responsive layouts
+(->> (column {:spacing 8}
+       (text "Header")
+       (expanded
+         (list-view
+           (for [i (range 10)]
+             (text (str "Item " i)))))
+       (text "Footer"))
+     (container {:color :white}))
+```
+
+### Interactive Components
+```clojure
+;; Button with feedback
+(->> (text "Click Me!")
+     (button #(println "Clicked!")
+             {:on-long-press #(println "Long pressed!")
+              :on-hover #(println "Hover: " %)}))
+
+;; Form elements
+(let [controller (atom "")]
+  (->> (text-field
+         {:controller controller
+          :on-changed #(reset! controller %)
+          :decoration {:label "Enter text"}})
+       (padding 16)))
+```
+
+### Complete Example
+```clojure
 (ns readme.example
   (:require [flutter-cljd.widgets :as ui]))
 
-;; Complete example: User profile card
+;; User profile card
 (defn profile-card [{:keys [name role avatar]}]
   (->> (ui/row
          ;; Avatar section
@@ -60,3 +99,36 @@ The library simplifies certain Dart APIs, making them easier to use and more exp
      :role "Senior Developer"
      :avatar (ui/image "path/to/avatar.png")}))
 ```
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
+
+### Development Setup
+
+1. Clone the repository
+```bash
+git clone https://github.com/yourusername/flutter-cljd.git
+```
+
+2. Install dependencies
+```bash
+clj -A:dev
+```
+
+3. Run tests
+```bash
+clj -A:test
+```
+
+### Guidelines
+
+- Follow the existing code style
+- Add tests for new features
+- Update documentation as needed
+- Keep commits focused and atomic
+- Write clear commit messages
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
