@@ -1,0 +1,16 @@
+(ns flutter-cljd.internal.constraints-transformed
+  (:require
+   ["package:flutter/widgets.dart" :as w]
+   [flutter-cljd.types :as t]))
+
+(defn constraints-transformed*
+  [args child]
+  (let [[args transform] (if (map? args) [args (:transform args)] [{} args])]
+    (w/ConstraintsTransformBox
+     .key (t/widget-key (args :key))
+     .child child
+     .textDirection (t/text-direction (:text-direction args))
+     .alignment (t/alignment-geometry (:alignment args :center))
+     .constraintsTransform transform
+     .clipBehavior (t/clip (or (some args [:clip :clip-behavior]) w/Clip.none))
+     .debugTransformType (:debug-transform-type args ""))))
