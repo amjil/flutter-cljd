@@ -1,0 +1,11 @@
+(ns flutter-cljd.internal.keep-alive
+  (:require
+   ["package:flutter/material.dart" :as m]))
+
+(defn keep-alive*
+  ([alive child] 
+   (if (= alive :auto)
+     (m/AutomaticKeepAlive .child child)
+     (m/KeepAlive .keepAlive (true? alive) .child child)))
+  ([child] 
+   (keep-alive* true child)))

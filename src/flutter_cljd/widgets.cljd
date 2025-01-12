@@ -39,7 +39,8 @@
    [flutter-cljd.internal.sized :as sz]
    [flutter-cljd.internal.with-inherited :as wi]
    [flutter-cljd.internal.autocomplete-highlighted-index :as ahi]
-   [flutter-cljd.internal.autofill-group :as afg]))
+   [flutter-cljd.internal.autofill-group :as afg]
+   [flutter-cljd.internal.keep-alive :as ka]))
 
 (defn absorb-pointer 
   "A widget that absorbs pointers during hit testing. 
@@ -178,10 +179,8 @@
 
    [Flutter docs](https://api.flutter.dev/flutter/widgets/KeepAlive-class.html)
    [AutomaticKeepAlive docs](https://api.flutter.dev/flutter/widgets/AutomaticKeepAlive-class.html)"
-  ([alive child] (if (= alive :auto)
-                   (m/AutomaticKeepAlive .child child)
-                   (m/KeepAlive .keepAlive (true? alive) .child child)))
-  ([child] (keep-alive true child)))
+  ([alive child] (ka/keep-alive* alive child))
+  ([child] (ka/keep-alive* child)))
 
 (defn on-back-button
   "A convenience widget that registers a callback for when the back button is pressed.
