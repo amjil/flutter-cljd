@@ -1,5 +1,6 @@
 (ns ^:internal flutter-cljd.internal.padding
   (:require
+   [flutter-cljd.types :as t]
    ["dart:math" :as math]
    ["package:flutter/foundation.dart" :as f]
    ["package:flutter/rendering.dart" :as r]
@@ -17,7 +18,7 @@
   (.-resolvedPaddingCache! this nil) 
   (.markNeedsLayout this))
 
-(deftype RenderAnyPadding [^w/EdgeInsetsGeometry ^:mutable padding 
+(deftype ^:private RenderAnyPadding [^w/EdgeInsetsGeometry ^:mutable padding 
                             ^w/BuildContext context
                            ^w/TextDirection? ^:mutable textDirection
                            ^:mutable resolvedPaddingCache]
@@ -124,7 +125,7 @@
       (.-textDirection! this value)
       (markNeedResolution this)))
 
-(deftype AnyPadding [^w/EdgeInsetsGeometry padding ^w/Key? key ^w/Widget? child]
+(deftype ^:private AnyPadding [^w/EdgeInsetsGeometry padding ^w/Key? key ^w/Widget? child]
   :extends (w/SingleChildRenderObjectWidget .key key .child child)
 
   (createRenderObject [_ context]
@@ -138,7 +139,7 @@
     (.debugFillProperties ^super this properties)
     (.add properties (f/DiagnosticsProperty. "padding" padding))))
 
-(deftype AnimatedAnyPaddingState []
+(deftype ^:private AnimatedAnyPaddingState []
   :extends w/AnimatedWidgetBaseState
 
   (initState [this]
@@ -170,7 +171,7 @@
                        (.-_padding this)
                        .defaultValue nil))))
 
-(deftype AnimatedAnyPadding [key padding child curve duration onEnd]
+(deftype ^:private AnimatedAnyPadding [key padding child curve duration onEnd]
   :extends (w/ImplicitlyAnimatedWidget
              .key key
              .curve curve
@@ -183,22 +184,28 @@
   (debugFillProperties [this properties]
     (.debugFillProperties ^super this properties)
     (.add properties (f/DiagnosticsProperty. "padding" padding))))
-(ns flutter-cljd.internal.padding
-  (:require
-   ["package:flutter/material.dart" :as m]
-   [flutter-cljd.types :as t]))
 
-(defn AnimatedAnyPadding [key padding child curve duration on-end]
-  (m/AnimatedPadding
-   .key key
-   .padding padding
-   .child child
-   .curve curve
-   .duration duration
-   .onEnd on-end))
-
-(defn AnyPadding [padding key child]
-  (m/Padding
-   .key key
-   .padding padding
-   .child child))
+(defn padding*
+  "Creates a Padding widget with the specified padding and child.
+     The padding can be specified as a number, a map of insets, or four numbers.
+     Examples:
+     ```clojure
+     (padding 8 child) ;; Padding(padding: EdgeInsets.all(8))
+     (padding {:all 8} child) ;; Padding(padding: EdgeInsets.all(8))
+     (padding {:left 8 :right 16} child) ;; Padding(padding: EdgeInsets.only(left: 8, right: 16))
+     (padding [8 16 24 32] child) ;; Padding(padding: EdgeInsets.fromLTRB(8, 16, 24, 32))
+     (padding (insets 8) child) ;; Padding(padding: EdgeInsets.all(8))
+     (padding 4 {:animation {:duration 0.1}} child) ;; AnimatedPadding(padding: EdgeInsets.all(4), duration: Duration(milliseconds: 100))
+     ```
+     If the padding argument is a map, the keys :all, :left, :right, :start, :end, :vertical, :horizontal, :top, and :bottom are used to specify the padding.
+     If the padding argument is a vector of four numbers, the numbers are used for the left, top, right, and bottom padding."
+  ([value args child]
+   (AnimatedAnyPadding
+    nil
+    (t/insets value)
+    child
+    (-> args :animation t/animation-options :curve)
+    (-> args :animation t/animation-options :duration)
+    (-> args :animation t/animation-options :on-end)))
+  ([value child]
+   (AnyPadding (t/insets value) nil child)))

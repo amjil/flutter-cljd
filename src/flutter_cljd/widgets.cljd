@@ -1141,15 +1141,9 @@
      If the padding argument is a map, the keys :all, :left, :right, :start, :end, :vertical, :horizontal, :top, and :bottom are used to specify the padding.
      If the padding argument is a vector of four numbers, the numbers are used for the left, top, right, and bottom padding."
   ([value args child]
-   (pd/AnimatedAnyPadding
-    nil  
-    (t/insets value)  
-    child 
-    (-> args :animation t/animation-options :curve)  
-    (-> args :animation t/animation-options :duration) 
-    (-> args :animation t/animation-options :on-end)))
+   (pd/padding* value args child))
   ([value child]
-   (pd/AnyPadding (t/insets value) nil child)))
+   (pd/padding* value child)))
 
 (defn text
   "Creates a text widget with the specified text and arguments.
