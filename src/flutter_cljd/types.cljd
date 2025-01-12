@@ -10,6 +10,30 @@
    [flutter-cljd.drawing :as dr :refer [offset]]
    [flutter-cljd.color-filters :as clr-f]))
 
+(deftype ^:private AnyActionDispatcher [invoke]
+  :extends w/ActionDispatcher
+  (invokeAction [action intent context]
+    (let [result (invoke action intent context)]
+      (.invokeAction ^super action intent context)
+      result))
+  (invokeActionIfEnabled [action intent context]
+    (let [result (invoke action intent context)
+          enabled (.-$1 (.invokeActionIfEnabled ^super action intent context))]
+      (list enabled result)))) ;; TODO create a tuple
+
+
+(defn action-dispatcher 
+  "An interface for dispatching actions to a `FocusNode`.
+   
+   This is used with `FocusNode.onKey` to allow the `FocusNode` to handle key events.
+   
+   [Flutter docs](https://api.flutter.dev/flutter/services/ActionDispatcher-class.html)"
+  [dispatcher]
+  (cond
+    (instance? w/ActionDispatcher dispatcher) dispatcher
+    ;; TODO (fn? dispatcher) (AnyActionDispatcher dispatcher)
+    :else (throw (Exception. (str "Invalid dispatcher: " dispatcher ", `ActionDispatcher` was expected.")))))
+
 (defn axis
   "Returns the `Axis` enum value for the specified axis.
    

@@ -3,13 +3,16 @@
    ["package:flutter/material.dart" :as m]
    [flutter-cljd.types :as t]))
 
+(defn- clipped-opacity [value]
+  (max 0.0 (min 1.0 (double (or value 1.0)))))
+
 (defn opacity*
   ([opacity args child]
    (if (contains? args :animation)
      (let [animation (t/animation-options (args :animation))]
        (m/AnimatedOpacity
         .key (t/widget-key (args :key))
-        .opacity (double opacity)
+        .opacity (clipped-opacity opacity)
         .child child
         .duration (animation :duration)
         .curve (animation :curve)
@@ -17,12 +20,12 @@
         .alwaysIncludeSemantics (:always-include-semantics args false)))
      (m/Opacity
       .key (t/widget-key (args :key))
-      .opacity (double opacity)
+      .opacity (clipped-opacity opacity)
       .alwaysIncludeSemantics (:always-include-semantics args false)
       .child child)))
   ([opacity child]
    (if (map? opacity)
      (opacity* (:opacity opacity 1.0) opacity child)
      (m/Opacity
-      .opacity (double opacity)
+      .opacity (clipped-opacity opacity)
       .child child))))
