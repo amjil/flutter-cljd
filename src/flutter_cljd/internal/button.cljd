@@ -1,12 +1,13 @@
-(ns flutter-cljd.button
+(ns ^:internal flutter-cljd.internal.button
   (:require
    ["dart:core" :as core]
    ["package:flutter/foundation.dart" :as f]
    ["package:flutter/widgets.dart" :as w]
    ["package:flutter/services.dart" :as s]
-   ["package:flutter/gestures.dart" :as g]))
+   ["package:flutter/gestures.dart" :as g]
+   [flutter-cljd.inherited-keys :as inh]))
 
-(declare ButtonState)
+(declare ^:private ButtonState)
 
 ;; Button widget
 (deftype Button [key child is-enabled on-tap on-tap-down on-tap-up
@@ -240,7 +241,7 @@
                       (update-focus-highlights this)))))
 
 ;; Button State
-(deftype ButtonState [^:mutable hovering
+(deftype ^:private ButtonState [^:mutable hovering
                       ^:mutable hasFocus
                       ^:mutable cursorLocalOffset
                       ^:mutable cursorGlobalOffset

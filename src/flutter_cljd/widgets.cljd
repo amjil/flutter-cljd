@@ -14,8 +14,8 @@
    [flutter-cljd.drawing :as dr :refer [offset, mat4]]
    [flutter-cljd.color-filters :as clr-f]
    [flutter-cljd.inherited-keys :as inh]
-   [flutter-cljd.button :as bt]
-   [flutter-cljd.padding :as pd]))
+   [flutter-cljd.internal.button :as bt]
+   [flutter-cljd.internal.padding :as pd]))
 
 ;; -------------------------
 ;; MARK: Macros
