@@ -1,0 +1,5 @@
+(ns flutter-cljd.internal.ignore-pointer
+  (:require ["package:flutter/material.dart" :as m]))
+
+(defn ignore-pointer* [ignoring child]
+  (m/IgnorePointer .ignoring (true? ignoring) .child child))
