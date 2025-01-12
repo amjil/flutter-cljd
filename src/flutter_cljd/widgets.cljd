@@ -38,7 +38,8 @@
    [flutter-cljd.internal.stack :as st]
    [flutter-cljd.internal.sized :as sz]
    [flutter-cljd.internal.with-inherited :as wi]
-   [flutter-cljd.internal.autocomplete-highlighted-index :as ahi]))
+   [flutter-cljd.internal.autocomplete-highlighted-index :as ahi]
+   [flutter-cljd.internal.autofill-group :as afg]))
 
 (defn absorb-pointer 
   "A widget that absorbs pointers during hit testing. 
@@ -157,8 +158,8 @@
    By default, onDisposeAction is set to AutofillContextAction.commit, in which case when any of the topmost AutofillGroups is being disposed, the platform will be informed to save the user input from the current autofill context, then the current autofill context will be destroyed, to free resources. You can, for example, wrap a route that contains a Form full of autofillable input fields in an AutofillGroup, so the user input of the Form can be saved for future autofill by the platform.
 
    [Flutter docs](https://api.flutter.dev/flutter/widgets/AutofillGroup-class.html)"
-  ([action child] (m/AutofillGroup .child child .onDisposeAction (t/autofill-context-action action)))
-  ([child] (autofill-group child m/AutofillContextAction.commit)))
+  ([action child] (afg/autofill-group* action child))
+  ([child] (afg/autofill-group* child)))
 
 (defn keep-alive
   "Mark a child as needing to stay alive even when it's in a lazy list that would otherwise remove it.

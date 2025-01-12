@@ -1,0 +1,10 @@
+(ns flutter-cljd.internal.autofill-group
+  (:require
+   ["package:flutter/material.dart" :as m]
+   [flutter-cljd.types :as t]))
+
+(defn autofill-group* 
+  ([action child] 
+   (m/AutofillGroup .child child .onDisposeAction (t/autofill-context-action action)))
+  ([child] 
+   (autofill-group* child m/AutofillContextAction.commit)))
