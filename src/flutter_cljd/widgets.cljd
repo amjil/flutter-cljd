@@ -1068,17 +1068,15 @@
    Check `box-constraints` function for more information on how to create constraints.
   
    [Flutter docs](https://api.flutter.dev/flutter/widgets/ConstrainedBox-class.html)"
-  ([] (sized {} nil))
+  ([] (sz/sized* {} nil))
   ([value]
    (if (instance? m/Widget value)
-     (sized {} value)
-     (sized value nil)))
+     (sz/sized* {} value)
+     (sz/sized* value nil)))
   ([value child]
-   (m/ConstrainedBox
-    .constraints (t/box-constraints value)
-    .child child))
+   (sz/sized* value child))
   ([width height child]
-   (sized {:width width :height height} child)))
+   (sz/sized* width height child)))
 
 (defn spacer
   "Spacer creates an adjustable, empty spacer that can be used to tune the spacing between widgets in a Flex container, like Row or Column.
