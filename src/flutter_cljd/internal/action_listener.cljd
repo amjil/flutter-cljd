@@ -9,3 +9,13 @@
    .listener listener 
    .action action 
    .child child))
+(ns flutter-cljd.internal.action-listener
+  (:require
+   ["package:flutter/material.dart" :as m]))
+
+(defn action-listener*
+  [listener action child]
+  (m/ActionListener 
+   .listener listener
+   .action action
+   .child child))
