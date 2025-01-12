@@ -966,15 +966,7 @@
    
    A `flexible` widget must be a descendant of a `row`, `column`, or `flex`, and the path from the `flexible` widget to its enclosing `row`, `column` or `flex` must contain only `StatelessWidget`s or `StatefulWidget`s (not other kinds of widgets, like `RenderObjectWidget`s)."
   ([args child]
-   (let [[flex fit] (cond
-                      (number? args) [args m/FlexFit.loose] 
-                      (map? args) [(:flex args 1) (:fit args m/FlexFit.loose)]
-                      :else [1 args])]
-     (m/Flexible 
-      .key (when (map? args) (t/widget-key (:key args)))
-      .flex (int (or flex 1))
-      .fit (t/flex-fit fit) 
-      .child child)))
+   (fx/flexible* args child))
   ([flex fit child]
    (flexible {:flex flex :fit fit} child))
   ([child]
@@ -994,7 +986,7 @@
    
    The builder function is not called during layout if the parent passes the same constraints repeatedly."
   [builder]
-  (m/LayoutBuilder .builder builder))
+  (fx/layout-builder* builder))
 
 (defn row
   "A widget that displays its children in a horizontal array.
