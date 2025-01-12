@@ -50,7 +50,33 @@
   "The mathematical constant `π` (pi), which is the ratio of a circle's circumference to its diameter."
   (.pi double))
 
-(defn lerp 
+(defn lerp
+  "Linear interpolation between two values.
+   
+   Takes two values and returns a function that interpolates between them based on a parameter t between 0 and 1.
+   Can interpolate between numbers, vectors, sequences, and maps.
+   
+   Args:
+    - from: The starting value
+    - to: The ending value 
+    - t: (optional) The interpolation parameter between 0 and 1
+   
+   Returns:
+    If t is provided: The interpolated value
+    If t is not provided: A function that takes t and returns the interpolated value
+   
+   Examples:
+   ```clojure
+   ;; Numbers
+   ((lerp 0 10) 0.5) ; => 5
+   (lerp 0 10 0.5)   ; => 5
+   
+   ;; Vectors
+   ((lerp [0 0] [10 10]) 0.5)  ; => [5 5]
+   
+   ;; Maps
+   ((lerp {:x 0} {:x 10}) 0.5) ; => {:x 5}
+   ```"
   ([from to t] 
    ((lerp from to) t))
   ([from to]
@@ -76,9 +102,50 @@
      :else
      #(if (> % 0.5) to from))))
 
-(defn flatten-children [children]
+(defn flatten-children
+  "Flattens a nested collection of children and filters out non-Widget elements.
+   
+   Used internally by widget functions to handle nested collections of children.
+   
+   Args:
+    - children: A collection that may contain widgets and nested collections
+   
+   Returns:
+    A flat sequence containing only Widget instances
+   
+   Example:
+   ```clojure
+   (flatten-children [[button1 button2] text1 [text2]])
+   ; => [button1 button2 text1 text2]
+   ```"
+  [children]
   (filter #(instance? w/Widget %) (flatten children)))
 
-(defn args-children [args children]
+(defn args-children
+  "Processes arguments and children for widget functions that accept both options and children.
+   
+   Used internally by widget functions to handle flexible argument patterns where the first argument
+   can either be a map of options or a child widget.
+   
+   Args:
+    - args: Either a map of options or the first child widget
+    - children: Sequence of child widgets (may be empty if args is a child)
+   
+   Returns:
+    A vector containing:
+    - A map of processed arguments (empty if args was a child)
+    - A flattened sequence of Widget children
+   
+   Example:
+   ```clojure
+   ;; With options map
+   (args-children {:color :red} [child1 child2])
+   ; => [{:color :red} [child1 child2]]
+   
+   ;; Without options map
+   (args-children first-child [child2 child3])
+   ; => [{} [first-child child2 child3]]
+   ```"
+  [args children]
   [(if (map? args) args {})
    (flatten-children (if (map? args) children (cons args children)))])
