@@ -1068,11 +1068,8 @@
    Check `box-constraints` function for more information on how to create constraints.
   
    [Flutter docs](https://api.flutter.dev/flutter/widgets/ConstrainedBox-class.html)"
-  ([] (sz/sized* {} nil))
-  ([value]
-   (if (instance? m/Widget value)
-     (sz/sized* {} value)
-     (sz/sized* value nil)))
+  ([] (sz/sized*))
+  ([value] (sz/sized* value))
   ([value child]
    (sz/sized* value child))
   ([width height child]
