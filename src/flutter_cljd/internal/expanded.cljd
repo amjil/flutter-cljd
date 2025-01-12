@@ -1,0 +1,9 @@
+(ns flutter-cljd.internal.expanded
+  (:require
+   ["package:flutter/material.dart" :as m]))
+
+(defn expanded*
+  ([flex child]
+   (m/Expanded .flex (int (or flex 1)) .child child))
+  ([child]
+   (expanded* 1 child)))

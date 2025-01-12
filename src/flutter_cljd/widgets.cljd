@@ -26,7 +26,8 @@
    [flutter-cljd.internal.color-filtered :as cf]
    [flutter-cljd.internal.composited-transform :as ct]
    [flutter-cljd.internal.constraints-transformed :as ctr]
-   [flutter-cljd.internal.flex :as fx]))
+   [flutter-cljd.internal.flex :as fx]
+   [flutter-cljd.internal.expanded :as ex]))
 
 ;; -------------------------
 ;; MARK: Widgets
@@ -998,8 +999,8 @@
    ```
 
    [Flutter docs](https://api.flutter.dev/flutter/widgets/Expanded-class.html)"
-  ([child] (expanded 1 child))
-  ([flex child] (m/Expanded .flex (int (or flex 1)) .child child)))
+  ([child] (ex/expanded* child))
+  ([flex child] (ex/expanded* flex child)))
 
 (defn flex
   "A widget that displays its children in a one-dimensional array.
