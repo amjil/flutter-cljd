@@ -45,7 +45,8 @@
    [flutter-cljd.internal.baseline :as bl]
    [flutter-cljd.internal.bottom-navigation-bar-item :as bnbi]
    [flutter-cljd.internal.shortcuts :as sc]
-   [flutter-cljd.internal.actions :as act]))
+   [flutter-cljd.internal.actions :as act]
+   [flutter-cljd.internal.checked-mode-banner :as cmb]))
 
 (defn absorb-pointer 
   "A widget that absorbs pointers during hit testing. 
@@ -582,12 +583,24 @@
   "A banner that shows the current checked mode.
 
    Displays a Banner saying \"DEBUG\" when running in debug mode. MaterialApp builds one of these by default.
+   This is useful for indicating that an app is running in debug mode, which may include additional debugging
+   features or behavior that shouldn't appear in release builds.
 
-   Does nothing in release mode.
+   Does nothing in release mode, making it safe to leave in place in production code.
+   
+   Args:
+    - child: The widget below this widget in the tree that will have the debug banner displayed over it
+   
+   Example:
+   ```clojure
+   (checked-mode-banner
+     (scaffold
+       (body (text \"Hello World!\"))))
+   ```
    
    [Flutter docs](https://api.flutter.dev/flutter/widgets/CheckedModeBanner-class.html)"
   [child]
-  (m/CheckedModeBanner .child child))
+  (cmb/checked-mode-banner* child))
 
 (defn clip-oval
   "A widget that clips its child using an oval.

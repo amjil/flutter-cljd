@@ -1,0 +1,7 @@
+(ns flutter-cljd.internal.checked-mode-banner
+  (:require
+   ["package:flutter/material.dart" :as m]))
+
+(defn checked-mode-banner*
+  [child]
+  (m/CheckedModeBanner .child child))
