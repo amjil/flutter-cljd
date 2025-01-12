@@ -39,10 +39,6 @@
    [flutter-cljd.internal.sized :as sz]
    [flutter-cljd.internal.with-inherited :as wi]))
 
-;; -------------------------
-;; MARK: Widgets
-;; -------------------------
-
 (defn absorb-pointer 
   "A widget that absorbs pointers during hit testing. 
    It makes the widget and any underlying widgets impossible to interact with.
