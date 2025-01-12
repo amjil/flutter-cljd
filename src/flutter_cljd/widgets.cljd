@@ -20,7 +20,8 @@
    [flutter-cljd.internal.block-semantics :as bs]
    [flutter-cljd.internal.banner :as bn]
    [flutter-cljd.internal.center :as ct]
-   [flutter-cljd.internal.clip-oval :as co]))
+   [flutter-cljd.internal.clip-oval :as co]
+   [flutter-cljd.internal.clip-rect :as cr]))
 
 ;; -------------------------
 ;; MARK: Widgets
@@ -689,12 +690,7 @@
    By default, inscribes an axis-aligned rectangle into its layout dimensions and prevents its child from painting outside that rectangle, but the size and location of the clip rectangle can be customized using a custom clipper.
 
    [Flutter docs](https://api.flutter.dev/flutter/widgets/ClipRect-class.html)"
-  ([{:keys [key clipper clip-behavior] :or {clip-behavior :anti-alias}} child]
-   (w/ClipRect 
-    .key (some-> key t/widget-key)
-    .clipper clipper
-    .clipBehavior (t/clip clip-behavior)
-    .child child))
+  ([args child] (cr/clip-rect* args child))
   ([child] (clip-rect {} child)))
 
 (defn clip-corners
