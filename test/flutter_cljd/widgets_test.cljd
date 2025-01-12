@@ -1,5 +1,7 @@
 (ns flutter-cljd.widgets-test
   (:require [clojure.test :refer [deftest is testing]]
+            [flutter-cljd.core :as c]
+            [flutter-cljd.types :as t]
             [flutter-cljd.widgets :as f]
             ["package:flutter/material.dart" :as m]
             ["package:flutter/services.dart" :as s]))
@@ -166,45 +168,45 @@
 
 (deftest test-cross-axis-alignment
   (testing "Valid cross-axis alignments"
-    (is (= (f/cross-axis-alignment :center) m/CrossAxisAlignment.center))
-    (is (= (f/cross-axis-alignment :start) m/CrossAxisAlignment.start))
-    (is (= (f/cross-axis-alignment :end) m/CrossAxisAlignment.end))
-    (is (= (f/cross-axis-alignment :stretch) m/CrossAxisAlignment.stretch))
-    (is (= (f/cross-axis-alignment :baseline) m/CrossAxisAlignment.baseline)))
+    (is (= (t/cross-axis-alignment :center) m/CrossAxisAlignment.center))
+    (is (= (t/cross-axis-alignment :start) m/CrossAxisAlignment.start))
+    (is (= (t/cross-axis-alignment :end) m/CrossAxisAlignment.end))
+    (is (= (t/cross-axis-alignment :stretch) m/CrossAxisAlignment.stretch))
+    (is (= (t/cross-axis-alignment :baseline) m/CrossAxisAlignment.baseline)))
 
   (testing "Passing an instance of CrossAxisAlignment"
-    (is (= (f/cross-axis-alignment m/CrossAxisAlignment.start) m/CrossAxisAlignment.start)))
+    (is (= (t/cross-axis-alignment m/CrossAxisAlignment.start) m/CrossAxisAlignment.start)))
 
   (testing "Invalid cross-axis alignment"
-    (is (thrown? Exception (f/cross-axis-alignment :invalid)))))
+    (is (thrown? Exception (t/cross-axis-alignment :invalid)))))
 
 (deftest test-main-axis-alignment
   (testing "Valid main-axis alignments"
-    (is (= (f/main-axis-alignment :center) m/MainAxisAlignment.center))
-    (is (= (f/main-axis-alignment :start) m/MainAxisAlignment.start))
-    (is (= (f/main-axis-alignment :end) m/MainAxisAlignment.end))
-    (is (= (f/main-axis-alignment :space-between) m/MainAxisAlignment.spaceBetween))
-    (is (= (f/main-axis-alignment :space-around) m/MainAxisAlignment.spaceAround)))
+    (is (= (t/main-axis-alignment :center) m/MainAxisAlignment.center))
+    (is (= (t/main-axis-alignment :start) m/MainAxisAlignment.start))
+    (is (= (t/main-axis-alignment :end) m/MainAxisAlignment.end))
+    (is (= (t/main-axis-alignment :space-between) m/MainAxisAlignment.spaceBetween))
+    (is (= (t/main-axis-alignment :space-around) m/MainAxisAlignment.spaceAround)))
 
   (testing "Passing an instance of MainAxisAlignment"
-    (is (= (f/main-axis-alignment m/MainAxisAlignment.spaceBetween) m/MainAxisAlignment.spaceBetween)))
+    (is (= (t/main-axis-alignment m/MainAxisAlignment.spaceBetween) m/MainAxisAlignment.spaceBetween)))
 
   (testing "Invalid main-axis alignment"
-    (is (thrown? Exception (f/main-axis-alignment :invalid)))))
+    (is (thrown? Exception (t/main-axis-alignment :invalid)))))
 
 (deftest logical-keyboard-key-test
   (testing "logical-keyboard-key"
     (let [key 0x00000000061]
-      (is (= (-> s/LogicalKeyboardKey.keyA f/logical-keyboard-key .-keyId) key))
-      (is (= (-> :a f/logical-keyboard-key .-keyId) key))
-      (is (= (-> "A" f/logical-keyboard-key .-keyId) key))
-      (is (= (-> "a" f/logical-keyboard-key  .-keyId) key))
-      (is (= (-> key f/logical-keyboard-key .-keyId) key))
-      (is (= (-> :shift f/logical-keyboard-key .-keyId) (.-keyId s/LogicalKeyboardKey.shift))))))
+      (is (= (-> s/LogicalKeyboardKey.keyA t/logical-keyboard-key .-keyId) key))
+      (is (= (-> :a t/logical-keyboard-key .-keyId) key))
+      (is (= (-> "A" t/logical-keyboard-key .-keyId) key))
+      (is (= (-> "a" t/logical-keyboard-key  .-keyId) key))
+      (is (= (-> key t/logical-keyboard-key .-keyId) key))
+      (is (= (-> :shift t/logical-keyboard-key .-keyId) (.-keyId s/LogicalKeyboardKey.shift))))))
 
 (deftest shortcut-activator-test
   (testing "shortcut-activator"
     (let [char-activator (m/CharacterActivator. "A")]
-      (is (= (f/shortcut-activator char-activator) char-activator))
-      (is (= (-> ["a"] f/shortcut-activator .-character) "a"))
-      (is (true? (-> [:shift :a] f/shortcut-activator .-shift))))))
+      (is (= (t/shortcut-activator char-activator) char-activator))
+      (is (= (-> ["a"] t/shortcut-activator .-character) "a"))
+      (is (true? (-> [:shift :a] t/shortcut-activator .-shift))))))

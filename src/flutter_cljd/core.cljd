@@ -1,0 +1,77 @@
+(ns flutter-cljd.core
+  (:require
+   [cljd.flutter :as f :refer [widget]]
+   [flutter-cljd.utils :as ut :refer [??]]))
+
+;; -------------------------
+;; MARK: Macros
+;; -------------------------
+
+(defmacro widget->>
+  "Like `widget`, but threads the forms in the body using `->>`.
+   While `widget` can thread forms with `.child`, `widget->>` threads pure clojure functions with last form as the child.
+   If you don't need any `widget`'s directives, you can use native `->>` instead of `widget->>`, because most IDEs will recognize the `->>` macro.
+   And if you don't need any threading, you can use `widget` instead of `widget->>`.
+   The macro extracts the keyword-based directives (e.g., :let, :padding) and
+   applies `->>` threading to the remaining forms.
+
+   Example:
+   ```clojure
+   (f/widget->>
+    :let [title \"Let's get coding!\"]
+    (f/text title)
+    (f/with-text-style {:color :red :font-size 32.0})
+    (f/padding 8)
+    (f/container {:h 40 :alignment :top}))
+   ```
+    The above code is equivalent to:
+   ```clojure
+   (widget
+     :let [title \"Let's get coding!\"]
+     (->>
+      (f/text title)
+      (f/with-text-style {:color :red :font-size 32.0})
+      (f/padding 8)
+      (f/container {:h 40 :alignment :top})))
+   ```
+   That is equivalent to:
+   ```clojure
+   (widget
+      :let [title \"Let's get coding!\"]
+      (f/container
+        {:h 40 :alignment :top}
+        (f/padding 8
+        (f/with-text-style {:color :red :font-size 32.0}
+          (f/text title)))))
+   ```
+   "
+  [& body]
+  (let [directives (take-while #(keyword? (first %)) (partition 2 body))
+        body-forms (drop (* 2 (count directives)) body)]
+    `(widget ~@(apply concat directives) (->> ~@body-forms))))
+
+;; -------------------------
+;; MARK: Helpers
+;; -------------------------
+
+(defn get-inherited
+  "Retrieves an inherited value from `context` based on the specified `key`.
+   Searches for an inherited widget of type `InheritedBindings` in the `context`.
+   If found, extracts the `bindings` map from the widget and returns the value 
+   associated with `key`. If `key` is not found, returns `default-value?` if provided, or `nil` by default.
+
+     Parameters:
+     - `context`: The context to search within.
+     - `key`: The key to look up in the bindings. Key can also be a map with the following keys:
+       - `:key`: The key to look up in the bindings.
+       - `:default-value`: The value to return if `key` is not found. Defaults to `nil`.
+     - `default-value`: The value to return if `key` is not found. Defaults to `nil`.
+   
+   Some default keys are defined in `flutter-cljd.inherited-keys` namespace"
+  ([context key] (get-inherited context key nil))
+  ([context key default-value]
+   (cond
+     (and (map? key) (contains? key :key))
+     (f/get-of context (:key key) (?? default-value (:default-value key)))
+
+     :else (f/get-of context key default-value))))
