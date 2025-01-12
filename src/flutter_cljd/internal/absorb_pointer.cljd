@@ -3,12 +3,3 @@
 
 (defn absorb-pointer* [absorbing child]
   (m/AbsorbPointer .absorbing (true? absorbing) .child child))
-(ns flutter-cljd.internal.absorb-pointer
-  (:require
-   ["package:flutter/material.dart" :as m]))
-
-(defn absorb-pointer*
-  [absorbing child]
-  (m/AbsorbPointer
-   .absorbing (true? absorbing)
-   .child child))
