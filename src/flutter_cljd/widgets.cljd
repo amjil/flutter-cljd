@@ -31,7 +31,8 @@
    [flutter-cljd.internal.action-listener :as al]
    [flutter-cljd.internal.text :as txt]
    [flutter-cljd.internal.container :as cnt]
-   [flutter-cljd.internal.spacer :as sp]))
+   [flutter-cljd.internal.spacer :as sp]
+   [flutter-cljd.internal.opacity :as op]))
 
 ;; -------------------------
 ;; MARK: Widgets
@@ -1103,27 +1104,9 @@
 
 (defn opacity
   ([opacity args child]
-   (if (contains? args :animation)
-     (let [animation (t/animation-options (args :animation))]
-       (m/AnimatedOpacity
-        .key (t/widget-key (args :key))
-        .opacity (double opacity)
-        .child child
-        .duration (animation :duration)
-        .curve (animation :curve)
-        .onEnd (animation :on-end)
-        .alwaysIncludeSemantics (:always-include-semantics args false)))
-     (m/Opacity
-      .key (t/widget-key (args :key))
-      .opacity (double opacity)
-      .alwaysIncludeSemantics (:always-include-semantics args false)
-      .child child)))
+   (op/opacity* opacity args child))
   ([opacity child]
-   (if (map? opacity)
-     (flutter-cljd.widgets/opacity (:opacity opacity 1.0) opacity child)
-     (m/Opacity
-      .opacity (double opacity)
-      .child child))))
+   (op/opacity* opacity child)))
 
 (defn decorated
   ([position with-decoration child]
