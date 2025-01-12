@@ -1,0 +1,6 @@
+(ns flutter-cljd.internal.autocomplete-highlighted-index
+  (:require
+   ["package:flutter/material.dart" :as m]))
+
+(defn with-autocomplete-highlighted-index* [option child]
+  (m/AutocompleteHighlightedOption .highlightIndexNotifier option .child child))

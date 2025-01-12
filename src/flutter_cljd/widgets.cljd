@@ -37,7 +37,8 @@
    [flutter-cljd.internal.opacity :as op]
    [flutter-cljd.internal.stack :as st]
    [flutter-cljd.internal.sized :as sz]
-   [flutter-cljd.internal.with-inherited :as wi]))
+   [flutter-cljd.internal.with-inherited :as wi]
+   [flutter-cljd.internal.autocomplete-highlighted-index :as ahi]))
 
 (defn absorb-pointer 
   "A widget that absorbs pointers during hit testing. 
@@ -130,7 +131,7 @@
    
    [Flutter docs](https://api.flutter.dev/flutter/widgets/AutocompleteHighlightedOption-class.html)"
   [option child]
-  (m/AutocompleteHighlightedOption .highlightIndexNotifier option .child child))
+  (ahi/with-autocomplete-highlighted-index* option child))
 
 (defn autofill-group
   "An AutofillScope widget that groups AutofillClients together.
