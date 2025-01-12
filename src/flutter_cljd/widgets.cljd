@@ -29,6 +29,7 @@
    [flutter-cljd.internal.flex :as fx]
    [flutter-cljd.internal.expanded :as ex]
    [flutter-cljd.internal.flex :as fx]
+   [flutter-cljd.internal.column-row :as cr]
    [flutter-cljd.internal.action-listener :as al]
    [flutter-cljd.internal.text :as txt]
    [flutter-cljd.internal.container :as cnt]
@@ -783,17 +784,7 @@
   A column widget with the specified arguments and children."
   ([] (column {}))
   ([args & children]
-   (let [[args children] (ut/args-children args children)]
-     (m/Column
-      .key (t/widget-key (args :key))
-      .mainAxisAlignment (t/main-axis-alignment (:main-axis-alignment args :start))
-      .mainAxisSize (t/main-axis-size (:main-axis-size args :min))
-      .crossAxisAlignment (t/cross-axis-alignment (:cross-axis-alignment args :center))
-      .textDirection (t/text-direction (:text-direction args :ltr))
-      .textBaseline (t/text-baseline (:text-baseline args :alphabetic))
-      .verticalDirection (t/vertical-direction (:vertical-direction args :down))
-      .spacing (double (or (:spacing args) 0))
-      .children children))))
+   (apply cr/column* args children)))
 
 (defn composited-transform-follower
   "A widget that follows a `composited-transform-target`.
@@ -1027,17 +1018,7 @@
    [Flutter docs](https://api.flutter.dev/flutter/widgets/Row-class.html)"
   ([] (row {}))
   ([args & children]
-   (let [[args children] (ut/args-children args children)]
-     (m/Row
-      .key (t/widget-key (args :key))
-      .mainAxisAlignment (t/main-axis-alignment (:main-axis-alignment args :start))
-      .mainAxisSize (t/main-axis-size (:main-axis-size args :min))
-      .crossAxisAlignment (t/cross-axis-alignment (:cross-axis-alignment args :center))
-      .textDirection (t/text-direction (:text-direction args :ltr))
-      .verticalDirection (t/vertical-direction (:vertical-direction args :down))
-      .textBaseline (t/text-baseline (:text-baseline args :alphabetic))
-      .spacing (double (or (:spacing args) 0))
-      .children children))))
+   (apply cr/row* args children)))
 
 (defn sized
   "Creates a `ConstrainedBox` widget with the specified constraints and child.\\
