@@ -1,0 +1,16 @@
+(ns flutter-cljd.internal.decorated
+  (:require
+   ["package:flutter/material.dart" :as m]
+   [flutter-cljd.types :as t]))
+
+(defn decorated*
+  ([position with-decoration child]
+   (m/DecoratedBox
+    .decoration (t/decoration with-decoration)
+    .position (t/decoration-position position)
+    .child child))
+  ([with-decoration child]
+   (decorated* 
+    (:position with-decoration m/DecorationPosition.background)
+    with-decoration
+    child)))
