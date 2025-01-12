@@ -34,3 +34,42 @@
        .widthFactor (args :width-factor)
        .heightFactor (args :height-factor)
        .child child))))
+(ns flutter-cljd.internal.align
+  (:require
+   ["package:flutter/material.dart" :as m]
+   [flutter-cljd.types :as t]))
+
+(defn align*
+  [args child]
+  (let [args (if (map? args) args {:alignment args})
+        align-value (get args :alignment m/Alignment.center)
+        alignment (if (instance? m/Animation align-value) align-value (t/alignment-geometry align-value))
+        key (t/widget-key (args :key))]
+    (cond
+      (instance? m/Animation alignment)
+      (m/AlignTransition
+       .key key
+       .alignment alignment
+       .widthFactor (args :width-factor)
+       .heightFactor (args :height-factor)
+       .child child)
+      
+      (contains? args :animation)
+      (let [animation (t/animation-options (args :animation))]
+        (m/AnimatedAlign
+         .key key
+         .alignment alignment
+         .child child
+         .heightFactor (args :height-factor)
+         .widthFactor (args :width-factor)
+         .duration (animation :duration)
+         .curve (animation :curve)
+         .onEnd (animation :on-end)))
+      
+      :else
+      (m/Align
+       .key key
+       .alignment alignment
+       .widthFactor (args :width-factor)
+       .heightFactor (args :height-factor)
+       .child child))))
