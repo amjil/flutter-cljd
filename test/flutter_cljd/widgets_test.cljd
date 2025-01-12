@@ -166,6 +166,223 @@
       (is (= (.-blocking widget) true))
       (is (instance? m/Text (.-child widget))))))
 
+(deftest test-bottom-navigation-bar-item
+  (testing "Bottom navigation bar item with basic properties"
+    (let [icon (m/Icon m/Icons.home)
+          widget (f/bottom-navigation-bar-item {:icon icon :label "Home"})]
+      (is (= (.-icon widget) icon))
+      (is (= (.-label widget) "Home"))))
+  
+  (testing "Bottom navigation bar item with all properties"
+    (let [icon (m/Icon m/Icons.home)
+          active-icon (m/Icon m/Icons.home_filled)
+          widget (f/bottom-navigation-bar-item 
+                 {:icon icon 
+                  :active-icon active-icon
+                  :label "Home"
+                  :background-color :blue
+                  :tooltip "Home Page"})]
+      (is (= (.-icon widget) icon))
+      (is (= (.-activeIcon widget) active-icon))
+      (is (= (.-label widget) "Home"))
+      (is (= (.-backgroundColor widget) (t/color :blue)))
+      (is (= (.-tooltip widget) "Home Page")))))
+
+(deftest test-builder
+  (testing "Builder with context only"
+    (let [widget (f/builder (fn [ctx] (m/Text "Built")))]
+      (is (instance? m/Builder widget))))
+  
+  (testing "Builder with child and context"
+    (let [child (m/Text "Child")
+          widget (f/builder (fn [c ctx] (m/Container .child c)) child)]
+      (is (instance? m/Builder widget)))))
+
+(deftest test-center
+  (testing "Center with default properties"
+    (let [child (m/Text "Child")
+          widget (f/center child)]
+      (is (instance? m/Center widget))
+      (is (instance? m/Text (.-child widget)))))
+  
+  (testing "Center with width and height factors"
+    (let [child (m/Text "Child")
+          widget (f/center {:width-factor 2.0 :height-factor 1.5} child)]
+      (is (= (.-widthFactor widget) 2.0))
+      (is (= (.-heightFactor widget) 1.5))
+      (is (instance? m/Text (.-child widget))))))
+
+(deftest test-column
+  (testing "Column with default properties"
+    (let [child (m/Text "Child")
+          widget (f/column child)]
+      (is (instance? m/Column widget))
+      (is (= (count (.-children widget)) 1))))
+  
+  (testing "Column with spacing and alignment"
+    (let [widget (f/column 
+                 {:spacing 10 
+                  :main-axis-alignment :center
+                  :cross-axis-alignment :start}
+                 (m/Text "First")
+                 (m/Text "Second"))]
+      (is (= (.-spacing widget) 10.0))
+      (is (= (.-mainAxisAlignment widget) m/MainAxisAlignment.center))
+      (is (= (.-crossAxisAlignment widget) m/CrossAxisAlignment.start))
+      (is (= (count (.-children widget)) 2)))))
+
+(deftest test-container
+  (testing "Container with basic properties"
+    (let [child (m/Text "Child")
+          widget (f/container {:color :blue} child)]
+      (is (instance? m/Container widget))
+      (is (instance? m/Text (.-child widget)))
+      (is (= (-> widget .-decoration .-color) (t/color :blue)))))
+  
+  (testing "Container with padding and margin"
+    (let [widget (f/container 
+                 {:padding 10
+                  :margin {:left 5 :right 5}
+                  :color :red}
+                 (m/Text "Child"))]
+      (is (= (.-padding widget) (t/insets 10)))
+      (is (= (.-margin widget) (t/insets {:left 5 :right 5})))
+      (is (= (-> widget .-decoration .-color) (t/color :red))))))
+
+(deftest test-expanded
+  (testing "Expanded with default flex"
+    (let [child (m/Text "Child")
+          widget (f/expanded child)]
+      (is (instance? m/Expanded widget))
+      (is (= (.-flex widget) 1))
+      (is (instance? m/Text (.-child widget)))))
+  
+  (testing "Expanded with custom flex"
+    (let [widget (f/expanded 2 (m/Text "Child"))]
+      (is (= (.-flex widget) 2)))))
+
+(deftest test-flex
+  (testing "Flex with horizontal direction"
+    (let [widget (f/flex :horizontal 
+                        {:spacing 10}
+                        (m/Text "First")
+                        (m/Text "Second"))]
+      (is (instance? m/Flex widget))
+      (is (= (.-direction widget) m/Axis.horizontal))
+      (is (= (.-spacing widget) 10.0))
+      (is (= (count (.-children widget)) 2))))
+  
+  (testing "Flex with vertical direction and alignment"
+    (let [widget (f/flex :vertical
+                        {:main-axis-alignment :space-between}
+                        (m/Text "Top")
+                        (m/Text "Bottom"))]
+      (is (= (.-direction widget) m/Axis.vertical))
+      (is (= (.-mainAxisAlignment widget) m/MainAxisAlignment.spaceBetween)))))
+
+(deftest test-opacity
+  (testing "Opacity with value only"
+    (let [child (m/Text "Child")
+          widget (f/opacity 0.5 child)]
+      (is (instance? m/Opacity widget))
+      (is (= (.-opacity widget) 0.5))
+      (is (instance? m/Text (.-child widget)))))
+  
+  (testing "Opacity with animation"
+    (let [widget (f/opacity 0.7 
+                           {:animation {:duration 0.3}}
+                           (m/Text "Child"))]
+      (is (instance? m/AnimatedOpacity widget))
+      (is (= (.-opacity widget) 0.7))
+      (is (= (.-inMilliseconds (.-duration widget)) 300)))))
+
+(deftest test-padding
+  (testing "Padding with number"
+    (let [child (m/Text "Child")
+          widget (f/padding 10 child)]
+      (is (instance? m/Padding widget))
+      (is (= (.-padding widget) (t/insets 10)))
+      (is (instance? m/Text (.-child widget)))))
+  
+  (testing "Padding with animation"
+    (let [widget (f/padding 
+                 20 
+                 {:animation {:duration 0.2}}
+                 (m/Text "Child"))]
+      (is (instance? m/AnimatedPadding widget))
+      (is (= (.-padding widget) (t/insets 20)))
+      (is (= (.-inMilliseconds (.-duration widget)) 200)))))
+
+(deftest test-row
+  (testing "Row with default properties"
+    (let [child (m/Text "Child")
+          widget (f/row child)]
+      (is (instance? m/Row widget))
+      (is (= (count (.-children widget)) 1))))
+  
+  (testing "Row with spacing and alignment"
+    (let [widget (f/row 
+                 {:spacing 15
+                  :main-axis-alignment :end
+                  :cross-axis-alignment :center}
+                 (m/Text "Left")
+                 (m/Text "Right"))]
+      (is (= (.-spacing widget) 15.0))
+      (is (= (.-mainAxisAlignment widget) m/MainAxisAlignment.end))
+      (is (= (.-crossAxisAlignment widget) m/CrossAxisAlignment.center))
+      (is (= (count (.-children widget)) 2)))))
+
+(deftest test-sized
+  (testing "Sized with single number"
+    (let [widget (f/sized 100)]
+      (is (instance? m/ConstrainedBox widget))
+      (is (= (-> widget .-constraints .-minWidth) 100.0))
+      (is (= (-> widget .-constraints .-maxWidth) 100.0))))
+  
+  (testing "Sized with width and height"
+    (let [widget (f/sized {:width 200 :height 150} (m/Text "Child"))]
+      (is (= (-> widget .-constraints .-minWidth) 200.0))
+      (is (= (-> widget .-constraints .-maxWidth) 200.0))
+      (is (= (-> widget .-constraints .-minHeight) 150.0))
+      (is (= (-> widget .-constraints .-maxHeight) 150.0)))))
+
+(deftest test-spacer
+  (testing "Spacer with default flex"
+    (let [widget (f/spacer)]
+      (is (instance? m/Spacer widget))
+      (is (= (.-flex widget) 1))))
+  
+  (testing "Spacer with custom flex"
+    (let [widget (f/spacer 2)]
+      (is (= (.-flex widget) 2)))))
+
+(deftest test-stack
+  (testing "Stack with default properties"
+    (let [widget (f/stack (m/Text "First") (m/Text "Second"))]
+      (is (instance? m/Stack widget))
+      (is (= (count (.-children widget)) 2))))
+  
+  (testing "Stack with alignment and fit"
+    (let [widget (f/stack 
+                 {:alignment :center
+                  :fit :expand}
+                 (m/Text "Bottom")
+                 (m/Text "Top"))]
+      (is (= (.-alignment widget) m/Alignment.center))
+      (is (= (.-fit widget) m/StackFit.expand))
+      (is (= (count (.-children widget)) 2)))))
+
+(deftest test-text
+  (testing "Text with string only"
+    (let [widget (f/text "Hello")]
+      (is (instance? m/Text widget))
+      (is (= (.-data widget) "Hello"))))
+  
+  (testing "Text with style"
+    (let [widget (f/text "Hello" {:color :red :font-size 20})]
+      (is (= (-> widget .-style .-color) (t/color :red)))
+      (is (= (-> widget .-style .-fontSize) 20.0)))))
+
 (deftest test-cross-axis-alignment
   (testing "Valid cross-axis alignments"
     (is (= (t/cross-axis-alignment :center) m/CrossAxisAlignment.center))
