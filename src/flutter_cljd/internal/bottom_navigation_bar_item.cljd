@@ -1,0 +1,13 @@
+(ns flutter-cljd.internal.bottom-navigation-bar-item
+  (:require
+   ["package:flutter/material.dart" :as m]
+   [flutter-cljd.types :as t]))
+
+(defn bottom-navigation-bar-item*
+  [args]
+  (m/BottomNavigationBarItem
+   .icon (get args :icon (m/SizedBox .width 0 .height 0))
+   .label (args :label)
+   .activeIcon (args :active-icon)
+   .backgroundColor (some-> (args :background-color) t/color)
+   .tooltip (args :tooltip)))

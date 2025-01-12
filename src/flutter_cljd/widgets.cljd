@@ -42,7 +42,8 @@
    [flutter-cljd.internal.autofill-group :as afg]
    [flutter-cljd.internal.keep-alive :as ka]
    [flutter-cljd.internal.on-back-button :as obb]
-   [flutter-cljd.internal.baseline :as bl]))
+   [flutter-cljd.internal.baseline :as bl]
+   [flutter-cljd.internal.bottom-navigation-bar-item :as bnbi]))
 
 (defn absorb-pointer 
   "A widget that absorbs pointers during hit testing. 
@@ -260,12 +261,7 @@
    
    [Flutter docs](https://api.flutter.dev/flutter/material/BottomNavigationBarItem-class.html)"
   [args]
-  (m/BottomNavigationBarItem
-   .icon (get args :icon (m/SizedBox .width 0 .height 0))
-   .label (args :label)
-   .activeIcon (args :active-icon)
-   .backgroundColor (some-> (args :background-color) t/color)
-   .tooltip (args :tooltip)))
+  (bnbi/bottom-navigation-bar-item* args))
 
 (defn builder
   "A stateless utility widget whose build method uses its builder callback to create the widget's child.
