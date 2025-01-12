@@ -183,3 +183,22 @@
   (debugFillProperties [this properties]
     (.debugFillProperties ^super this properties)
     (.add properties (f/DiagnosticsProperty. "padding" padding))))
+(ns flutter-cljd.internal.padding
+  (:require
+   ["package:flutter/material.dart" :as m]
+   [flutter-cljd.types :as t]))
+
+(defn AnimatedAnyPadding [key padding child curve duration on-end]
+  (m/AnimatedPadding
+   .key key
+   .padding padding
+   .child child
+   .curve curve
+   .duration duration
+   .onEnd on-end))
+
+(defn AnyPadding [padding key child]
+  (m/Padding
+   .key key
+   .padding padding
+   .child child))
