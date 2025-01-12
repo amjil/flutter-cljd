@@ -1,0 +1,7 @@
+(ns flutter-cljd.internal.aspect-ratio
+  (:require
+   ["package:flutter/material.dart" :as m]))
+
+(defn aspect-ratio*
+  [ratio child]
+  (m/AspectRatio .aspectRatio (double ratio) .child child))

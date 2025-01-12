@@ -15,7 +15,8 @@
    [flutter-cljd.internal.padding :as pd]
    [flutter-cljd.internal.absorb-pointer :as ap]
    [flutter-cljd.internal.ignore-pointer :as ip]
-   [flutter-cljd.internal.align :as al]))
+   [flutter-cljd.internal.align :as al]
+   [flutter-cljd.internal.aspect-ratio :as ar]))
 
 ;; -------------------------
 ;; MARK: Widgets
@@ -90,7 +91,7 @@
 
    [Flutter docs](https://api.flutter.dev/flutter/widgets/AspectRatio-class.html)"
   [ratio child]
-  (m/AspectRatio .aspectRatio (double ratio) .child child))
+  (ar/aspect-ratio* ratio child))
 
 (defn action-listener 
   "A helper widget for making sure that listeners on an action are removed properly.
