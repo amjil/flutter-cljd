@@ -1,0 +1,10 @@
+(ns flutter-cljd.internal.keyed
+  (:require
+   ["package:flutter/material.dart" :as m]
+   [flutter-cljd.types :as t]))
+
+(defn keyed*
+  [key child]
+  (m/KeyedSubtree
+   .key (t/widget-key key)
+   .child child))

@@ -49,7 +49,8 @@
    [flutter-cljd.internal.checked-mode-banner :as cmb]
    [flutter-cljd.internal.clip-corners :as cc]
    [flutter-cljd.internal.custom-multi-child-layout :as cml]
-   [flutter-cljd.internal.decorated :as dec]))
+   [flutter-cljd.internal.decorated :as dec]
+   [flutter-cljd.internal.keyed :as kyd]))
 
 (defn absorb-pointer 
   "A widget that absorbs pointers during hit testing. 
@@ -1118,10 +1119,34 @@
   ([with-decoration child]
    (dec/decorated* with-decoration child)))
 
-(defn keyed [key child]
-  (m/KeyedSubtree
-   .key (t/widget-key key)
-   .child child))
+(defn keyed
+  "A widget that assigns a key to a child widget.
+
+  The KeyedSubtree widget is useful when you want to give a specific key to a widget
+  in the tree. This is often used when you need to maintain the state of a specific
+  widget across rebuilds, or when you need to uniquely identify a widget for testing
+  or animation purposes.
+
+  Args:
+   - key: The key to assign to the child widget. Can be any value that can be
+          converted to a Key using widget-key.
+   - child: The widget to assign the key to.
+
+  Example:
+  ```clojure
+  ;; Assign a key to a text widget
+  (keyed :my-text
+    (text \"Hello World\"))
+
+  ;; Use with a stateful widget to preserve state
+  (keyed \"counter-1\"
+    (stateful-widget
+      (counter-widget)))
+  ```
+
+  [Flutter docs](https://api.flutter.dev/flutter/widgets/KeyedSubtree-class.html)"
+  [key child]
+  (kyd/keyed* key child))
 
 (defn padding
     "Creates a Padding widget with the specified padding and child.
