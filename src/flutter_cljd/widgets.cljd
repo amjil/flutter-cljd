@@ -22,7 +22,8 @@
    [flutter-cljd.internal.center :as ct]
    [flutter-cljd.internal.clip-oval :as co]
    [flutter-cljd.internal.clip-rect :as cr]
-   [flutter-cljd.internal.colored :as cd]))
+   [flutter-cljd.internal.colored :as cd]
+   [flutter-cljd.internal.color-filtered :as cf]))
 
 ;; -------------------------
 ;; MARK: Widgets
@@ -736,7 +737,7 @@
    Use the ColorFilter.mode constructor to apply a Color using a BlendMode.
    Use the BackdropFilter widget instead, if the ColorFilter needs to be applied onto the content beneath child."
   ([filter child]
-   (m/ColorFiltered .colorFilter (t/color-filter filter) .child child)))
+   (cf/color-filtered* filter child)))
 
 (defn column
   "Creates a column widget with the specified arguments and children.

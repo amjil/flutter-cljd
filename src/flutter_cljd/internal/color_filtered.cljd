@@ -1,0 +1,8 @@
+(ns flutter-cljd.internal.color-filtered
+  (:require
+   ["package:flutter/material.dart" :as m]
+   [flutter-cljd.types :as t]))
+
+(defn color-filtered*
+  [filter child]
+  (m/ColorFiltered .colorFilter (t/color-filter filter) .child child))
