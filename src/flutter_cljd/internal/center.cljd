@@ -1,0 +1,12 @@
+(ns flutter-cljd.internal.center
+  (:require
+   ["package:flutter/widgets.dart" :as w]
+   [flutter-cljd.types :as t]))
+
+(defn center*
+  [{:keys [key width-factor height-factor]} child]
+  (w/Center
+   .key (some-> key t/widget-key)
+   .widthFactor (some-> width-factor double)
+   .heightFactor (some-> height-factor double)
+   .child child))

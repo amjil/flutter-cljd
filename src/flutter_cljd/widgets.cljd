@@ -18,7 +18,8 @@
    [flutter-cljd.internal.align :as al]
    [flutter-cljd.internal.aspect-ratio :as ar]
    [flutter-cljd.internal.block-semantics :as bs]
-   [flutter-cljd.internal.banner :as bn]))
+   [flutter-cljd.internal.banner :as bn]
+   [flutter-cljd.internal.center :as ct]))
 
 ;; -------------------------
 ;; MARK: Widgets
@@ -658,11 +659,7 @@
    ```
 
    [Flutter docs](https://api.flutter.dev/flutter/widgets/Center-class.html)"
-  ([{:keys [key width-factor height-factor]} child] (w/Center
-                 .key (some-> key t/widget-key)
-                 .widthFactor (some-> width-factor double)
-                 .heightFactor (some-> height-factor double)
-                 .child child))
+  ([args child] (ct/center* args child))
   ([child] (center {} child)))
 
 (defn checked-mode-banner
