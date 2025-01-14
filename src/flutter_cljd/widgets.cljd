@@ -1350,5 +1350,5 @@
   Keywords are not animatable. Convert them to appropriate Flutter classes using methods from the `flutter-cljd/types` namespace:
   - `(t/color :blue)`
   - `(t/alignment :center)`"
-  ([builder & values]
-   (an/animated* builder values)))
+  ([animation builder & values]
+   (an/animated* animation (cons builder values))))

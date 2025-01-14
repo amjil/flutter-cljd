@@ -30,7 +30,10 @@
            :else (throw (ex-info "Invalid arguments in animated" {:args (cons builder values)})))
          [value child] (if has-child?
                         [(vec (drop-last args)) (last args)]
-                        [(vec args) nil])]
+                        [(vec args) nil])
+         getter #(.-value %)
+         builder (fn [value child]
+                   (apply builder (conj value child)))]
      (cond
        (map? animation) 
        (let [options (t/animation-options animation)
@@ -41,27 +44,26 @@
           .tween (build-tween lerp value)
           .duration (options :duration)
           .curve (options :curve)
-          .builder builder
+          .builder (fn [_ value child]
+                     (builder value child))
           .onEnd (options :on-end)
           .child child))
 
        (or
         (instance? a/Animation animation)
         (instance? fd/ValueListenable animation))
-       (let [getter #(.-value %)]
-         (w/AnimatedBuilder
-          .animation animation
-          .child child
-          .builder (fn [_ child]
-                     (builder (getter animation) child)))) 
+       (w/AnimatedBuilder
+        .animation animation
+        .child child
+        .builder (fn [_ child]
+                   (builder (getter animation) child))) 
        
        (instance? c/Atom animation) 
-       (let [getter #(.-value %)]
-        (w/AnimatedBuilder
-         .animation (la/AtomListenable animation)
-         .child child
-         .builder (fn [_ child]
-                    (builder (getter animation) child))))
+       (w/AnimatedBuilder
+        .animation (la/AtomListenable animation)
+        .child child
+        .builder (fn [_ child]
+                   (builder (getter animation) child)))
 
        :else
        (throw (ex-info "Invalid animation" {:animation animation})))))
