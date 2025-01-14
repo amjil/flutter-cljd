@@ -33,7 +33,7 @@
                         [(vec args) nil])
          getter #(.-value %)
          builder (fn [value child]
-                   (apply builder (conj value child)))]
+                   (apply builder (if has-child? (conj value child) value)))]
      (cond
        (map? animation) 
        (let [options (t/animation-options animation)
