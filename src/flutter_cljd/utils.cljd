@@ -2,7 +2,8 @@
   "Core utilities and helpers for flutter-cljd."
   (:require
    [cljd.flutter :as f]
-   ["package:flutter/widgets.dart" :as w]))
+   ["package:flutter/widgets.dart" :as w]
+   ["package:flutter/animation.dart" :as an]))
 
 (defmacro ??
   "A nil-coalescing macro that returns the first non-nil value from a series of expressions.
@@ -189,3 +190,5 @@
   [args children]
   [(if (map? args) args {})
    (flatten-children (if (map? args) children (cons args children)))])
+
+(defn animation [parent getter])

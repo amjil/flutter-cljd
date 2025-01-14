@@ -1,6 +1,7 @@
 (ns flutter-cljd.internal.animated
   (:require
    [cljd.core :as c]
+   ["dart:ui" :as ui]
    [cljd.flutter :as f]
    [flutter-cljd.types :as t]
    [flutter-cljd.ListenableAtom :as la]
@@ -12,7 +13,7 @@
 ;; MARK: Animated
 
 (defn- ^f/CustomTween build-tween [lerp-fn value]
-  (doto (f/CustomTween lerp-fn nil)
+  (doto (f/CustomTween (or lerp-fn #(ut/lerp %1 %2)) nil)
     (.-begin! value)
     (.-end! value)))
 
@@ -28,7 +29,7 @@
                     (= (count values) 2)))
            [builder (second values) (cons (first values) (drop 2 values))]
            :else (throw (ex-info "Invalid arguments in animated" {:args (cons builder values)})))
-         [value child] (if has-child?
+         [values child] (if has-child?
                         [(vec (drop-last args)) (last args)]
                         [(vec args) nil])
          getter #(.-value %)
@@ -37,11 +38,11 @@
      (cond
        (map? animation) 
        (let [options (t/animation-options animation)
-             lerp (or (:lerp animation) #(ut/lerp %1 %2))
+             lerp (:lerp animation)
              trigger (:trigger animation)]
          (w/TweenAnimationBuilder
           .key (t/widget-key (animation :key))
-          .tween (build-tween lerp value)
+          .tween (build-tween lerp values)
           .duration (options :duration)
           .curve (options :curve)
           .builder (fn [_ value child]
@@ -67,3 +68,72 @@
 
        :else
        (throw (ex-info "Invalid animation" {:animation animation})))))
+  
+ 
+(deftype TransformedAnimation
+         [^a/Animation parent transform]
+  :extends a/Animation
+  (isAnimating [this] (-> this .-parent .-isAnimating))
+  (isCompleted [this] (-> this .-parent .-isCompleted))
+  (isDismissed [this] (-> this .-parent .-isDismissed))
+  (isForwardOrCompleted [this] (-> this .-parent .-isForwardOrCompleted))
+  (status [this] (-> this .-parent .-status))
+  (value [this] ((.-transform this) (-> this .-parent .-value)))
+  (addListener [this listener] (.addListener (.-parent this) listener))
+  (removeListener [this listener] (.removeListener (.-parent this) listener))
+  (addStatusListener [this listener] (.addStatusListener (.-parent this) listener))
+  (removeStatusListener [this listener] (.removeStatusListener (.-parent this) listener)))
+
+(defn animation-of
+  ([^a/Animation value transform]
+   (TransformedAnimation value transform)))
+
+ (defn- set-value [this new-value]
+    (let [old-value (-> this .-tween .-end)
+          tween (.-tween this)]
+      (when-not (= new-value old-value)
+        (.-begin! tween (.evaluate tween this))
+        (.-end! tween new-value)
+        (if-not (.-isAnimating this)
+          (.forward this .from 0.0)
+          (let [progress (.-value this)]
+            (.forward this .from 0.0)
+            (.-value! this progress)))
+        nil)))
+ 
+ (defn- get-state [this]
+    (-> this .-tween .-end))
+  
+(deftype AnimatedValue 
+         [tween
+          ^a/TickerProvider vsync
+          duration
+          curve]
+  :extends (a/AnimationController
+             .vsync vsync
+             .duration duration) 
+  c/IEquiv
+  (-equiv [o other] (identical? o other))
+  c/IDeref
+  (-deref [this] (get-state this))
+  c/ISwap
+  (-swap! [this f] (set-value this (f (get-state this))))
+  (-swap! [this f a] (set-value this (f (get-state this) a)))
+  (-swap! [this f a b] (set-value this (f (get-state this) a b)))
+  (-swap! [this f a b xs] (set-value this (apply f (get-state this) a b xs)))
+  c/IReset
+  (-reset! [this new-value] (set-value this new-value)) 
+  c/IFn
+  (-invoke [this transform]
+           (animation-of this transform)))
+
+ (defn animated-value
+   ([initial-value vsync] (animated-value initial-value vsync {}))
+   ([initial-value vsync options]
+    (let [options (t/animation-options options)]
+      (AnimatedValue 
+       (build-tween (:lerp options) initial-value) 
+       vsync
+       (:duration options)
+       (:curve options)))))
+ 
