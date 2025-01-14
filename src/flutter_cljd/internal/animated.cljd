@@ -17,9 +17,22 @@
     (.-end! value)))
 
 (defn animated*
-  ([animation value builder child]
-   (cond
-     (map? animation) 
+  [builder values]
+   (let [has-child? (instance? w/Widget (last values))
+         [animation builder args]
+         (cond
+           (fn? builder) [{} builder values]
+           (fn? (first values)) [builder (first values) (drop 1 values)]
+           (and (fn? (second values))
+                (or (and has-child? (= (count values) 3))
+                    (= (count values) 2)))
+           [builder (second values) (cons (first values) (drop 2 values))]
+           :else (throw (ex-info "Invalid arguments in animated" {:args (cons builder values)})))
+         [value child] (if has-child?
+                        [(vec (drop-last args)) (last args)]
+                        [(vec args) nil])]
+     (cond
+       (map? animation) 
        (let [options (t/animation-options animation)
              lerp (or (:lerp animation) #(ut/lerp %1 %2))
              trigger (:trigger animation)]
@@ -32,18 +45,23 @@
           .onEnd (options :on-end)
           .child child))
 
-     (or
-      (instance? a/Animation animation)
-      (instance? fd/ValueListenable animation))
-     (let [getter #(.-value %)]
-       (w/AnimatedBuilder
-        .animation animation
-        .child child
-        .builder (fn [ctx child]
-                   (builder ctx (getter animation) child)))) 
-     
-     (instance? c/Atom animation) 
-     (animated* (la/AtomListenable animation) value builder child)
+       (or
+        (instance? a/Animation animation)
+        (instance? fd/ValueListenable animation))
+       (let [getter #(.-value %)]
+         (w/AnimatedBuilder
+          .animation animation
+          .child child
+          .builder (fn [ctx child]
+                     (builder ctx (getter animation) child)))) 
+       
+       (instance? c/Atom animation) 
+       (let [getter #(.-value %)]
+        (w/AnimatedBuilder
+         .animation (la/AtomListenable animation)
+         .child child
+         .builder (fn [ctx child]
+                    (builder ctx (getter animation) child))))
 
-     :else
-     (throw (ex-info "Invalid animation" {:animation animation})))))
+       :else
+       (throw (ex-info "Invalid animation" {:animation animation})))))
