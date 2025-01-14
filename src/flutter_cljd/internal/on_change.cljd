@@ -13,7 +13,7 @@
           ^w/Widget child]
   :extends (w/StatefulWidget .key key)
 
-  (^#/(State OnChange) createState [_] (OnChangeState)))
+  (^#/(w/State OnChange) createState [_] (OnChangeState)))
 
 (defn- equal? [state a b]
   (let [equals (or 
@@ -23,7 +23,7 @@
     (equals a b)))
 
 (deftype ^:private OnChangeState []   
-  :extends (#(State OnChange>)) 
+  :extends (#/(w/State OnChange))
   
   (didUpdateWidget [this oldWidget] 
     (.didUpdateWidget ^super this oldWidget)  
@@ -32,10 +32,11 @@
           new (.-value widget)
           on-change (.-onChange widget)]
       (when-not (equal? this old new) 
-        (on-change old new (.-context widget)))))
+        (w/WidgetsBinding.instance.addPostFrameCallback
+         (fn [_] (on-change old new (.-context this)))))))
   
   (build [this _]  
-    (this .-widget .-child)))
+    (-> this .-widget .-child)))
 
 (defn on-change-of*
   [value equal? on-change child]

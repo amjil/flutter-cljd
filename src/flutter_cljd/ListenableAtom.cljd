@@ -1,0 +1,20 @@
+(ns flutter-cljd.ListenableAtom
+  (:require
+   [cljd.core :as c]
+   ["dart:core" :as dc]
+   ["package:flutter/foundation.dart" :as f]))
+
+(deftype AtomListenable [^c/Atom atom]
+  :extends f/ValueListenable
+
+  (value [this] (c/deref (.-atom this)))
+  
+  (addListener [this listener]
+    (c/add-watch (.-atom this)
+                 (dc/identityHashCode listener)
+                 (fn [_ _ _ _] (listener))) 
+    nil)
+  
+  (removeListener [this listener]
+    (c/remove-watch (.-atom this) (dc/identityHashCode listener))
+    nil))

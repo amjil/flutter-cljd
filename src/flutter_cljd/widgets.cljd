@@ -1,6 +1,7 @@
 (ns flutter-cljd.widgets
   "The Flutter widgets framework. [Docs](https://api.flutter.dev/flutter/widgets/widgets-library.html)"
   (:require
+   ["package:flutter/widgets.dart" :as w]
    [flutter-cljd.inherited-keys :as inh]
    [flutter-cljd.internal.builder :as bd]
    [flutter-cljd.internal.layout-builder :as lbd]
@@ -44,7 +45,8 @@
    [flutter-cljd.internal.decorated :as dec]
    [flutter-cljd.internal.keyed :as kyd]
    [flutter-cljd.internal.with-text-style :as wts]
-   [flutter-cljd.internal.on-change :as oc]))
+   [flutter-cljd.internal.on-change :as oc]
+   [flutter-cljd.internal.animated :as an]))
 
 (defn absorb-pointer 
   "A widget that absorbs pointers during hit testing. 
@@ -1279,3 +1281,56 @@
    (oc/on-change-of* value equal? on-change child))
   ([value on-change child]
    (oc/on-change-of* value nil on-change child)))
+
+(defn animated
+  "Creates a widget that animates the given value.
+  
+  This widget accepts:
+    1. An optional map with the following keys:
+     - `:duration` - The duration of the animation.
+     - `:curve` - The curve of the animation.
+     - `:lerp` - The lerp function to interpolate between values.
+     - `:on-end` - The callback to be called when the animation ends.
+    2. A builder function that creates the child widget. (fn [value Widget?])
+    3. Values to animate. Animation will be triggered when the values changes. All values will be applied to the builder function. If there is only one value, it's allowed to pass it before the builder function.
+    4. An optional child widget that will be passed to the builder function as the last argument.
+
+  Or:
+    1. An `Animation` or `ValueListenable`.
+    2. A builder function that creates the child widget. (fn [value Widget?])
+    3. An optional child widget that will be passed to the builder function.
+
+  ```clojure
+  (animated
+    {:duration 0.25}
+    {:padding pd :color txt-clr}
+    #(padding (:padding %1) 
+        (tx/text \"Text\" {:color (:color %1)})))
+  ```
+     If your builder function contains a subtree that does not depend on the animation,
+     it's more efficient to build that subtree once instead of rebuilding it on every animation tick.
+     
+     To achieve this `animated` can be just inserted before any modifier call:
+     
+  ```clojure
+   (->> (some-widget)
+     (animated padding pd)
+     (animated sized w h)
+     (animated {:duration 0.2 :curve :linear}
+       decorated {:color color, :border-radius radius}))
+  ```"
+  ([builder & values]
+   (let [has-child? (instance? w/Widget (last values))
+         [animation builder args]
+         (cond
+           (fn? builder) [{} builder values]
+           (fn? (first values)) [builder (first values) (drop 1 values)] 
+           (and (fn? (second values)) 
+                (or (and has-child? (= (count values) 3))
+                    (= (count values) 2)))
+           [builder (second values) (cons (first values) (drop 2 values))]
+           :else (throw (ex-info "Invalid arguments in animated" {:args (cons builder values)})))
+         [args child] (if has-child?
+                        [(drop-last args) (last args)] 
+                        [args nil])]
+      (an/animated* animation (vec args) (fn [_ val ch] (apply builder (conj val ch))) child))))

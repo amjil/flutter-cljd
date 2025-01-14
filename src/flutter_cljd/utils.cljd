@@ -1,6 +1,7 @@
 (ns flutter-cljd.utils
   "Core utilities and helpers for flutter-cljd."
   (:require
+   [cljd.flutter :as f]
    ["package:flutter/widgets.dart" :as w]))
 
 (defmacro ??
@@ -50,6 +51,28 @@
   "The mathematical constant `π` (pi), which is the ratio of a circle's circumference to its diameter."
   (.pi double))
 
+(extend-protocol f/ITweenable
+  w/Offset
+  (-tween [end] 
+    (f/tween-with 
+     (fn [begin end]  
+       (fn [t] (w/Offset.lerp begin end t)))
+     end))
+
+  w/Shadow
+  (-tween [end]
+    (f/tween-with 
+     (fn [begin end] 
+       (fn [t] (w/Shadow.lerp begin end t)))
+     end))
+
+  w/BoxShadow
+  (-tween [end]
+    (f/tween-with 
+     (fn [begin end] 
+       (fn [t] (w/BoxShadow.lerp begin end t)))
+     end)))
+
 (defn lerp
   "Linear interpolation between two values.
    
@@ -81,23 +104,40 @@
    ((lerp from to) t))
   ([from to]
    (cond
-    ;; (satisfies? from f/ITweenable)
-    ;; (f/lerp from to)
+     (satisfies? f/ITweenable from) 
+     (f/lerp from to) 
      
+     (and (int? from) (int? to))
+     (fn [t] (.round (+ (* (- 1 t) (double from)) (* t (double to)))))
+
      (and (number? from) (number? to))
      #(+ (* (- 1 %) from) (* % to))
 
-     (and (vector? from) (vector? to))
+     (and (vector? from) (vector? to) (= (count from) (count to)))
      (fn [t] (mapv #((lerp %1 %2) t) from to))
 
-     (and (seq? from) (seq? to))
-     (fn [t] (map #((lerp %1 %2) t) from to))
-
      (and (map? from) (map? to))
-     (fn [t] (reduce-kv (fn [acc k v] 
-                          (assoc acc k ((lerp (get from k) v) t))) 
-                        {} 
-                        to))
+     (fn [t]
+      (let [all-keys (set (concat (keys from) (keys to)))]
+        (reduce (fn [acc k]
+                  (cond
+                        ;; Key exists in both maps - interpolate
+                    (and (contains? from k) (contains? to k))
+                    (assoc acc k ((lerp (get from k) (get to k)) t))
+    
+                        ;; Key only in 'from' - keep if t < 0.5
+                    (contains? from k)
+                    (if (< t 0.5)
+                      (assoc acc k (get from k))
+                      acc)
+    
+                        ;; Key only in 'to' - keep if t >= 0.5
+                    :else
+                    (if (>= t 0.5)
+                      (assoc acc k (get to k))
+                      acc)))
+                {}
+                all-keys)))
      
      :else
      #(if (> % 0.5) to from))))

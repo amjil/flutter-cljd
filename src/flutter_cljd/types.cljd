@@ -4,12 +4,14 @@
    ["package:flutter/services.dart" :as s]
    ["package:flutter/widgets.dart" :as w]
    ["package:flutter/animation.dart" :as a]
+   ["package:flutter/physics.dart" :as p]
    ["dart:core" :as c]
    ["dart:ui" :as ui]
    [cljd.string :as str]
    [flutter-cljd.keyboard-keys :as keys]
    [flutter-cljd.drawing :as dr :refer [offset]]
-   [flutter-cljd.color-filters :as clr-f]))
+   [flutter-cljd.color-filters :as clr-f]
+   [flutter-cljd.types :as t]))
 
 (deftype ^:private AnyActionDispatcher [invoke]
   :extends w/ActionDispatcher
@@ -958,6 +960,31 @@
     (nil? value) (c/Duration .milliseconds 250)
     :else (throw (Exception. (str "Invalid duration: " value)))))
 
+(deftype ^:private CurveFn 
+  [curve]
+  :extends (a/Curve)
+  (transform [_ t] (curve t)))
+
+(deftype ^:private SpringCurve 
+  [^p/SpringSimulation simulation]
+  :extends (a/Curve)
+  (transform [this t] 
+    (let [sim (.-simulation this)]
+      (+ (.x sim t) (* t (- 1.0 (.x sim 1.0)))))))
+
+(defn spring
+  ([& {:keys [damping stiffness mass velocity]  
+       :or {damping 20 stiffness 180 mass 1 velocity 0}}]
+   (SpringCurve 
+    (p/SpringSimulation  
+     (p/SpringDescription 
+      .damping (double damping) 
+      .mass (double mass) 
+      .stiffness (double stiffness)) 
+     0.0 
+     1.0
+     (double velocity)))))
+
 (defn curve [curve]
   (cond
     (instance? m/Curve curve) curve
@@ -1007,6 +1034,8 @@
       :fast-out-slow-in m/Curves.fastOutSlowIn
       :slow-middle m/Curves.slowMiddle
       (throw (Exception. (str "Unknown curve: " curve))))
+    
+    (fn? curve) (CurveFn curve)
 
     :else
     (throw (Exception. (str "Invalid curve: " curve)))))
@@ -1344,3 +1373,15 @@
   (if (instance? a/AlwaysStoppedAnimation value)
     value
     (a/AlwaysStoppedAnimation. value)))
+
+(defn interval 
+  "A curve that is 0.0 until begin, then curved (according to curve) from 0.0 at begin to 1.0 at end, then remains 1.0 past end.
+
+   An Interval can be used to delay an animation. For example, a six second animation that uses an Interval with its begin set to 0.5 and its end set to 1.0 will essentially become a three-second animation that starts three seconds later."
+  ([start end curve]
+   (a/Interval
+    (max 0.0 (min 1.0 start end)) 
+    (min 1.0 (max 0.0 end start))
+    .curve (t/curve curve)))
+  ([start end]
+   (interval start end m/Curves.linear)))

@@ -1,0 +1,49 @@
+(ns flutter-cljd.internal.animated
+  (:require
+   [cljd.core :as c]
+   [cljd.flutter :as f]
+   [flutter-cljd.types :as t]
+   [flutter-cljd.ListenableAtom :as la]
+   ["package:flutter/foundation.dart" :as fd]
+   ["package:flutter/widgets.dart" :as w]
+   ["package:flutter/animation.dart" :as a]
+   [flutter-cljd.utils :as ut]))
+
+;; MARK: Animated
+
+(defn- ^f/CustomTween build-tween [lerp-fn value]
+  (doto (f/CustomTween lerp-fn nil)
+    (.-begin! value)
+    (.-end! value)))
+
+(defn animated*
+  ([animation value builder child]
+   (cond
+     (map? animation) 
+       (let [options (t/animation-options animation)
+             lerp (or (:lerp animation) #(ut/lerp %1 %2))
+             trigger (:trigger animation)]
+         (w/TweenAnimationBuilder
+          .key (t/widget-key (animation :key))
+          .tween (build-tween lerp value)
+          .duration (options :duration)
+          .curve (options :curve)
+          .builder builder
+          .onEnd (options :on-end)
+          .child child))
+
+     (or
+      (instance? a/Animation animation)
+      (instance? fd/ValueListenable animation))
+     (let [getter #(.-value %)]
+       (w/AnimatedBuilder
+        .animation animation
+        .child child
+        .builder (fn [ctx child]
+                   (builder ctx (getter animation) child)))) 
+     
+     (instance? c/Atom animation) 
+     (animated* (la/AtomListenable animation) value builder child)
+
+     :else
+     (throw (ex-info "Invalid animation" {:animation animation})))))
