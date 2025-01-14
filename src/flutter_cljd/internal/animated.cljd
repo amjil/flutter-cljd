@@ -52,16 +52,16 @@
          (w/AnimatedBuilder
           .animation animation
           .child child
-          .builder (fn [ctx child]
-                     (builder ctx (getter animation) child)))) 
+          .builder (fn [_ child]
+                     (builder (getter animation) child)))) 
        
        (instance? c/Atom animation) 
        (let [getter #(.-value %)]
         (w/AnimatedBuilder
          .animation (la/AtomListenable animation)
          .child child
-         .builder (fn [ctx child]
-                    (builder ctx (getter animation) child))))
+         .builder (fn [_ child]
+                    (builder (getter animation) child))))
 
        :else
        (throw (ex-info "Invalid animation" {:animation animation})))))
