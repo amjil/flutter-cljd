@@ -39,14 +39,13 @@
        (map? animation) 
        (let [options (t/animation-options animation)
              lerp (:lerp animation)
-             trigger (:trigger animation)]
+             condition (if (some? (animation :when)) (animation :when) true)]
          (w/TweenAnimationBuilder
           .key (t/widget-key (animation :key))
           .tween (build-tween lerp values)
-          .duration (options :duration)
+          .duration (if condition (options :duration) (t/duration 0))
           .curve (options :curve)
-          .builder (fn [_ value child]
-                     (builder value child))
+          .builder (fn [_ value child] (builder value child))
           .onEnd (options :on-end)
           .child child))
 
@@ -56,8 +55,7 @@
        (w/AnimatedBuilder
         .animation animation
         .child child
-        .builder (fn [_ child]
-                   (builder (getter animation) child))) 
+        .builder (fn [_ child] (builder (getter animation) child))) 
        
        (instance? c/Atom animation) 
        (w/AnimatedBuilder
@@ -137,3 +135,28 @@
        (:duration options)
        (:curve options)))))
  
+
+(defn ttt []
+  (cntr {:duration 2.0 :curve :ease-in-out}
+        {:color {:tween [w/Colors.red w/Colors.blue]
+                 :curve (t/interval 0.4 1 :ease-in-out)}
+         :offset {:tween [{:dx 0.0 :dy 0.0} {:dx 100.0 :dy 100.0}]
+                  :value {:dx 0.0 :dy 0.0}}})
+
+  (cntr {:color w/Colors.red
+         :offset {:dx 0.0 :dy 0.0}})
+
+  (animation-of cntr :color
+                {:tween [w/Colors.red w/Colors.blue] 
+                 :curve (t/interval 0.4 1 :ease-in-out)})
+
+  (animate-intervals cntr {[0 1] #(assoc % :color w/Colors.blue) 
+                           [0.5 1] #(assoc-in % [:color :alpha] 0.5)})
+  
+  (animate cntr #(assoc % :color w/Colors.blue))
+  
+  (animate cntr {:color [0.3 :linear]})
+
+  
+
+  )

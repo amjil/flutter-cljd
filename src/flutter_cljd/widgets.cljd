@@ -1243,12 +1243,13 @@
 
    This widget accepts:
      1. An optional map with the following keys:
-        - `:duration` - The duration of the animation.
-        - `:curve` - The curve of the animation.
-        - `:lerp` - The lerp function to interpolate between values.
-        - `:on-end` - The callback to be called when the animation ends.
+        - `:duration` - The duration of the animation. Default is 0.25 seconds.
+        - `:curve` - The curve of the animation. Default is `Curves.easeInOut`.
+        - `:lerp` - The lerp function to interpolate between values. Default is `utils/lerp`.
+        - `:on-end` - The callback to be called when the animation ends. Default is nil.
+        - `:when` - The condition to trigger the animation. True by default.
      2. A builder function that creates the child widget. (fn [value Widget?])
-     3. Values to animate. Animation is triggered when any value changes. All values are passed to the builder function. For a single value, it can optionally be passed before the builder function.
+     3. Values to animate. Animation is triggered when any value changes and `:when` option is true. All values are passed to the builder function. For a single value, it can optionally be passed before the builder function.
      4. An optional child widget that is passed to the builder function as the last argument.
    
    Or:
@@ -1290,17 +1291,15 @@
   Instead of:
   ```clojure
   ;; Inconsistent - animation won't work correctly
-  (animated padding 
-    {:h 8 :v 10}  ; first value
-    {:all 16})    ; second value - different structure
+  {:h 8 :v 10}  ; first value
+  {:all 16}     ; second value - different structure
   ```
   
   Use:
   ```clojure
   ;; Correct - consistent EdgeInsets instances
-  (animated padding 
-    (t/insets {:h 8 :v 10})  ; first value
-    (t/insets {:all 16}))    ; second value
+  (t/insets {:h 8 :v 10})  ; first value
+  (t/insets {:all 16})     ; second value
   ```
   
   Keywords are not animatable. Convert them to appropriate Flutter classes using methods from the `flutter-cljd/types` namespace:
