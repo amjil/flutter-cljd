@@ -190,5 +190,3 @@
   [args children]
   [(if (map? args) args {})
    (flatten-children (if (map? args) children (cons args children)))])
-
-(defn animation [parent getter])

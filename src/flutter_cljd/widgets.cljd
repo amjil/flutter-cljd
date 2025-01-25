@@ -87,7 +87,7 @@
      - `:width-factor` (number, default: nil): The width factor of the child.
      - `:height-factor` (number, default: nil): The height factor of the child.
      - `:animation` (map or number of seconds, default: nil): The animation options for the align widget.
-       - `:duration` (number of seconds or map or Duration, default: 0.25): The duration of the animation.
+       - `:duration` (number of seconds or map or Duration, default: 250): The duration of the animation.
        - `:curve` (keyword or Curve, default: :ease-in-out): The curve of the animation.
        - `:on-end` (function, default: nil): The callback function to be called when the animation ends.
    - child: The child widget to be aligned.
@@ -1110,7 +1110,7 @@
      (padding {:left 8 :right 16} child) ;; Padding(padding: EdgeInsets.only(left: 8, right: 16))
      (padding [8 16 24 32] child) ;; Padding(padding: EdgeInsets.fromLTRB(8, 16, 24, 32))
      (padding (insets 8) child) ;; Padding(padding: EdgeInsets.all(8))
-     (padding 4 {:animation {:duration 0.1}} child) ;; AnimatedPadding(padding: EdgeInsets.all(4), duration: Duration(milliseconds: 100))
+     (padding 4 {:animation {:duration 100}} child) ;; AnimatedPadding(padding: EdgeInsets.all(4), duration: Duration(milliseconds: 100))
      ```
      If the padding argument is a map, the keys :all, :left, :right, :start, :end, :vertical, :horizontal, :top, and :bottom are used to specify the padding.
      If the padding argument is a vector of four numbers, the numbers are used for the left, top, right, and bottom padding."
@@ -1243,7 +1243,7 @@
 
    This widget accepts:
      1. An optional map with the following keys:
-        - `:duration` - The duration of the animation. Default is 0.25 seconds.
+        - `:duration` - The duration of the animation. Default is 250 milliseconds.
         - `:curve` - The curve of the animation. Default is `Curves.easeInOut`.
         - `:lerp` - The lerp function to interpolate between values. Default is `utils/lerp`.
         - `:on-end` - The callback to be called when the animation ends. Default is nil.
@@ -1259,7 +1259,7 @@
 
   ```clojure
   (animated
-    {:duration 0.25}
+    {:duration 250}
     {:padding pd :color txt-clr}
     #(padding (:padding %1) 
         (tx/text \"Text\" {:color (:color %1)})))
@@ -1273,7 +1273,7 @@
    (->> (some-widget)
      (animated padding pd)
      (animated sized w h)
-     (animated {:duration 0.2 :curve :linear}
+     (animated {:duration 200 :curve :linear}
        decorated {:color color, :border-radius radius}))
   ```
 

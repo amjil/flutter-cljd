@@ -946,17 +946,26 @@
       :else (throw (Exception. (str "Invalid decoration: " args))))))
 
 (defn duration [value]
+  "Creates a Duration object from the specified value.
+   The value can be specified as a number, a map of days, hours, minutes, seconds, milliseconds, microseconds, or a Duration object.
+   Examples:
+   ```clojure
+   (duration 500) ;; Duration(milliseconds: 500)
+   (duration {:seconds 30}) ;; Duration(seconds: 30)
+   (duration {:days 1 :hours 2 :minutes 30}) ;; Duration(days: 1, hours: 2, minutes: 30)
+   (duration (c/Duration .seconds 30)) ;; Duration(seconds: 30)
+   ```"
   (cond
     (instance? c/Duration value) value
     (integer? value) (c/Duration .seconds value)
-    (number? value) (c/Duration .microseconds (int (* value 1000000.0)))
+    (number? value) (c/Duration .microseconds (int (* value 1000.0)))
     (map? value) (c/Duration
-                  .days (int (get value :days 0))
-                  .hours (int (get value :hours 0))
-                  .minutes (int (get value :minutes 0))
-                  .seconds (int (get value :seconds 0))
-                  .milliseconds (int (get value :milliseconds 0))
-                  .microseconds (int (get value :microseconds 0)))
+                  .days (int (:d value (:day value 0)))
+                  .hours (int (:h value (:hours value 0)))
+                  .minutes (int (:m value (:minutes value 0)))
+                  .seconds (int (:s value (:seconds value 0)))
+                  .milliseconds (int (:ms value (:milliseconds value 0)))
+                  .microseconds (int (:μs value (:microseconds value 0))))
     (nil? value) (c/Duration .milliseconds 250)
     :else (throw (Exception. (str "Invalid duration: " value)))))
 
@@ -1033,12 +1042,23 @@
       :fast-linear-to-slow-ease-in m/Curves.fastLinearToSlowEaseIn
       :fast-out-slow-in m/Curves.fastOutSlowIn
       :slow-middle m/Curves.slowMiddle
-      (throw (Exception. (str "Unknown curve: " curve))))
+      (throw (Exception. (str "Unknown curve: " curve)))) 
     
     (fn? curve) (CurveFn curve)
 
     :else
     (throw (Exception. (str "Invalid curve: " curve)))))
+
+(extend-protocol c/IFn
+  m/Curve
+  (-invoke [this t]
+           (.transform this t))
+  
+  m/Animatable
+  (-invoke [this t]
+           (.transform this t))
+  
+  )
 
 (defn catmull-rom-curve
   "An animation easing curve that passes smoothly through the given control points using a centripetal Catmull-Rom spline.
@@ -1087,14 +1107,33 @@
                            :animate #(%)
                            :is-animated? false})
 
-(defn saw-tooth [count]
+(defn saw-tooth
+  [count]
   (w/SawTooth (int count)))
+
+(defn interval 
+  "A curve that is 0.0 until begin, then curved (according to curve) from 0.0 at begin to 1.0 at end, then remains 1.0 past end.
+
+   An Interval can be used to delay an animation. For example, a six second animation that uses an Interval with its begin set to 0.5 and its end set to 1.0 will essentially become a three-second animation that starts three seconds later."
+  ([start end curve]
+   (a/Interval
+    (max 0.0 (min 1.0 start end)) 
+    (min 1.0 (max 0.0 end start))
+    .curve (t/curve (or curve m/Curves.linear))))
+  ([start end] 
+   (if (coll? start) 
+     (interval (first start) (second start) end) 
+     (interval start end nil)))
+  ([value]
+   (if (number? value)
+     (interval value 1.0)
+     (interval (first value) (second value)))))
 
 (defn animation-options
   "Creates an animation options object from the specified value.
    The value can be specified as a map with the following keys:
-   - `:duration` (number, map, default: 0.25): The duration of the animation.
-   - `:curve` (keyword, default: :ease-in-out): The curve of the animation.
+   - `:duration` or `:dur` (number, map or Duration, default: 250): The duration of the animation in milliseconds.
+   - `:curve` (keyword, fn or Curve, default: :ease-in-out): The curve of the animation.
    - `:on-end` (function, default: nil): The callback function to be called when the animation ends.
    The value can also be specified as a vector with the following elements:
    - The duration of the animation.
@@ -1105,9 +1144,9 @@
   (let [def-curve (get-in *anim-ctx* [:animation :curve] m/Curves.easeInOut)]
     (cond
       (map? value)
-      (let [duration (duration (get value :duration (get-in *anim-ctx* [:animation :duration])))
-            curve (curve (get value :curve def-curve))
-            on-end (value :on-end)]
+      (let [duration (duration (:duration value (:dur value (get-in *anim-ctx* [:animation :duration]))))
+            curve (curve (:curve value def-curve))
+            on-end (value :on-end)] 
         {:duration duration :curve curve :on-end on-end})
 
       (number? value)
@@ -1373,15 +1412,3 @@
   (if (instance? a/AlwaysStoppedAnimation value)
     value
     (a/AlwaysStoppedAnimation. value)))
-
-(defn interval 
-  "A curve that is 0.0 until begin, then curved (according to curve) from 0.0 at begin to 1.0 at end, then remains 1.0 past end.
-
-   An Interval can be used to delay an animation. For example, a six second animation that uses an Interval with its begin set to 0.5 and its end set to 1.0 will essentially become a three-second animation that starts three seconds later."
-  ([start end curve]
-   (a/Interval
-    (max 0.0 (min 1.0 start end)) 
-    (min 1.0 (max 0.0 end start))
-    .curve (t/curve curve)))
-  ([start end]
-   (interval start end m/Curves.linear)))
