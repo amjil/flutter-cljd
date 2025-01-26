@@ -163,9 +163,6 @@
     {:anim (fn [_] value)
      :dur 0}))
  
-(defn from [from]
-  (constantly {:anim (constantly from) :dur 0}))
-
 (defn anim [animation]
   (cond
     (fn? animation)
@@ -298,8 +295,8 @@
                               (+ start duration-ratio)
                               (when dur (+ start (relative-time dur duration)))))
             curve (or (when (and start end) (t/interval start end curve))
-                      (t/curve (or curve :linear)))]
-       {:anim #(anim (curve %))
+                      (when curve (t/curve curve)))]
+       {:anim (if curve #(anim (.transform curve %)) anim)
         :dur duration
         :dur-ratio duration-ratio}))))
 
@@ -318,17 +315,30 @@
 (defn at-ratio [at-ratio animation]
   (options {:at-ratio at-ratio} animation))
 
-(defn from-to  
-  [from to & {:keys [dur at dur-ratio at-ratio curve lerp] :as options}] 
-  (with (fn [_ _] 
-          {:anim (if lerp (lerp from to) (ut/lerp from to))}) 
-        options))
-
- (defn to [to & {:keys [dur curve at lerp] :as options}] 
-   (with (fn [from _] 
+ (defn _to [to & {:keys [dur at dur-ratio at-ratio curve lerp] :as opt}] 
+   (options (fn [from _]
            {:anim (if lerp (lerp (?? from to) to) (ut/lerp (?? from to) to))}) 
-         options))
- 
+         opt))
+
+ (defn to [value & values]
+   (fn [from exp-dur]
+     (let [values (if (some? from)
+                    (concat [from value] values)
+                    (cons value values))
+           int-cnt (dec (count values))
+           dur (if (zero? int-cnt) 0 (when exp-dur (/ exp-dur int-cnt)))]
+       {:anim (case int-cnt
+                0 (constantly (first values))
+                1 (ut/lerp (first values) (second value))
+                (fn [T]
+                  (let [k (* T int-cnt)
+                        i (int k)
+                        t (- k i)]
+                    (if (< i int-cnt)
+                      (ut/lerp (get values i) (get values (inc i) t))
+                      (last values)))))
+        :dur dur})))
+
 (defn seq [& animations]
   (-sequential animations))
 
@@ -339,35 +349,21 @@
   
   (anim-cntr
    {:dur 500 :curve :ease-in-out}
-   [{:color w/Colors.red
-     :offset {:x 0.0}}
-    {:color w/Colors.blue
-     :offset {:x (to 10.0 :curve :ease-in-out)}}
-    {:color w/Colors.red}])
-  
-  [w/Colors.red w/Colors.blue w/Colors.green w/Colors.yellow]
-  
-  (anim-cntr
-   {:dur 500 :curve :ease-in-out}
-   [(from 
-     {:color w/Colors.blue 
-      :offset {:x 0.0}})
-    {:color (to w/Colors.blue)
-     :offset {:x (to 10.0 :curve :ease-in-out)}}
-    {:color (to w/Colors.red)}]) 
-  
-  [(to w/Colors.red) (to w/Colors.blue) (to w/Colors.green) (to w/Colors.yellow)]
-  
+   [(to {:color w/Colors.blue 
+         :offset {:x 0.0}})
+    {:color (to {:dur 100} w/Colors.blue)
+     :offset {:x (to {:dur 20} 10.0)}}
+    {:color (to w/Colors.red)}])
+   
   (anim-cntr
    {:dur 500 :curve :ease-in-out}
    (seq
     {:color w/Colors.blue
      :dx 0.0}
     (par
-     :color w/Colors.blue
-     :dx (to 10.0 :curve :ease-in-out))
+     :color (dur 50 w/Colors.blue)
+     :offset (par :dx (dur 100 10.0)))
     (par :color w/Colors.red)))
   
-  (seq w/Colors.red w/Colors.blue w/Colors.green w/Colors.yellow)
-)
+  )
  
