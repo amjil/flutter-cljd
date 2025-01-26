@@ -1133,7 +1133,7 @@
   "Creates an animation options object from the specified value.
    The value can be specified as a map with the following keys:
    - `:duration` or `:dur` (number, map or Duration, default: 250): The duration of the animation in milliseconds.
-   - `:curve` (keyword, fn or Curve, default: :ease-in-out): The curve of the animation.
+   - `:curve` (keyword, fn or Curve, default: :linear): The curve of the animation.
    - `:on-end` (function, default: nil): The callback function to be called when the animation ends.
    The value can also be specified as a vector with the following elements:
    - The duration of the animation.
@@ -1141,7 +1141,7 @@
    - The callback function to be called when the animation ends.
    The value can also be specified as a number, in which case it is used as the duration of the animation."
   [value]
-  (let [def-curve (get-in *anim-ctx* [:animation :curve] m/Curves.easeInOut)]
+  (let [def-curve (get-in *anim-ctx* [:animation :curve] m/Curves.linear)]
     (cond
       (map? value)
       (let [duration (duration (:duration value (:dur value (get-in *anim-ctx* [:animation :duration]))))

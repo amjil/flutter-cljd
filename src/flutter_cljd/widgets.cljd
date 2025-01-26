@@ -88,7 +88,7 @@
      - `:height-factor` (number, default: nil): The height factor of the child.
      - `:animation` (map or number of seconds, default: nil): The animation options for the align widget.
        - `:duration` (number of seconds or map or Duration, default: 250): The duration of the animation.
-       - `:curve` (keyword or Curve, default: :ease-in-out): The curve of the animation.
+       - `:curve` (keyword or Curve, default: :linear): The curve of the animation.
        - `:on-end` (function, default: nil): The callback function to be called when the animation ends.
    - child: The child widget to be aligned.
 
