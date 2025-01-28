@@ -96,7 +96,7 @@
 
 (deftest test-repeat
   (testing "Basic repeat functionality"
-    (let [anim (unwrap (a/repeat 2 percents))]
+    (let [anim (unwrap (a/repeat 2 (a/to 0 100)))]
       (is (= (anim 0) 0))
       (is (= (anim 0.25) 50))  ; First iteration at 50%
       (is (= (anim 0.5) 0))    ; Start of second iteration

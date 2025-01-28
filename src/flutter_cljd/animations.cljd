@@ -447,16 +447,18 @@
      (= cnt 1) animation
      :else
      (fn [value exp-dur]
-       (let [dur-ratio (/ cnt)
+       (let [dur-ratio (/ 1.0 cnt)
              dur (when exp-dur {:microseconds (* (in-mcs exp-dur) dur-ratio)})
-             loop-anim ((anim animation) value dur)]
+             loop-anim ((anim animation) value dur)
+             initial-value (or value (:value ((:anim loop-anim) 0.0 {})))]
          {:anim
           (fn [T cache]
-            (let [tranform-t #(if (= % 1.0) 1.0 (mod (* % cnt) 1.0))
-                  t (tranform-t T)
+            (let [transform-t #(if (= % 1.0) 1.0 (mod (* % cnt) 1.0))
+                  t (transform-t T)
                   last-T (:last-t cache)
-                  last-t (when last-T (tranform-t last-T))]
-              (loop-anim t (assoc cache :last-t last-t))))
+                  last-t (when last-T (transform-t last-T))
+                  result (loop-anim t (assoc cache :last-t last-t))]
+              (assoc result :value (or (:value result) initial-value))))
           :dur exp-dur})))))
 
 (defn autoreverse
