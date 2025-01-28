@@ -17,77 +17,77 @@
   (-invoke [this t]
     (.transform this t)))
 
-(deftype TransformedAnimation
-         [^a/Animation parent transform]
-  :extends a/Animation
-  (isAnimating [this] (-> this .-parent .-isAnimating))
-  (isCompleted [this] (-> this .-parent .-isCompleted))
-  (isDismissed [this] (-> this .-parent .-isDismissed))
-  (isForwardOrCompleted [this] (-> this .-parent .-isForwardOrCompleted))
-  (status [this] (-> this .-parent .-status))
-  (value [this] ((.-transform this) (-> this .-parent .-value)))
-  (addListener [this listener] (.addListener (.-parent this) listener))
-  (removeListener [this listener] (.removeListener (.-parent this) listener))
-  (addStatusListener [this listener] (.addStatusListener (.-parent this) listener))
-  (removeStatusListener [this listener] (.removeStatusListener (.-parent this) listener)))
+;; (deftype TransformedAnimation
+;;          [^a/Animation parent transform]
+;;   :extends a/Animation
+;;   (isAnimating [this] (-> this .-parent .-isAnimating))
+;;   (isCompleted [this] (-> this .-parent .-isCompleted))
+;;   (isDismissed [this] (-> this .-parent .-isDismissed))
+;;   (isForwardOrCompleted [this] (-> this .-parent .-isForwardOrCompleted))
+;;   (status [this] (-> this .-parent .-status))
+;;   (value [this] ((.-transform this) (-> this .-parent .-value)))
+;;   (addListener [this listener] (.addListener (.-parent this) listener))
+;;   (removeListener [this listener] (.removeListener (.-parent this) listener))
+;;   (addStatusListener [this listener] (.addStatusListener (.-parent this) listener))
+;;   (removeStatusListener [this listener] (.removeStatusListener (.-parent this) listener)))
 
-(defn animation-of
-  ([^a/Animation value transform]
-   (TransformedAnimation value transform)))
+;; (defn animation-of
+;;   ([^a/Animation value transform]
+;;    (TransformedAnimation value transform)))
 
-(defn- set-value [this new-value]
-  (let [old-value (-> this .-tween .-end)
-        tween (.-tween this)]
-    (when-not (= new-value old-value)
-      (.-begin! tween (.evaluate tween this))
-      (.-end! tween new-value)
-      (if-not (.-isAnimating this)
-        (.forward this .from 0.0)
-        (let [progress (.-value this)]
-          (.forward this .from 0.0)
-          (.-value! this progress)))
-      nil)))
+;; (defn- set-value [this new-value]
+;;   (let [old-value (-> this .-tween .-end)
+;;         tween (.-tween this)]
+;;     (when-not (= new-value old-value)
+;;       (.-begin! tween (.evaluate tween this))
+;;       (.-end! tween new-value)
+;;       (if-not (.-isAnimating this)
+;;         (.forward this .from 0.0)
+;;         (let [progress (.-value this)]
+;;           (.forward this .from 0.0)
+;;           (.-value! this progress)))
+;;       nil)))
 
-(defn- get-state [this]
-  (-> this .-tween .-end))
+;; (defn- get-state [this]
+;;   (-> this .-tween .-end))
 
-(deftype AnimatedValue
-         [tween
-          ^a/TickerProvider vsync
-          duration
-          curve]
-  :extends (a/AnimationController
-             .vsync vsync
-             .duration duration)
-  c/IEquiv
-  (-equiv [o other] (identical? o other))
-  c/IDeref
-  (-deref [this] (get-state this))
-  c/ISwap
-  (-swap! [this f] (set-value this (f (get-state this))))
-  (-swap! [this f a] (set-value this (f (get-state this) a)))
-  (-swap! [this f a b] (set-value this (f (get-state this) a b)))
-  (-swap! [this f a b xs] (set-value this (apply f (get-state this) a b xs)))
-  c/IReset
-  (-reset! [this new-value] (set-value this new-value))
-  c/IFn
-  (-invoke [this transform]
-    (animation-of this transform)))
+;; (deftype AnimatedValue
+;;          [tween
+;;           ^a/TickerProvider vsync
+;;           duration
+;;           curve]
+;;   :extends (a/AnimationController
+;;              .vsync vsync
+;;              .duration duration)
+;;   c/IEquiv
+;;   (-equiv [o other] (identical? o other))
+;;   c/IDeref
+;;   (-deref [this] (get-state this))
+;;   c/ISwap
+;;   (-swap! [this f] (set-value this (f (get-state this))))
+;;   (-swap! [this f a] (set-value this (f (get-state this) a)))
+;;   (-swap! [this f a b] (set-value this (f (get-state this) a b)))
+;;   (-swap! [this f a b xs] (set-value this (apply f (get-state this) a b xs)))
+;;   c/IReset
+;;   (-reset! [this new-value] (set-value this new-value))
+;;   c/IFn
+;;   (-invoke [this transform]
+;;     (animation-of this transform)))
 
-(defn animated-value
-  ([initial-value vsync] (animated-value initial-value vsync {}))
-  ([initial-value vsync options]
-   (let [options (t/animation-options options)]
-     (AnimatedValue
-      (t/tween (:lerp options) initial-value initial-value)
-      vsync
-      (:duration options)
-      (:curve options)))))
+;; (defn animated-value
+;;   ([initial-value vsync] (animated-value initial-value vsync {}))
+;;   ([initial-value vsync options]
+;;    (let [options (t/animation-options options)]
+;;      (AnimatedValue
+;;       (t/tween (:lerp options) initial-value initial-value)
+;;       vsync
+;;       (:duration options)
+;;       (:curve options)))))
 
-(defn anim-cntr
-  ([options animations])
+;; (defn anim-cntr
+;;   ([options animations])
 
-  ([animations]))
+;;   ([animations]))
 
 (defn- in-mcs [duration]
   (-> duration t/duration .-inMicroseconds double))
@@ -308,16 +308,16 @@
             duration-ratio (if (and duration-ratio dur-ratio)
                              (* duration-ratio dur-ratio)
                              (or duration-ratio dur-ratio))
-            start (or at-ratio (relative-time at duration))
-            end (when start (if duration-ratio
-                              (+ start duration-ratio)
-                              (when dur (+ start (relative-time dur duration)))))
-            curve (or (when (and start end) (curves/interval start end curve))
+            start (or at-ratio (relative-time at duration) 0.0)
+            end (if duration-ratio
+                  (+ start duration-ratio)
+                  (when (and dur duration) (+ start (relative-time dur duration))))
+            curve (or (when end (curves/interval start end curve))
                       (when curve (t/curve curve)))]
         {:anim (if curve
-                 (no-cache-anim #(anim (.transform curve %)))
+                 #(anim (.transform curve (double %1)) %2)
                  anim)
-         :dur duration
+         :dur (when duration (t/duration duration))
          :dur-ratio duration-ratio}))))
 
 (defn curve [curve animation]
@@ -370,19 +370,19 @@
                    (concat [from value] values)
                    (cons value values))
           int-cnt (dec (count values))
-          dur (if (zero? int-cnt) 0 (when exp-dur (/ exp-dur int-cnt)))]
+          dur (if (zero? int-cnt) 0 (when exp-dur (/ (in-mcs exp-dur) int-cnt)))]
       {:anim (case int-cnt
                0 (const-anim (first values))
-               1 (no-cache-anim (ut/lerp (first values) (second value)))
+               1 (no-cache-anim (ut/lerp (first values) (second values)))
                (no-cache-anim
                 (fn [T]
                   (let [k (* T int-cnt)
                         i (int k)
                         t (- k i)]
                     (if (< i int-cnt)
-                      (ut/lerp (get values i) (get values (inc i) t))
+                      (ut/lerp (nth values i) (nth values (inc i)) t)
                       (last values))))))
-       :dur dur})))
+       :dur (when dur (t/duration {:microseconds dur}))})))
 
 (defn seq
   "Sequential animations of the value.\\
@@ -475,18 +475,3 @@
                (- 1.0 t)
                (assoc cache :last-t (when last-t (- 1.0 last-t)))))))
         :dur exp-dur}))))
-
-(defn ttt []
-  (anim-cntr
-   {:dur 500 :curve :ease-in-out}
-   (seq
-    {:color w/Colors.blue
-     :dx 0.0}
-    (par
-     :color (with {:dur 50} w/Colors.blue)
-     :offset (par :dx (with {:dur 100} 10.0)))
-    (par :color w/Colors.red)))
-  
-  
-  
-  )
