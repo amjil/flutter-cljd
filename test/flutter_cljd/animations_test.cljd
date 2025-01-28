@@ -12,6 +12,8 @@
    (let [anim (:anim (animation value dur))]
      (fn [t] (:value (anim (double t) {}))))))
 
+(def ^:private percents (fn [_ dur] {:dur dur :anim (fn [t _] {:value (int (* 100 t))})}))
+
 (deftest test-to
   (testing "Single value"
     (let [anim (unwrap (a/to 100))]
@@ -44,19 +46,19 @@
 
 (deftest test-with
   (testing "Duration option"
-    (let [anim ((a/with {:dur 100} (a/to 0 100)) nil nil)]
-      (is (= (:microseconds (:dur anim)) 100000))))
+    (let [anim ((a/with {:dur 100} percents) nil nil)]
+      (is (= (.-inMilliseconds (:dur anim)) 100))))
   
   (testing "Start time option"
-    (let [anim (unwrap (a/with {:at 500 :dur 1000} (a/to 0 100)))]
+    (let [anim (unwrap (a/with {:at 500 :dur 1000} percents))]
       (is (= (anim 0) 0))
       (is (= (anim 0.25) 0))  ; Before start
-      (is (= (anim 0.5) 0))   ; At start
-      (is (= (anim 0.75) 50)) ; Mid-animation
+      (is (= (anim 0.5) 25))  ; After start
+      (is (= (anim 0.75) 62)) ; Mid-animation
       (is (= (anim 1) 100)))) ; End
   
   (testing "Duration ratio option"
-    (let [anim (unwrap (a/with {:dur-ratio 0.5} (a/to 0 100)) {:microseconds 1000})]
+    (let [anim (unwrap (a/with {:dur-ratio 0.5} percents))]
       (is (= (anim 0) 0))
       (is (= (anim 0.25) 50))
       (is (= (anim 0.5) 100))
@@ -64,24 +66,58 @@
       (is (= (anim 1) 100))))
   
   (testing "Start time ratio option"
-    (let [anim (unwrap (a/with {:at-ratio 0.5 :dur-ratio 0.5} (a/to 0 100)))]
+    (let [anim (unwrap (a/with {:at-ratio 0.5 :dur-ratio 0.5} percents))]
       (is (= (anim 0) 0))
       (is (= (anim 0.5) 0))
       (is (= (anim 0.75) 50))
       (is (= (anim 1) 100))))
   
   (testing "Curve option"
-    (let [anim (unwrap (a/with {:curve :ease-in} (a/to 0 100)))]
+    (let [anim (unwrap (a/with {:curve (constantly 0)} percents))]
       (is (= (anim 0) 0))
-      (is (< (anim 0.5) 50)) ; With ease-in, should be less than linear
+      (is (= (anim 0.5) 0))
+      (is (= (anim 1) 0))))
+  
+  (testing "Curve :ease-in option"
+    (let [anim (unwrap (a/with {:curve :ease-in} percents))]
+      (is (= (anim 0) 0))
+      (is (< (anim 0.5) 50))
       (is (= (anim 1) 100))))
   
   (testing "Combined options"
     (let [anim (unwrap (a/with {:dur 1000 
                                :at 500
                                :curve :ease-in-out} 
-                              (a/to 0 100)))]
+                              percents))]
       (is (= (anim 0) 0))
       (is (= (anim 0.25) 0))
       (is (not= (anim 0.75) 50)) ; Should not be linear due to ease-in-out
+      (is (= (anim 1) 100)))))
+
+(deftest test-repeat
+  (testing "Basic repeat functionality"
+    (let [anim (unwrap (a/repeat 2 percents))]
+      (is (= (anim 0) 0))
+      (is (= (anim 0.25) 50))  ; First iteration at 50%
+      (is (= (anim 0.5) 0))    ; Start of second iteration
+      (is (= (anim 0.75) 50))  ; Second iteration at 50%
+      (is (= (anim 1) 100))))  ; End
+
+  (testing "Zero or negative count"
+    (let [anim (unwrap (a/repeat 0 percents))]
+      (is (= (anim 0) 0))
+      (is (= (anim 0.5) 0))
+      (is (= (anim 1) 0)))
+
+    (let [anim (unwrap (a/repeat -1 percents))]
+      (is (= (anim 0) 0))
+      (is (= (anim 0.5) 0))
+      (is (= (anim 1) 0))))
+
+  (testing "With duration and curve options"
+    (let [anim (unwrap (a/repeat 2 {:dur 1000 :curve :ease-in} percents))]
+      (is (= (anim 0) 0))
+      (is (< (anim 0.25) 50))  ; Should be less than 50 due to ease-in
+      (is (= (anim 0.5) 0))    ; Start of second iteration
+      (is (< (anim 0.75) 50))  ; Should be less than 50 due to ease-in
       (is (= (anim 1) 100)))))
