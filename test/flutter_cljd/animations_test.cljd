@@ -12,14 +12,31 @@
      (fn [t] (:value (anim (double t) {}))))))
 
 (deftest test-to
+  (testing "Single value"
+    (let [anim (unwrap (a/to 100))]
+      (is (= (anim 0) 100))
+      (is (= (anim 0.5) 100))
+      (is (= (anim 1) 100))))
+
   (testing "Valid between two values"
     (let [anim (unwrap (a/to 0 100))]
+      (is (= (anim 0) 0))
+      (is (= (anim 0.25) 25))
       (is (= (anim 0.5) 50))
-      (is (= (anim 0.25) 25))))
+      (is (= (anim 0.75) 75))
+      (is (= (anim 1) 100))))
   
   (testing "Valid between many values"
     (let [anim (unwrap (a/to 0 100 200 300 400 500))]
       (is (= (anim 0) 0))
-      (is (= (anim 0.5) 250))
-      (is (= (anim 0.25) 125))
-      (is (= (anim 1) 500)))))
+      (is (= (anim 0.2) 100))
+      (is (= (anim 0.4) 200))
+      (is (= (anim 0.6) 300))
+      (is (= (anim 0.8) 400))
+      (is (= (anim 1) 500))))
+  
+  (testing "With initial value"
+    (let [anim (unwrap ((a/to 200) 100))]
+      (is (= (anim 0) 100))
+      (is (= (anim 0.5) 150))
+      (is (= (anim 1) 200)))))
