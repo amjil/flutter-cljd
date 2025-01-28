@@ -6,9 +6,10 @@
             ["package:flutter/material.dart" :as m]))
 
 (defn- unwrap 
-  ([animation] (unwrap animation nil))
-  ([animation dur]
-   (let [anim (:anim (animation nil dur))]
+  ([animation] (unwrap nil animation nil))
+  ([animation dur] (if (fn? animation) (unwrap nil animation dur) (unwrap animation dur nil)))
+  ([value animation dur]
+   (let [anim (:anim (animation value dur))]
      (fn [t] (:value (anim (double t) {}))))))
 
 (deftest test-to
@@ -36,7 +37,7 @@
       (is (= (anim 1) 500))))
   
   (testing "With initial value"
-    (let [anim (unwrap ((a/to 200) 100))]
+    (let [anim (unwrap 100 (a/to 200))]
       (is (= (anim 0) 100))
       (is (= (anim 0.5) 150))
       (is (= (anim 1) 200)))))
