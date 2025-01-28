@@ -1,0 +1,25 @@
+(ns flutter-cljd.animations-test
+  (:require [clojure.test :refer [deftest is testing]]
+            [flutter-cljd.types :as t]
+            [flutter-cljd.curves :as c]
+            [flutter-cljd.animations :as a]
+            ["package:flutter/material.dart" :as m]))
+
+(defn- unwrap 
+  ([animation] (unwrap animation nil))
+  ([animation dur]
+   (let [anim (:anim (animation nil dur))]
+     (fn [t] (:value (anim (double t) {}))))))
+
+(deftest test-to
+  (testing "Valid between two values"
+    (let [anim (unwrap (a/to 0 100))]
+      (is (= (anim 0.5) 50))
+      (is (= (anim 0.25) 25))))
+  
+  (testing "Valid between many values"
+    (let [anim (unwrap (a/to 0 100 200 300 400 500))]
+      (is (= (anim 0) 0))
+      (is (= (anim 0.5) 250))
+      (is (= (anim 0.25) 125))
+      (is (= (anim 1) 500)))))
