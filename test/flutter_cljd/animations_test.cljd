@@ -41,3 +41,47 @@
       (is (= (anim 0) 100))
       (is (= (anim 0.5) 150))
       (is (= (anim 1) 200)))))
+
+(deftest test-with
+  (testing "Duration option"
+    (let [anim ((a/with {:dur 100} (a/to 0 100)) nil nil)]
+      (is (= (:microseconds (:dur anim)) 100000))))
+  
+  (testing "Start time option"
+    (let [anim (unwrap (a/with {:at 500 :dur 1000} (a/to 0 100)))]
+      (is (= (anim 0) 0))
+      (is (= (anim 0.25) 0))  ; Before start
+      (is (= (anim 0.5) 0))   ; At start
+      (is (= (anim 0.75) 50)) ; Mid-animation
+      (is (= (anim 1) 100)))) ; End
+  
+  (testing "Duration ratio option"
+    (let [anim (unwrap (a/with {:dur-ratio 0.5} (a/to 0 100)) {:microseconds 1000})]
+      (is (= (anim 0) 0))
+      (is (= (anim 0.25) 50))
+      (is (= (anim 0.5) 100))
+      (is (= (anim 0.75) 100))
+      (is (= (anim 1) 100))))
+  
+  (testing "Start time ratio option"
+    (let [anim (unwrap (a/with {:at-ratio 0.5 :dur-ratio 0.5} (a/to 0 100)))]
+      (is (= (anim 0) 0))
+      (is (= (anim 0.5) 0))
+      (is (= (anim 0.75) 50))
+      (is (= (anim 1) 100))))
+  
+  (testing "Curve option"
+    (let [anim (unwrap (a/with {:curve :ease-in} (a/to 0 100)))]
+      (is (= (anim 0) 0))
+      (is (< (anim 0.5) 50)) ; With ease-in, should be less than linear
+      (is (= (anim 1) 100))))
+  
+  (testing "Combined options"
+    (let [anim (unwrap (a/with {:dur 1000 
+                               :at 500
+                               :curve :ease-in-out} 
+                              (a/to 0 100)))]
+      (is (= (anim 0) 0))
+      (is (= (anim 0.25) 0))
+      (is (not= (anim 0.75) 50)) ; Should not be linear due to ease-in-out
+      (is (= (anim 1) 100)))))
