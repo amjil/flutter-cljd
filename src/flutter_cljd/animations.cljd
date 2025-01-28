@@ -1,0 +1,492 @@
+(ns flutter-cljd.animations
+  (:require
+   [cljd.core :as c]
+   [cljd.set :refer [superset?]]
+   [flutter-cljd.types :as t]
+   [flutter-cljd.curves :as curves]
+   ["package:flutter/widgets.dart" :as w]
+   ["package:flutter/animation.dart" :as a]
+   [flutter-cljd.utils :as ut]))
+
+(extend-protocol c/IFn
+  a/Curve
+  (-invoke [this t]
+    (.transform this t))
+
+  a/Animatable
+  (-invoke [this t]
+    (.transform this t)))
+
+(deftype TransformedAnimation
+         [^a/Animation parent transform]
+  :extends a/Animation
+  (isAnimating [this] (-> this .-parent .-isAnimating))
+  (isCompleted [this] (-> this .-parent .-isCompleted))
+  (isDismissed [this] (-> this .-parent .-isDismissed))
+  (isForwardOrCompleted [this] (-> this .-parent .-isForwardOrCompleted))
+  (status [this] (-> this .-parent .-status))
+  (value [this] ((.-transform this) (-> this .-parent .-value)))
+  (addListener [this listener] (.addListener (.-parent this) listener))
+  (removeListener [this listener] (.removeListener (.-parent this) listener))
+  (addStatusListener [this listener] (.addStatusListener (.-parent this) listener))
+  (removeStatusListener [this listener] (.removeStatusListener (.-parent this) listener)))
+
+(defn animation-of
+  ([^a/Animation value transform]
+   (TransformedAnimation value transform)))
+
+(defn- set-value [this new-value]
+  (let [old-value (-> this .-tween .-end)
+        tween (.-tween this)]
+    (when-not (= new-value old-value)
+      (.-begin! tween (.evaluate tween this))
+      (.-end! tween new-value)
+      (if-not (.-isAnimating this)
+        (.forward this .from 0.0)
+        (let [progress (.-value this)]
+          (.forward this .from 0.0)
+          (.-value! this progress)))
+      nil)))
+
+(defn- get-state [this]
+  (-> this .-tween .-end))
+
+(deftype AnimatedValue
+         [tween
+          ^a/TickerProvider vsync
+          duration
+          curve]
+  :extends (a/AnimationController
+             .vsync vsync
+             .duration duration)
+  c/IEquiv
+  (-equiv [o other] (identical? o other))
+  c/IDeref
+  (-deref [this] (get-state this))
+  c/ISwap
+  (-swap! [this f] (set-value this (f (get-state this))))
+  (-swap! [this f a] (set-value this (f (get-state this) a)))
+  (-swap! [this f a b] (set-value this (f (get-state this) a b)))
+  (-swap! [this f a b xs] (set-value this (apply f (get-state this) a b xs)))
+  c/IReset
+  (-reset! [this new-value] (set-value this new-value))
+  c/IFn
+  (-invoke [this transform]
+    (animation-of this transform)))
+
+(defn animated-value
+  ([initial-value vsync] (animated-value initial-value vsync {}))
+  ([initial-value vsync options]
+   (let [options (t/animation-options options)]
+     (AnimatedValue
+      (t/tween (:lerp options) initial-value initial-value)
+      vsync
+      (:duration options)
+      (:curve options)))))
+
+(defn anim-cntr
+  ([options animations])
+
+  ([animations]))
+
+(defn- in-mcs [duration]
+  (-> duration t/duration .-inMicroseconds double))
+
+(defn- is-options? [x]
+  (and
+   (map? x)
+   (superset? #{:dur :curve :lerp :dur-ratio :at :at-ratio} (set (keys x)))))
+
+(defn- relative-time [time full]
+  (when (and time full)
+    (let [time-mcs (in-mcs time)
+          full-mcs (in-mcs full)]
+      (if (< 0.0 full-mcs)
+        (/ time-mcs full-mcs)
+        1.0))))
+
+(defn- const-anim
+  ([value]
+   (fn [_ cache] {:value value :cache cache}))
+  ([value dur]
+   {:anim (const-anim value)
+    :dur dur}))
+
+(defn- no-cache-anim
+  ([transform] (fn [t cache] {:value (transform t) :cache cache}))
+  ([transform dur]
+   {:anim (no-cache-anim transform)
+    :dur dur}))
+
+(defn instant
+  "Instant animation with zero duration.
+   ```clojure
+   (instant 10.0)
+   (instant)
+   ```"
+  ([] (fn [value _] (const-anim value 0)))
+  ([value] (fn [_ _] (const-anim value 0))))
+
+(defn action
+  [action]
+  (fn [value _]
+    {:dur 0
+     :anim (fn [t cache]
+             (when (and
+                    (= 1.0 t)
+                    (:is-animating cache)
+                    (not= 1.0 (:last-t cache)))
+               (action value))
+             {:value value :cache cache})}))
+
+(defn anim
+  [animation]
+  (cond
+    (fn? animation)
+    animation
+
+    (instance? w/Animatable animation)
+    (fn [_ dur]
+      (no-cache-anim #(.transform animation %) dur))
+
+    (nil? animation)
+    nil
+
+    :else
+    (fn [from dur]
+      (if (some? from)
+        (no-cache-anim (ut/lerp from animation) dur)
+        (no-cache-anim (constantly animation) 0)))))
+
+(defn- -sequential [animations]
+  (fn [value exp-dur]
+    (let [{:keys [sum-abs sum-rel cnt-any cnt-abs items]}
+          (reduce
+           (fn [animation res]
+             (if (some? animation)
+               (let [{:keys [value sum-abs sum-rel]} res
+                     {:keys [dur dur-ratio anim]} ((anim animation) value nil)
+                     next-value (:value (anim 1.0 {}))
+                     dur (when dur (in-mcs dur))]
+                 {:value next-value
+                  :sum-abs (if dur (+ dur sum-abs) sum-abs)
+                  :sum-rel (+ sum-rel (or dur-ratio 0.0))
+                  :cnt-any (+ (:cnt-any res) (if (or dur dur-ratio) 0 1))
+                  :cnt-abs (+ (:cnt-abs res) (if dur 1 0))
+                  :items (conj (:items res) {:dur dur :dur-ratio dur-ratio :anim anim})})
+               res))
+           {:value value :sum-abs 0.0 :sum-rel 0.0 :cnt-any 0 :cnt-abs 0 :items []}
+           (flatten animations))
+          sum-rel (min 1.0 (max 0.0 sum-rel))
+          min-dur (* sum-abs (- 1.0 sum-rel))
+          exp-dur (when exp-dur (in-mcs exp-dur))
+          res-dur (if exp-dur
+                    (max min-dur exp-dur)
+                    (when (and (zero? cnt-any) (> cnt-abs 0)) min-dur))
+          any-dur (if (and res-dur (> cnt-any 0)) (/ (- res-dur min-dur) cnt-any res-dur) 0.0)
+          final-items (reduce
+                       (fn [item res]
+                         (let [{:keys [dur dur-ratio]} item
+                               t (if (empty? res) 0.0 (:end (last res)))
+                               real-dur (or dur-ratio
+                                            (if (< 0 res-dur)
+                                              (/ (or dur any-dur) res-dur)
+                                              1.0))
+                               end (+ t real-dur)]
+                           (conj res (assoc item :start t :end end :rel-dur (- end t)))))
+                       []
+                       items)
+          cnt (count final-items)]
+      {:dur (when res-dur {:microseconds res-dur})
+       :anim (case cnt
+               0 (const-anim value)
+               (fn [t cache]
+                 (let [items-cache (:items cache {})
+                       last-t (:last-t cache)
+                       x (min 1.0 (max 0.0 t))
+                       items (->> final-items
+                                  (map-indexed (fn [i item] [i item]))
+                                  (drop-while #(< (:end (last %)) x))
+                                  (take-while #(<= (:start (last %)) x (:end (last %)))))
+                       results (map
+                                (fn [[i {:keys [start rel-dur anim]}]]
+                                  (let [transform-t #(if (zero? rel-dur) 1.0 (/ (- % start) rel-dur))
+                                        anim-t (transform-t t)
+                                        last-anim-t (when last-t (transform-t last-t))]
+                                    [i (anim
+                                        anim-t
+                                        (merge
+                                         (assoc cache :items nil)
+                                         (get items-cache i {})
+                                         {:last-t last-anim-t}))]))
+                                items)
+                       new-value (some-> results last last :value)
+                       new-items-cache (into items-cache (map (fn [[i {:keys [cache]}]] [i cache]) results))]
+                   {:value (if (empty? results) value new-value)
+                    :cache (assoc cache :items new-items-cache)})))})))
+
+(defn- -parallel [animations]
+  (fn [value exp-dur]
+    (let [value (or value {})
+          exp-dur-in-mcs
+          (when exp-dur (in-mcs exp-dur))
+
+          {:keys [max-dur items]}
+          (reduce
+           (fn [[k v] res]
+             (let [{:keys [dur dur-ratio anim]} ((anim v) value exp-dur)
+                   {:keys [max-dur items]} res
+                   dur-abs (or
+                            (when dur (in-mcs dur))
+                            (when (and dur-ratio exp-dur-in-mcs) (* exp-dur-in-mcs dur-ratio)))
+                   max-dur (if dur-abs (max dur-abs (or max-dur 0.0)) max-dur)
+                   rel-dur (or
+                            dur-ratio
+                            (when (and dur-abs exp-dur-in-mcs (< 0 exp-dur-in-mcs)) (/ dur-abs exp-dur-in-mcs))
+                            1.0)]
+               {:max-dur max-dur
+                :items (assoc items k {:dur dur-abs :anim anim :rel-dur rel-dur})}))
+           {:max-dur nil :items {}}
+           animations)
+          full-dur (if (and exp-dur-in-mcs max-dur)
+                     (max exp-dur-in-mcs max-dur)
+                     (or exp-dur-in-mcs max-dur))
+          items (if (and full-dur (not= full-dur exp-dur-in-mcs) (< 0 full-dur))
+                  (update-vals
+                   items
+                   (fn [{:keys [dur anim]}]
+                     {:anim anim
+                      :rel-dur (if dur (/ dur full-dur) 1.0)}))
+                  items)]
+      {:dur (or (when max-dur {:microseconds max-dur}) exp-dur)
+       :anim (fn [T cache]
+               (let [last-T (:last-t cache)
+                     items-cache (:items cache {})
+                     results (map
+                              (fn [[k {:keys [anim rel-dur]}]]
+                                (let [transform-t #(cond
+                                                     (zero? rel-dur) 1.0
+                                                     (= 1.0 rel-dur) %
+                                                     :else (min 1.0 (/ % rel-dur)))
+                                      t (transform-t T)
+                                      last-t (when last-T (transform-t last-T))]
+                                  [k (anim
+                                      t
+                                      (merge
+                                       (assoc cache :items nil)
+                                       (get items-cache k {})
+                                       {:last-t last-t}))]))
+                              items)
+                     new-value (into value (map (fn [[k {:keys [value]}]] [k value]) results))
+                     new-items-cache (into items-cache (map (fn [[k {:keys [cache]}]] [k cache]) results))]
+                 {:value new-value
+                  :cache (assoc cache :items new-items-cache)}))})))
+
+(defn with
+  "Add options to an animation.\\
+   `with` takes a map of options and an animation and returns a new animation with the provided options.\\
+   The options are merged with the existing options of the animation.\\
+   Options:
+    - `:dur` - Duration of the animation in milliseconds, or Duration object or map.
+    - `:at` - Start time of the animation in milliseconds or Duration object or map.
+    - `:dur-ratio` - Duration of the animation relative to the parent animation.
+    - `:at-ratio` - Start time ratio of the animation relative to the duration.
+    - `:curve` - Curve of the animation.
+   
+   ```clojure
+   (with {:dur 100} w/Colors.blue)
+   (with {:dur 100 :curve :ease-in-out} w/Colors.blue)
+   (with {:dur 100} (to 10.0))
+   ```"
+  [{:keys [dur at dur-ratio at-ratio curve]} animation]
+  (let [animation (anim animation)]
+    (fn [value exp-dur]
+      (let [min-dur (if (and dur at) {:microseconds (+ (in-mcs dur) (in-mcs at))} dur)
+            duration (or exp-dur min-dur)
+            duration-ratio (if (and dur-ratio at-ratio) (+ dur-ratio at-ratio) dur-ratio)
+            {:keys [anim dur dur-ratio]} (animation value duration)
+            duration-ratio (if (and duration-ratio dur-ratio)
+                             (* duration-ratio dur-ratio)
+                             (or duration-ratio dur-ratio))
+            start (or at-ratio (relative-time at duration))
+            end (when start (if duration-ratio
+                              (+ start duration-ratio)
+                              (when dur (+ start (relative-time dur duration)))))
+            curve (or (when (and start end) (curves/interval start end curve))
+                      (when curve (t/curve curve)))]
+        {:anim (if curve
+                 (no-cache-anim #(anim (.transform curve %)))
+                 anim)
+         :dur duration
+         :dur-ratio duration-ratio}))))
+
+(defn curve [curve animation]
+  (with {:curve curve} animation))
+
+(defn at [at animation]
+  (with {:at at} animation))
+
+(defn dur [dur animation]
+  (with {:dur dur} animation))
+
+(defn dur-ratio [dur-ratio animation]
+  (with {:dur-ratio dur-ratio} animation))
+
+(defn at-ratio [at-ratio animation]
+  (with {:at-ratio at-ratio} animation))
+
+(defn wait
+  "Do nothing for a given duration. Duration is optional.
+   ```clojure
+   (wait 100)
+   ```
+   To wait relative to the parent animation wrap the `wait` in `with`:
+   ```clojure
+   (with {:dur-ratio 0.2} (wait))
+   ```
+   Can be used to fill the time between animations:
+   ```clojure
+   (seq {:dur 600}
+     (with {:dur 100} w/Colors.blue)
+     (wait) ;; Wait for 400ms
+     (with {:dur 100} w/Colors.red))
+   ```"
+  ([] (fn [value, exp-dur] (const-anim value exp-dur)))
+  ([duration]
+   (fn [value, _] (const-anim value duration))))
+
+(defn to
+  "Animate to a value.\\
+     `to` takes a value and returns an animation that animates from the current value to the provided values.\\
+     If the current value is nil, the first value is used as the initial value.
+     ```clojure
+     (to 10.0)
+     (to 5.0 10.0)
+     (to Colors.blue Colors.red Colors.green)
+     ```"
+  [value & values]
+  (fn [from exp-dur]
+    (let [values (if (some? from)
+                   (concat [from value] values)
+                   (cons value values))
+          int-cnt (dec (count values))
+          dur (if (zero? int-cnt) 0 (when exp-dur (/ exp-dur int-cnt)))]
+      {:anim (case int-cnt
+               0 (const-anim (first values))
+               1 (no-cache-anim (ut/lerp (first values) (second value)))
+               (no-cache-anim
+                (fn [T]
+                  (let [k (* T int-cnt)
+                        i (int k)
+                        t (- k i)]
+                    (if (< i int-cnt)
+                      (ut/lerp (get values i) (get values (inc i) t))
+                      (last values))))))
+       :dur dur})))
+
+(defn seq
+  "Sequential animations of the value.\\
+   `seq` takes a list of animations and applies them one after the other.
+   
+   If `seq` has a duration, the duration is partitioned between the animations according to their options or evenly if not provided.\\
+   If `seq` has a curve, the curve is partitioned between the animations and merged with the animation's curve if provided.
+   ```clojure
+   (seq
+     (with {:dur 50} w/Colors.blue)
+     (with {:dur 100} w/Colors.red))
+  
+   (seq {:dur 200 :curve :ease-in-out}
+     (par :color (with {:dur 50} w/Colors.blue)
+          :offset (with {:dur 100} 10.0))
+     (par :color (with {:dur 50} w/Colors.red)))
+   ```
+   
+   `seq` can be used to define initial value of the animation:
+   ```clojure
+   (seq
+     {:color w/Colors.blue
+      :dx 0.0}
+     (par
+       :color (with {:dur 50} w/Colors.blue)
+       :dx (with {:dur 100} 10.0)))
+   ```
+   If you need animate evenly spaced values, you can use `to` instead."
+  [& animations]
+  (if (is-options? (first animations))
+    (with (first animations) (-sequential (drop 1 animations)))
+    (-sequential animations)))
+
+(defn par
+  "Parallel animations of multiple properties of the value.\\
+   `par` takes a list of key-value pairs, where the key is the property to animate and the value is the animation.\\
+   It's useful when you want to animate multiple properties with different animations at the same time.\\
+   If `par` has a duration, the duration is applied to all animations.\\
+   If `par` has a curve, the curve is applied to all animations.
+   ```clojure
+   (par
+      :color (with {:dur 50} w/Colors.blue)
+      :offset (with {:dur 100} 10.0))
+   ```
+   It's possible to nest `par` calls to animate nested properties:
+   ```clojure
+   (par :offset (par :dx (with {:dur 100} 10.0)))
+   ```"
+  [& kvs]
+  (if (odd? (count kvs))
+    (if (is-options? (first kvs))
+      (with (first kvs) (into {} (partition 2 (drop 1 kvs))))
+      (throw (ex-info "Invalid arguments in par" {:args kvs})))
+    (-parallel (into {} (partition 2 kvs)))))
+
+(defn repeat
+  ([cnt options animation]
+   (with options (repeat cnt animation)))
+  ([cnt animation]
+   (if (<= cnt 0)
+     (instant)
+     (fn [value exp-dur]
+       (let [dur-ratio (/ cnt)
+             dur (when exp-dur {:microseconds (* (in-mcs exp-dur) dur-ratio)})
+             loop-anim ((anim animation) value dur)]
+         {:anim
+          (fn [T cache]
+            (let [tranform-t #(if (= % 1.0) 1.0 (mod (* % cnt) 1.0))
+                  t (tranform-t T)
+                  last-T (:last-t cache)
+                  last-t (tranform-t last-T)]
+              (loop-anim t (assoc cache :last-t last-t))))
+          :dur exp-dur})))))
+
+(defn autoreverse
+  ([options animation]
+   (with options (autoreverse animation)))
+  ([animation]
+   (fn [value exp-dur]
+     (let [dur (when exp-dur {:microseconds (/ (in-mcs exp-dur) 2)})
+           loop-anim ((anim animation) value dur)]
+       {:anim
+        (fn [T cache]
+          (let [t (* T 2)
+                last-T (:last-t cache)
+                last-t (when last-T (* last-T 2))]
+            (if (<= T 0.5)
+              (loop-anim t (assoc cache :last-t last-t))
+              (loop-anim
+               (- 1.0 t)
+               (assoc cache :last-t (when last-t (- 1.0 last-t)))))))
+        :dur exp-dur}))))
+
+(defn ttt []
+  (anim-cntr
+   {:dur 500 :curve :ease-in-out}
+   (seq
+    {:color w/Colors.blue
+     :dx 0.0}
+    (par
+     :color (with {:dur 50} w/Colors.blue)
+     :offset (par :dx (with {:dur 100} 10.0)))
+    (par :color w/Colors.red)))
+  
+  
+  
+  )

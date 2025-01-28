@@ -1,369 +1,62 @@
 (ns flutter-cljd.internal.animated
   (:require
    [cljd.core :as c]
-   ["dart:ui" :as ui]
    [cljd.flutter :as f]
    [flutter-cljd.types :as t]
    [flutter-cljd.ListenableAtom :as la]
    ["package:flutter/foundation.dart" :as fd]
    ["package:flutter/widgets.dart" :as w]
    ["package:flutter/animation.dart" :as a]
-   [flutter-cljd.utils :as ut :refer [??]]))
+   [flutter-cljd.utils :as ut]))
 
 ;; MARK: Animated
 
-(defn- ^f/CustomTween build-tween
-  ([lerp-fn from to]
-   (doto (f/CustomTween (or lerp-fn #(ut/lerp %1 %2)) nil)
-     (.-begin! from)
-     (.-end! to)))
-  ([lerp-fn value]
-   (build-tween lerp-fn value value)))
-
 (defn animated*
   [builder values]
-   (let [has-child? (instance? w/Widget (last values))
-         [animation builder args]
-         (cond
-           (fn? builder) [{} builder values]
-           (fn? (first values)) [builder (first values) (drop 1 values)]
-           (and (fn? (second values))
-                (or (and has-child? (= (count values) 3))
-                    (= (count values) 2)))
-           [builder (second values) (cons (first values) (drop 2 values))]
-           :else (throw (ex-info "Invalid arguments in animated" {:args (cons builder values)})))
-         [values child] (if has-child?
-                        [(vec (drop-last args)) (last args)]
-                        [(vec args) nil])
-         getter #(.-value %)
-         builder (fn [value child]
-                   (apply builder (if has-child? (conj value child) value)))]
-     (cond
-       (map? animation) 
-       (let [options (t/animation-options animation)
-             lerp (:lerp animation)
-             condition (if (some? (animation :when)) (animation :when) true)]
-         (w/TweenAnimationBuilder
-          .key (t/widget-key (animation :key))
-          .tween (build-tween lerp values)
-          .duration (if condition (options :duration) (t/duration 0))
-          .curve (options :curve)
-          .builder (fn [_ value child] (builder value child))
-          .onEnd (options :on-end)
-          .child child))
+  (let [has-child? (instance? w/Widget (last values))
+        [animation builder args]
+        (cond
+          (fn? builder) [{} builder values]
+          (fn? (first values)) [builder (first values) (drop 1 values)]
+          (and (fn? (second values))
+               (or (and has-child? (= (count values) 3))
+                   (= (count values) 2)))
+          [builder (second values) (cons (first values) (drop 2 values))]
+          :else (throw (ex-info "Invalid arguments in animated" {:args (cons builder values)})))
+        [values child] (if has-child?
+                         [(vec (drop-last args)) (last args)]
+                         [(vec args) nil])
+        getter #(.-value %)
+        builder (fn [value child]
+                  (apply builder (if has-child? (conj value child) value)))]
+    (cond
+      (map? animation)
+      (let [options (t/animation-options animation)
+            lerp (:lerp animation)
+            condition (if (some? (animation :when)) (animation :when) true)]
+        (w/TweenAnimationBuilder
+         .key (t/widget-key (animation :key))
+         .tween (t/tween lerp values values)
+         .duration (if condition (options :duration) (t/duration 0))
+         .curve (options :curve)
+         .builder (fn [_ value child] (builder value child))
+         .onEnd (options :on-end)
+         .child child))
 
-       (or
-        (instance? a/Animation animation)
-        (instance? fd/ValueListenable animation))
-       (w/AnimatedBuilder
-        .animation animation
-        .child child
-        .builder (fn [_ child] (builder (getter animation) child))) 
-       
-       (instance? c/Atom animation) 
-       (w/AnimatedBuilder
-        .animation (la/AtomListenable animation)
-        .child child
-        .builder (fn [_ child]
-                   (builder (getter animation) child)))
+      (or
+       (instance? a/Animation animation)
+       (instance? fd/ValueListenable animation))
+      (w/AnimatedBuilder
+       .animation animation
+       .child child
+       .builder (fn [_ child] (builder (getter animation) child)))
 
-       :else
-       (throw (ex-info "Invalid animation" {:animation animation})))))
-  
- 
-(deftype TransformedAnimation
-         [^a/Animation parent transform]
-  :extends a/Animation
-  (isAnimating [this] (-> this .-parent .-isAnimating))
-  (isCompleted [this] (-> this .-parent .-isCompleted))
-  (isDismissed [this] (-> this .-parent .-isDismissed))
-  (isForwardOrCompleted [this] (-> this .-parent .-isForwardOrCompleted))
-  (status [this] (-> this .-parent .-status))
-  (value [this] ((.-transform this) (-> this .-parent .-value)))
-  (addListener [this listener] (.addListener (.-parent this) listener))
-  (removeListener [this listener] (.removeListener (.-parent this) listener))
-  (addStatusListener [this listener] (.addStatusListener (.-parent this) listener))
-  (removeStatusListener [this listener] (.removeStatusListener (.-parent this) listener)))
+      (instance? c/Atom animation)
+      (w/AnimatedBuilder
+       .animation (la/AtomListenable animation)
+       .child child
+       .builder (fn [_ child]
+                  (builder (getter animation) child)))
 
-(defn animation-of
-  ([^a/Animation value transform]
-   (TransformedAnimation value transform)))
-
- (defn- set-value [this new-value]
-    (let [old-value (-> this .-tween .-end)
-          tween (.-tween this)]
-      (when-not (= new-value old-value)
-        (.-begin! tween (.evaluate tween this))
-        (.-end! tween new-value)
-        (if-not (.-isAnimating this)
-          (.forward this .from 0.0)
-          (let [progress (.-value this)]
-            (.forward this .from 0.0)
-            (.-value! this progress)))
-        nil)))
- 
- (defn- get-state [this]
-    (-> this .-tween .-end))
-  
-(deftype AnimatedValue 
-         [tween
-          ^a/TickerProvider vsync
-          duration
-          curve]
-  :extends (a/AnimationController
-             .vsync vsync
-             .duration duration) 
-  c/IEquiv
-  (-equiv [o other] (identical? o other))
-  c/IDeref
-  (-deref [this] (get-state this))
-  c/ISwap
-  (-swap! [this f] (set-value this (f (get-state this))))
-  (-swap! [this f a] (set-value this (f (get-state this) a)))
-  (-swap! [this f a b] (set-value this (f (get-state this) a b)))
-  (-swap! [this f a b xs] (set-value this (apply f (get-state this) a b xs)))
-  c/IReset
-  (-reset! [this new-value] (set-value this new-value)) 
-  c/IFn
-  (-invoke [this transform]
-           (animation-of this transform)))
-
- (defn animated-value
-   ([initial-value vsync] (animated-value initial-value vsync {}))
-   ([initial-value vsync options]
-    (let [options (t/animation-options options)]
-      (AnimatedValue 
-       (build-tween (:lerp options) initial-value) 
-       vsync
-       (:duration options)
-       (:curve options)))))
- 
-
-(defn anim-cntr 
-  ([options initial-value animations])
-
-  ([initial-value animations])
-  ([options animations])
-
-  ([animations]))
-
- (defn- in-mcs [duration]
-   (-> duration t/duration .-inMicroseconds double))
-
- (defn relative-time [time full]
-   (when (and time full)
-     (let [time-mcs (in-mcs time)
-           full-mcs (in-mcs full)]
-       (if (< 0.0 full-mcs)
-         (/ time-mcs full-mcs)
-         1.0))))
-
-(def instant
-  (fn [value, _]
-    {:anim (fn [_] value)
-     :dur 0}))
- 
-(defn anim [animation]
-  (cond
-    (fn? animation)
-    animation
-    
-    (instance? w/Animatable animation)
-    (fn [_ dur]
-      {:anim #(.transform animation %)
-       :dur dur})
-    
-    (nil? animation)
-    nil
-    
-    :else
-    (fn [from dur]
-      (if (some? from)
-        {:anim #(ut/lerp from animation %) :dur dur}
-        {:anim #(constantly animation) :dur 0}))))
- 
-(defn- -sequential [animations]
-  (fn [value exp-dur]
-    (let [{:keys [sum-abs sum-rel cnt-any cnt-abs items]}
-          (reduce
-           (fn [animation res]
-             (if (some? animation)
-               (let [{:keys [value sum-abs sum-rel]} res
-                     {:keys [dur dur-ratio anim]} ((anim animation) value nil)
-                     next-value (anim 1.0)
-                     dur (when dur (in-mcs dur))]
-                 {:value next-value
-                  :sum-abs (if dur (+ dur sum-abs) sum-abs)
-                  :sum-rel (+ sum-rel (or dur-ratio 0.0))
-                  :cnt-any (+ (:cnt-any res) (if (or dur dur-ratio) 0 1))
-                  :cnt-abs (+ (:cnt-abs res) (if dur 1 0))
-                  :items (conj (:items res) {:dur dur :dur-ratio dur-ratio :anim anim})})
-               res))
-           {:value value :sum-abs 0.0 :sum-rel 0.0 :cnt-any 0 :cnt-abs 0 :items []}
-           (flatten animations))
-          sum-rel (min 1.0 (max 0.0 sum-rel))
-          min-dur (* sum-abs (- 1.0 sum-rel))
-          exp-dur (when exp-dur (in-mcs exp-dur))
-          res-dur (if exp-dur 
-                    (max min-dur exp-dur)
-                    (when (and (zero? cnt-any) (> cnt-abs 0)) min-dur))
-          any-dur (if (and res-dur (> cnt-any 0)) (/ (- res-dur min-dur) cnt-any res-dur) 0.0)
-          final-items (reduce 
-                       (fn [item res]
-                         (let [{:keys [dur dur-ratio]} item
-                               t (if (empty? res) 0.0 (:end (last res)))
-                               real-dur (or dur-ratio
-                                            (if (< 0 res-dur)
-                                              (/ (or dur any-dur) res-dur)
-                                              1.0))
-                               end (+ t real-dur)]
-                           (conj res (assoc item :start t :end end :rel-dur (- end t)))))
-                       []
-                       items)]
-      {:dur (when res-dur {:microseconds res-dur})
-       :anim (case (count items)
-               0 (constantly value)
-               (fn [t]
-                 (let [x (min 1.0 (max 0.0 t))
-                       items (->> final-items
-                                  (drop-while #(< (:end %) x))
-                                  (take-while #(<= (:start %) x (:end %))))]
-                   (last
-                    (map
-                     (fn [{:keys [start rel-dur anim]}]
-                       (let [anim-t (if (zero? rel-dur) 1.0 (/ (- t start) rel-dur))]
-                         (anim anim-t)))
-                     items)))))})))
-
-(defn- -parallel [animations]
-  (fn [value exp-dur]
-    (let [value (or value {})
-          exp-dur-in-mcs 
-          (when exp-dur (in-mcs exp-dur))
-
-          {:keys [max-dur items]} 
-          (reduce
-           (fn [[k v] res]
-             (let [{:keys [dur dur-ratio anim]} ((anim v) value exp-dur)
-                   {:keys [max-dur items]} res
-                   dur-abs (or 
-                            (when dur (in-mcs dur))
-                            (when (and dur-ratio exp-dur-in-mcs) (* exp-dur-in-mcs dur-ratio)))
-                   max-dur (if dur-abs (max dur-abs (or max-dur 0.0)) max-dur)
-                   rel-dur (or 
-                            dur-ratio 
-                            (when (and dur-abs exp-dur-in-mcs (< 0 exp-dur-in-mcs)) (/ dur-abs exp-dur-in-mcs))
-                            1.0)]
-               {:max-dur max-dur
-                :items (assoc items k {:dur dur-abs :anim anim :rel-dur rel-dur})}))
-           {:max-dur nil :items {}}
-           animations)
-          full-dur (if (and exp-dur-in-mcs max-dur)
-                     (max exp-dur-in-mcs max-dur)
-                     (or exp-dur-in-mcs max-dur))
-          items (if (and full-dur (not= full-dur exp-dur-in-mcs) (< 0 full-dur))
-                  (update-vals 
-                   items 
-                   (fn [{:keys [dur anim]}]
-                     {:anim anim
-                      :rel-dur (if dur (/ dur full-dur) 1.0)}))
-                  items)]
-      {:dur (or (when max-dur {:microseconds max-dur}) exp-dur)
-       :anim (fn [t]
-               (merge
-                value
-                (update-vals
-                 items
-                 (fn [{:keys [anim rel-dur]}]
-                   (anim (cond 
-                           (zero? rel-dur) 1.0
-                           (= 1.0 rel-dur) t
-                           :else (min 1.0 (/ t rel-dur))))))))})))
-
-(defn options [{:keys [dur at dur-ratio at-ratio curve]} animation] 
-  (let [animation (anim animation)]
-    (fn [value exp-dur]
-      (let [min-dur (if (and dur at) {:microseconds (+ (in-mcs dur) (in-mcs at))} dur)
-            duration (or exp-dur min-dur)
-            duration-ratio (if (and dur-ratio at-ratio) (+ dur-ratio at-ratio) dur-ratio)
-            {:keys [anim dur dur-ratio]} (animation value duration)
-            duration-ratio (if (and duration-ratio dur-ratio)
-                             (* duration-ratio dur-ratio)
-                             (or duration-ratio dur-ratio))
-            start (or at-ratio (relative-time at duration))
-            end (when start (if duration-ratio
-                              (+ start duration-ratio)
-                              (when dur (+ start (relative-time dur duration)))))
-            curve (or (when (and start end) (t/interval start end curve))
-                      (when curve (t/curve curve)))]
-       {:anim (if curve #(anim (.transform curve %)) anim)
-        :dur duration
-        :dur-ratio duration-ratio}))))
-
-(defn curve [curve animation]
-  (options {:curve curve} animation))
-
-(defn at [at animation]
-  (options {:at at} animation))
-
-(defn dur [dur animation]
-  (options {:dur dur} animation))
-
-(defn dur-ratio [dur-ratio animation]
-  (options {:dur-ratio dur-ratio} animation))
-
-(defn at-ratio [at-ratio animation]
-  (options {:at-ratio at-ratio} animation))
-
- (defn _to [to & {:keys [dur at dur-ratio at-ratio curve lerp] :as opt}] 
-   (options (fn [from _]
-           {:anim (if lerp (lerp (?? from to) to) (ut/lerp (?? from to) to))}) 
-         opt))
-
- (defn to [value & values]
-   (fn [from exp-dur]
-     (let [values (if (some? from)
-                    (concat [from value] values)
-                    (cons value values))
-           int-cnt (dec (count values))
-           dur (if (zero? int-cnt) 0 (when exp-dur (/ exp-dur int-cnt)))]
-       {:anim (case int-cnt
-                0 (constantly (first values))
-                1 (ut/lerp (first values) (second value))
-                (fn [T]
-                  (let [k (* T int-cnt)
-                        i (int k)
-                        t (- k i)]
-                    (if (< i int-cnt)
-                      (ut/lerp (get values i) (get values (inc i) t))
-                      (last values)))))
-        :dur dur})))
-
-(defn seq [& animations]
-  (-sequential animations))
-
-(defn par [& kvs]
-  (-parallel (into {} (partition 2 kvs))))
-
-(defn ttt []
-  
-  (anim-cntr
-   {:dur 500 :curve :ease-in-out}
-   [(to {:color w/Colors.blue 
-         :offset {:x 0.0}})
-    {:color (to {:dur 100} w/Colors.blue)
-     :offset {:x (to {:dur 20} 10.0)}}
-    {:color (to w/Colors.red)}])
-   
-  (anim-cntr
-   {:dur 500 :curve :ease-in-out}
-   (seq
-    {:color w/Colors.blue
-     :dx 0.0}
-    (par
-     :color (dur 50 w/Colors.blue)
-     :offset (par :dx (dur 100 10.0)))
-    (par :color w/Colors.red)))
-  
-  )
- 
+      :else
+      (throw (ex-info "Invalid animation" {:animation animation})))))

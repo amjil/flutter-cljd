@@ -4,14 +4,14 @@
    ["package:flutter/services.dart" :as s]
    ["package:flutter/widgets.dart" :as w]
    ["package:flutter/animation.dart" :as a]
-   ["package:flutter/physics.dart" :as p]
-   ["dart:core" :as c]
+   ["dart:core" :as dc]
    ["dart:ui" :as ui]
    [cljd.string :as str]
+   [cljd.flutter :as f]
    [flutter-cljd.keyboard-keys :as keys]
-   [flutter-cljd.drawing :as dr :refer [offset]]
    [flutter-cljd.color-filters :as clr-f]
-   [flutter-cljd.types :as t]))
+   [flutter-cljd.types :as t]
+   [flutter-cljd.utils :as ut]))
 
 (deftype ^:private AnyActionDispatcher [invoke]
   :extends w/ActionDispatcher
@@ -541,8 +541,8 @@
      (string? value) (let [hex (-> value str/lower-case)]
                        (if (re-matches #"^#([0-9a-f]{6}|[0-9a-f]{8})$" hex)
                          (m/Color (if (= (count hex) 7)
-                                    (c/int.parse (str "0xff" (subs hex 1)))
-                                    (c/int.parse (str "0x" (subs hex 1)))))
+                                    (dc/int.parse (str "0xff" (subs hex 1)))
+                                    (dc/int.parse (str "0x" (subs hex 1)))))
                          (throw (Exception. (str "Invalid color hex: " value)))))
 
      (keyword? value) (case value
@@ -619,7 +619,7 @@
       (let [dim 5
             size 20
             values (->> filter flatten (take size) vec)]
-        (m/ColorFilter.matrix (#/(c/List.from c/double)
+        (m/ColorFilter.matrix (#/(dc/List.from dc/double)
                                (map-indexed
                                 (fn [idx _]
                                   (cond
@@ -953,46 +953,26 @@
    (duration 500) ;; Duration(milliseconds: 500)
    (duration {:seconds 30}) ;; Duration(seconds: 30)
    (duration {:days 1 :hours 2 :minutes 30}) ;; Duration(days: 1, hours: 2, minutes: 30)
-   (duration (c/Duration .seconds 30)) ;; Duration(seconds: 30)
+   (duration (dc/Duration .seconds 30)) ;; Duration(seconds: 30)
    ```"
   (cond
-    (instance? c/Duration value) value
-    (integer? value) (c/Duration .seconds value)
-    (number? value) (c/Duration .microseconds (int (* value 1000.0)))
-    (map? value) (c/Duration
+    (instance? dc/Duration value) value
+    (integer? value) (dc/Duration .seconds value)
+    (number? value) (dc/Duration .microseconds (int (* value 1000.0)))
+    (map? value) (dc/Duration
                   .days (int (:d value (:day value 0)))
                   .hours (int (:h value (:hours value 0)))
                   .minutes (int (:m value (:minutes value 0)))
                   .seconds (int (:s value (:seconds value 0)))
                   .milliseconds (int (:ms value (:milliseconds value 0)))
                   .microseconds (int (:μs value (:microseconds value 0))))
-    (nil? value) (c/Duration .milliseconds 250)
+    (nil? value) (dc/Duration .milliseconds 250)
     :else (throw (Exception. (str "Invalid duration: " value)))))
 
-(deftype ^:private CurveFn 
+(deftype AnyCurve
   [curve]
   :extends (a/Curve)
   (transform [_ t] (curve t)))
-
-(deftype ^:private SpringCurve 
-  [^p/SpringSimulation simulation]
-  :extends (a/Curve)
-  (transform [this t] 
-    (let [sim (.-simulation this)]
-      (+ (.x sim t) (* t (- 1.0 (.x sim 1.0)))))))
-
-(defn spring
-  ([& {:keys [damping stiffness mass velocity]  
-       :or {damping 20 stiffness 180 mass 1 velocity 0}}]
-   (SpringCurve 
-    (p/SpringSimulation  
-     (p/SpringDescription 
-      .damping (double damping) 
-      .mass (double mass) 
-      .stiffness (double stiffness)) 
-     0.0 
-     1.0
-     (double velocity)))))
 
 (defn curve [curve]
   (cond
@@ -1000,134 +980,58 @@
 
     (keyword? curve)
     (case curve
-      :linear m/Curves.linear
-      :bounce-in m/Curves.bounceIn
-      :bounce-in-out m/Curves.bounceInOut
-      :bounce-out m/Curves.bounceOut
-      :decelerate m/Curves.decelerate
-      :ease m/Curves.ease
-      :ease-in m/Curves.easeIn
-      :ease-in-back m/Curves.easeInBack
-      :ease-in-circ m/Curves.easeInCirc
-      :ease-in-cubic m/Curves.easeInCubic
-      :ease-in-expo m/Curves.easeInExpo
-      :ease-in-out m/Curves.easeInOut
-      :ease-in-out-back m/Curves.easeInOutBack
-      :ease-in-out-circ m/Curves.easeInOutCirc
-      :ease-in-out-cubic m/Curves.easeInOutCubic
-      :ease-in-out-cubic-emphasized m/Curves.easeInOutCubicEmphasized
-      :ease-in-out-expo m/Curves.easeInOutExpo
-      :ease-in-out-quad m/Curves.easeInOutQuad
-      :ease-in-out-quart m/Curves.easeInOutQuart
-      :ease-in-out-quint m/Curves.easeInOutQuint
-      :ease-in-out-sine m/Curves.easeInOutSine
-      :ease-in-quad m/Curves.easeInQuad
-      :ease-in-quart m/Curves.easeInQuart
-      :ease-in-quint m/Curves.easeInQuint
-      :ease-in-sine m/Curves.easeInSine
-      :ease-in-to-linear m/Curves.easeInToLinear
-      :ease-out m/Curves.easeOut
-      :ease-out-back m/Curves.easeOutBack
-      :ease-out-circ m/Curves.easeOutCirc
-      :ease-out-cubic m/Curves.easeOutCubic
-      :ease-out-expo m/Curves.easeOutExpo
-      :ease-out-quad m/Curves.easeOutQuad
-      :ease-out-quart m/Curves.easeOutQuart
-      :ease-out-quint m/Curves.easeOutQuint
-      :ease-out-sine m/Curves.easeOutSine
-      :elastic-in m/Curves.elasticIn
-      :elastic-in-out m/Curves.elasticInOut
-      :elastic-out m/Curves.elasticOut
-      :fast-ease-in-to-slow-ease-out m/Curves.fastEaseInToSlowEaseOut
-      :fast-linear-to-slow-ease-in m/Curves.fastLinearToSlowEaseIn
-      :fast-out-slow-in m/Curves.fastOutSlowIn
-      :slow-middle m/Curves.slowMiddle
+      :linear a/Curves.linear
+      :bounce-in a/Curves.bounceIn
+      :bounce-in-out a/Curves.bounceInOut
+      :bounce-out a/Curves.bounceOut
+      :decelerate a/Curves.decelerate
+      :ease a/Curves.ease
+      :ease-in a/Curves.easeIn
+      :ease-in-back a/Curves.easeInBack
+      :ease-in-circ a/Curves.easeInCirc
+      :ease-in-cubic a/Curves.easeInCubic
+      :ease-in-expo a/Curves.easeInExpo
+      :ease-in-out a/Curves.easeInOut
+      :ease-in-out-back a/Curves.easeInOutBack
+      :ease-in-out-circ a/Curves.easeInOutCirc
+      :ease-in-out-cubic a/Curves.easeInOutCubic
+      :ease-in-out-cubic-emphasized a/Curves.easeInOutCubicEmphasized
+      :ease-in-out-expo a/Curves.easeInOutExpo
+      :ease-in-out-quad a/Curves.easeInOutQuad
+      :ease-in-out-quart a/Curves.easeInOutQuart
+      :ease-in-out-quint a/Curves.easeInOutQuint
+      :ease-in-out-sine a/Curves.easeInOutSine
+      :ease-in-quad a/Curves.easeInQuad
+      :ease-in-quart a/Curves.easeInQuart
+      :ease-in-quint a/Curves.easeInQuint
+      :ease-in-sine a/Curves.easeInSine
+      :ease-in-to-linear a/Curves.easeInToLinear
+      :ease-out a/Curves.easeOut
+      :ease-out-back a/Curves.easeOutBack
+      :ease-out-circ a/Curves.easeOutCirc
+      :ease-out-cubic a/Curves.easeOutCubic
+      :ease-out-expo a/Curves.easeOutExpo
+      :ease-out-quad a/Curves.easeOutQuad
+      :ease-out-quart a/Curves.easeOutQuart
+      :ease-out-quint a/Curves.easeOutQuint
+      :ease-out-sine a/Curves.easeOutSine
+      :elastic-in a/Curves.elasticIn
+      :elastic-in-out a/Curves.elasticInOut
+      :elastic-out a/Curves.elasticOut
+      :fast-ease-in-to-slow-ease-out a/Curves.fastEaseInToSlowEaseOut
+      :fast-linear-to-slow-ease-in a/Curves.fastLinearToSlowEaseIn
+      :fast-out-slow-in a/Curves.fastOutSlowIn
+      :slow-middle a/Curves.slowMiddle
       (throw (Exception. (str "Unknown curve: " curve)))) 
     
-    (fn? curve) (CurveFn curve)
+    (fn? curve) (AnyCurve curve)
 
     :else
     (throw (Exception. (str "Invalid curve: " curve)))))
 
-(extend-protocol c/IFn
-  m/Curve
-  (-invoke [this t]
-           (.transform this t))
-  
-  m/Animatable
-  (-invoke [this t]
-           (.transform this t))
-  
-  )
-
-(defn catmull-rom-curve
-  "An animation easing curve that passes smoothly through the given control points using a centripetal Catmull-Rom spline.
-
-   When this curve is evaluated with transform, the values will interpolate smoothly from one control point to the next, passing through (0.0, 0.0), the given points, and then (1.0, 1.0).
-
-   Unlike most cubic splines, Catmull-Rom splines have the advantage that their curves pass through the control points given to them. They are cubic polynomial representations, and, in fact, Catmull-Rom splines can be converted mathematically into cubic splines.
-   This class implements a \"centripetal\" Catmull-Rom spline. The term centripetal implies that it won't form loops or self-intersections within a single segment.
-
-   This class uses a centripetal Catmull-Rom curve (a CatmullRomSpline) as its internal representation. The term centripetal implies that it won't form loops or self-intersections within a single segment, and corresponds to a Catmull-Rom α (alpha) value of 0.5.
-   
-   Arity:
-    1. [control-points] - Creates a `CatmullRomCurve` object with the specified control points.
-    2. [control-points args] - Creates a `CatmullRomCurve` object with the specified control points and arguments. The arguments can be specified as a map with the following keys:
-        - `:tension` (number, default: 0): The tension of the curve.
-    3. [args] - Creates a `CatmullRomCurve` object with the specified arguments. The arguments can be specified as a map with the following keys:
-        - `:control-points` (list of Offset, default: []): The control points of the curve.
-        - `:tension` (number, default: 0): The tension of the curve.
-   ```clojure
-   (catmull-rom-curve [[0 0] [100 100] [200 200]]) ;; CatmullRomCurve.precompute([Offset(0.0, 0.0), Offset(100.0, 100.0), Offset(200.0, 200.0)], 0.0)
-   ```"
-  [control-points & {:keys [tension]
-                     :or {tension 0.0}}]
-  (w/CatmullRomCurve.precompute (map offset control-points)
-                                .tension tension))
-
-(defn catmull-rom-spline
-  "A 2D spline that passes smoothly through the given control points using a centripetal Catmull-Rom spline.
-
-   When the curve is evaluated with transform, the output values will move smoothly from one control point to the next, passing through the control points.
-
-   Unlike most cubic splines, Catmull-Rom splines have the advantage that their curves pass through the control points given to them. They are cubic polynomial representations, and, in fact, Catmull-Rom splines can be converted mathematically into cubic splines.
-   This class implements a \"centripetal\" Catmull-Rom spline. The term centripetal implies that it won't form loops or self-intersections within a single segment.
-  
-   ```clojure
-   (catmull-rom-spline [[0 0] [100 100] [200 200]]) ;; CatmullRomSpline.precompute([Offset(0.0, 0.0), Offset(100.0, 100.0), Offset(200.0, 200.0)], 0.0)
-   ```"
-  [control-points & {:keys [tension start-handle end-handle]
-                     :or {tension 0.0}}]
-  (w/CatmullRomSpline.precompute (map offset control-points)
-                                 .tension tension
-                                 .startHandle (some-> start-handle offset)
-                                 .endHandle (some-> end-handle offset)))
-
-(def ^:dynamic *anim-ctx* {:animation {:duration (c/Duration .milliseconds 250) :curve m/Curves.easeInOut}
+(def ^:dynamic *anim-ctx* {:animation {:duration (dc/Duration .milliseconds 250) :curve a/Curves.easeInOut}
                            :animate #(%)
                            :is-animated? false})
-
-(defn saw-tooth
-  [count]
-  (w/SawTooth (int count)))
-
-(defn interval 
-  "A curve that is 0.0 until begin, then curved (according to curve) from 0.0 at begin to 1.0 at end, then remains 1.0 past end.
-
-   An Interval can be used to delay an animation. For example, a six second animation that uses an Interval with its begin set to 0.5 and its end set to 1.0 will essentially become a three-second animation that starts three seconds later."
-  ([start end curve]
-   (a/Interval
-    (max 0.0 (min 1.0 start end)) 
-    (min 1.0 (max 0.0 end start))
-    .curve (t/curve (or curve m/Curves.linear))))
-  ([start end] 
-   (if (coll? start) 
-     (interval (first start) (second start) end) 
-     (interval start end nil)))
-  ([value]
-   (if (number? value)
-     (interval value 1.0)
-     (interval (first value) (second value)))))
 
 (defn animation-options
   "Creates an animation options object from the specified value.
@@ -1141,7 +1045,7 @@
    - The callback function to be called when the animation ends.
    The value can also be specified as a number, in which case it is used as the duration of the animation."
   [value]
-  (let [def-curve (get-in *anim-ctx* [:animation :curve] m/Curves.linear)]
+  (let [def-curve (get-in *anim-ctx* [:animation :curve] a/Curves.linear)]
     (cond
       (map? value)
       (let [duration (duration (:duration value (:dur value (get-in *anim-ctx* [:animation :duration]))))
@@ -1172,6 +1076,14 @@
     (nil? key) nil
     (instance? m/Key key) key
     :else (m/ValueKey key)))
+
+(defn ^f/CustomTween tween
+  ([lerp-fn from to]
+   (doto (f/CustomTween (or lerp-fn #(ut/lerp %1 %2)) nil)
+     (.-begin! from)
+     (.-end! to)))
+  ([from to]
+   (tween nil from to)))
 
 (defn logical-keyboard-key
   "Converts a given `key` into a `LogicalKeyboardKey` instance.
@@ -1310,7 +1222,7 @@
                           [fun edge]
                           (case type
                             :min [max 0.0]
-                            [min c/double.infinity])
+                            [min dc/double.infinity])
                           keys (map #(keyword (str type-str "-" %)) (conj names "size"))]
                       (double (reduce fun (filter some? [(some value keys) (get-cnstrt val type) edge])))))]
       (m/BoxConstraints

@@ -1,0 +1,240 @@
+(ns flutter-cljd.curves
+  (:require
+   ["package:flutter/animation.dart" :as a]
+   [flutter-cljd.drawing :as dr :refer [offset]]
+   [flutter-cljd.types :as t]
+   ["package:flutter/physics.dart" :as p]
+   [flutter-cljd.curves :as curves]))
+
+(defn catmull-rom-curve
+  "An animation easing curve that passes smoothly through the given control points using a centripetal Catmull-Rom spline.
+
+   When this curve is evaluated with transform, the values will interpolate smoothly from one control point to the next, passing through (0.0, 0.0), the given points, and then (1.0, 1.0).
+
+   Unlike most cubic splines, Catmull-Rom splines have the advantage that their curves pass through the control points given to them. They are cubic polynomial representations, and, in fact, Catmull-Rom splines can be converted mathematically into cubic splines.
+   This class implements a \"centripetal\" Catmull-Rom spline. The term centripetal implies that it won't form loops or self-intersections within a single segment.
+
+   This class uses a centripetal Catmull-Rom curve (a CatmullRomSpline) as its internal representation. The term centripetal implies that it won't form loops or self-intersections within a single segment, and corresponds to a Catmull-Rom α (alpha) value of 0.5.
+   
+   Arity:
+    1. [control-points] - Creates a `CatmullRomCurve` object with the specified control points.
+    2. [control-points args] - Creates a `CatmullRomCurve` object with the specified control points and arguments. The arguments can be specified as a map with the following keys:
+        - `:tension` (number, default: 0): The tension of the curve.
+    3. [args] - Creates a `CatmullRomCurve` object with the specified arguments. The arguments can be specified as a map with the following keys:
+        - `:control-points` (list of Offset, default: []): The control points of the curve.
+        - `:tension` (number, default: 0): The tension of the curve.
+   ```clojure
+   (catmull-rom-curve [[0 0] [100 100] [200 200]]) ;; CatmullRomCurve.precompute([Offset(0.0, 0.0), Offset(100.0, 100.0), Offset(200.0, 200.0)], 0.0)
+   ```"
+  [control-points & {:keys [tension]
+                     :or {tension 0.0}}]
+  (a/CatmullRomCurve.precompute (map offset control-points) .tension tension))
+
+(defn catmull-rom-spline
+  "A 2D spline that passes smoothly through the given control points using a centripetal Catmull-Rom spline.
+
+   When the curve is evaluated with transform, the output values will move smoothly from one control point to the next, passing through the control points.
+
+   Unlike most cubic splines, Catmull-Rom splines have the advantage that their curves pass through the control points given to them. They are cubic polynomial representations, and, in fact, Catmull-Rom splines can be converted mathematically into cubic splines.
+   This class implements a \"centripetal\" Catmull-Rom spline. The term centripetal implies that it won't form loops or self-intersections within a single segment.
+  
+   ```clojure
+   (catmull-rom-spline [[0 0] [100 100] [200 200]]) ;; CatmullRomSpline.precompute([Offset(0.0, 0.0), Offset(100.0, 100.0), Offset(200.0, 200.0)], 0.0)
+   ```"
+  [control-points & {:keys [tension start-handle end-handle]
+                     :or {tension 0.0}}]
+  (a/CatmullRomSpline.precompute (map offset control-points)
+                                 .tension tension
+                                 .startHandle (some-> start-handle offset)
+                                 .endHandle (some-> end-handle offset)))
+
+(defn saw-tooth
+  [count]
+  (a/SawTooth (int count)))
+
+(defn interval
+  "A curve that is 0.0 until begin, then curved (according to curve) from 0.0 at begin to 1.0 at end, then remains 1.0 past end.
+
+   An Interval can be used to delay an animation. For example, a six second animation that uses an Interval with its begin set to 0.5 and its end set to 1.0 will essentially become a three-second animation that starts three seconds later."
+  ([start end curve]
+   (a/Interval
+    (max 0.0 (min 1.0 start end))
+    (min 1.0 (max 0.0 end start))
+    .curve (t/curve (or curve a/Curves.linear))))
+  ([start end]
+   (if (coll? start)
+     (interval (first start) (second start) end)
+     (interval start end nil)))
+  ([value]
+   (if (number? value)
+     (interval value 1.0)
+     (interval (first value) (second value)))))
+
+(defn cubic [p1x p1y p2x p2y]
+  (a/Cubic (double p1x) (double p1y) (double p2x) (double p2y)))
+
+(deftype SpringCurve
+         [^p/SpringSimulation simulation]
+  :extends (a/Curve)
+  (transform [this t]
+    (let [sim (.-simulation this)]
+      (+ (.x sim t) (* t (- 1.0 (.x sim 1.0)))))))
+
+(defn spring
+  ([& {:keys [damping stiffness mass velocity]
+       :or {damping 20 stiffness 180 mass 1 velocity 0}}]
+   (SpringCurve
+    (p/SpringSimulation
+     (p/SpringDescription
+      .damping (double damping)
+      .mass (double mass)
+      .stiffness (double stiffness))
+     0.0
+     1.0
+     (double velocity)))))
+
+(defn transform
+  [transform & curves]
+  (let [curves (map t/curve curves)]
+    (t/AnyCurve
+     (if (empty? curves)
+       identity
+       (fn [t]
+         (apply transform (map #(.transform % t) curves)))))))
+
+(defn average
+  [& curves]
+  (transform
+   (fn [& values]
+     (/ (apply + values) (count values)))
+   curves))
+
+(defn multiply
+  [& curves]
+  (transform
+   (fn [& values]
+     (apply * values))
+   curves))
+
+(defn add
+  [& curves]
+  (transform
+   (fn [& values]
+     (apply + values))
+   curves))
+
+(defn reversed
+  [curve]
+  (let [curve (t/curve curve)]
+    (t/AnyCurve
+     (fn [t]
+       (.transform curve (- 1.0 t))))))
+
+(defn autoreversed
+  [curve]
+  (let [curve (t/curve curve)]
+    (t/AnyCurve
+     (fn [t]
+       (if (< t 0.5)
+         (.transform curve (* 2.0 t))
+         (.transform curve (* 2.0 (- 1.0 t))))))))
+
+(defn repeat
+  [count curve]
+  ([curve (t/curve curve)]
+   (t/AnyCurve
+    (fn [T]
+      (let [mult (* T count)
+            curve (t/curve curve)
+            t (if (= T 1.0) 1.0 (mod mult 1.0))]
+        (.transform curve t))))))
+
+(defn constant
+  [value]
+  (t/AnyCurve
+   (fn [_] value)))
+
+(defn concat
+  [& curves]
+  (let [curves (map t/curve curves)
+        len (count curves)]
+    (t/AnyCurve
+     (if (empty? curves)
+       identity
+       (fn [T]
+         (let [mult (* T len)
+               i (max 0 (min (dec len) (int mult)))
+               curve (nth curves i)
+               t (if (= T 1.0) 1.0 (mod mult 1.0))]
+           (.transform curve t)))))))
+
+(defn clamped
+  [curve]
+  (let [curve (t/curve curve)]
+    (t/AnyCurve
+     (fn [T]
+       (if (< T 0.0)
+         (.transform curve 0.0)
+         (if (> T 1.0)
+           (.transform curve 1.0)
+           (.transform curve T)))))))
+
+(defn first-non-zero
+  "```clojure
+(first-non-zero
+ (interval 0.0 0.3 :ease-in-out) 
+ (interval 0.3 (reversed :ease-in-out)))
+```"
+  [& curves]
+  (let [curves (map t/curve curves)]
+    (t/AnyCurve
+     (fn [t]
+       (or
+        (some (fn [curve]
+                (let [value (.transform curve t)]
+                  (when-not (zero? value) value)))
+              curves)
+        0.0)))))
+
+(def linear a/Curves.linear)
+(def bounce-in a/Curves.bounceIn)
+(def bounce-in-out a/Curves.bounceInOut)
+(def bounce-out a/Curves.bounceOut)
+(def decelerate a/Curves.decelerate)
+(def ease a/Curves.ease)
+(def ease-in a/Curves.easeIn)
+(def ease-in-back a/Curves.easeInBack)
+(def ease-in-circ a/Curves.easeInCirc)
+(def ease-in-cubic a/Curves.easeInCubic)
+(def ease-in-expo a/Curves.easeInExpo)
+(def ease-in-out a/Curves.easeInOut)
+(def ease-in-out-back a/Curves.easeInOutBack)
+(def ease-in-out-circ a/Curves.easeInOutCirc)
+(def ease-in-out-cubic a/Curves.easeInOutCubic)
+(def ease-in-out-cubic-emphasized a/Curves.easeInOutCubicEmphasized)
+(def ease-in-out-expo a/Curves.easeInOutExpo)
+(def ease-in-out-quad a/Curves.easeInOutQuad)
+(def ease-in-out-quart a/Curves.easeInOutQuart)
+(def ease-in-out-quint a/Curves.easeInOutQuint)
+(def ease-in-out-sine a/Curves.easeInOutSine)
+(def ease-in-quad a/Curves.easeInQuad)
+(def ease-in-quart a/Curves.easeInQuart)
+(def ease-in-quint a/Curves.easeInQuint)
+(def ease-in-sine a/Curves.easeInSine)
+(def ease-in-to-linear a/Curves.easeInToLinear)
+(def ease-out a/Curves.easeOut)
+(def ease-out-back a/Curves.easeOutBack)
+(def ease-out-circ a/Curves.easeOutCirc)
+(def ease-out-cubic a/Curves.easeOutCubic)
+(def ease-out-expo a/Curves.easeOutExpo)
+(def ease-out-quad a/Curves.easeOutQuad)
+(def ease-out-quart a/Curves.easeOutQuart)
+(def ease-out-quint a/Curves.easeOutQuint)
+(def ease-out-sine a/Curves.easeOutSine)
+(def elastic-in a/Curves.elasticIn)
+(def elastic-in-out a/Curves.elasticInOut)
+(def elastic-out a/Curves.elasticOut)
+(def fast-ease-in-to-slow-ease-out a/Curves.fastEaseInToSlowEaseOut)
+(def fast-linear-to-slow-ease-in a/Curves.fastLinearToSlowEaseIn)
+(def fast-out-slow-in a/Curves.fastOutSlowIn)
+(def slow-middle a/Curves.slowMiddle)

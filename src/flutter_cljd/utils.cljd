@@ -2,8 +2,7 @@
   "Core utilities and helpers for flutter-cljd."
   (:require
    [cljd.flutter :as f]
-   ["package:flutter/widgets.dart" :as w]
-   ["package:flutter/animation.dart" :as an]))
+   ["package:flutter/widgets.dart" :as w]))
 
 (defmacro ??
   "A nil-coalescing macro that returns the first non-nil value from a series of expressions.
@@ -111,7 +110,7 @@
      (and (int? from) (int? to))
      (fn [t] (.round (+ (* (- 1 t) (double from)) (* t (double to)))))
 
-     (and (number? from) (number? to))
+     (and (number? from) (number? to)) 
      #(+ (* (- 1 %) from) (* % to))
 
      (and (vector? from) (vector? to) (= (count from) (count to)))
