@@ -58,7 +58,7 @@
   [count]
   (a/SawTooth (int count)))
 
-(defn elastic-in 
+(defn elastic-in
   "An oscillating curve that grows in magnitude while overshooting its bounds."
   ([] a/Curves.elasticIn)
   ([period] (a/ElasticInCurve (double period))))
@@ -73,7 +73,7 @@
   ([] a/Curves.elasticInOut)
   ([period] (a/ElasticInOutCurve (double period))))
 
-(defn flipped 
+(defn flipped
   "A curve that is the reversed inversion of its given curve.
 
    This curve evaluates the given curve in reverse (i.e., from 1.0 to 0.0 as t increases from 0.0 to 1.0)
@@ -84,7 +84,8 @@
 (defn interval
   "A curve that is 0.0 until begin, then curved (according to curve) from 0.0 at begin to 1.0 at end, then remains 1.0 past end.
 
-   An Interval can be used to delay an animation. For example, a six second animation that uses an Interval with its begin set to 0.5 and its end set to 1.0 will essentially become a three-second animation that starts three seconds later."
+   An Interval can be used to delay an animation. For example, a six second animation that uses an Interval with
+   its begin set to 0.5 and its end set to 1.0 will essentially become a three-second animation that starts three seconds later."
   ([start end curve]
    (a/Interval
     (double (max 0.0 (min 1.0 start end)))
@@ -99,7 +100,27 @@
      (interval value 1.0)
      (interval (first value) (second value)))))
 
-(defn cubic 
+(defn saw-tooth-interval
+  "A curve that is 0.0 until begin, then curved (according to curve) from 0.0 at begin to 1.0 at end, then remains 0.0 past end.
+
+   An saw-tooth-interval can be used to concat animations."
+  ([start end curve]
+   (let [curve (t/curve curve)]
+     (t/AnyCurve
+      (fn [t]
+        (if (or (< t start) (> t end))
+          0.0
+          (.transform curve t))))))
+  ([start end]
+   (if (coll? start)
+     (saw-tooth-interval (first start) (second start) end)
+     (saw-tooth-interval start end nil)))
+  ([value]
+   (if (number? value)
+     (saw-tooth-interval value 1.0)
+     (saw-tooth-interval (first value) (second value)))))
+
+(defn cubic
   "Creates a cubic Bézier curve.\\
    Takes four parameters that specify the two control points that define the shape.\\
    The curve will start at (0,0) and end at (1,1), with p1 and p2 as control points.
@@ -265,8 +286,15 @@
   "Creates a curve that concatenates multiple curves sequentially.\\
    Takes any number of curves and returns a new curve that runs each\\
    input curve for an equal portion of the total time.\\
+   Note: For custom timing proportions, use `first-non-zero` with `saw-tooth-interval` curves instead.
    ```clojure
    (concat :ease-in :linear :ease-out)  ;; Runs three curves in equal time segments
+     
+   ;; For custom timing, use first-non-zero:
+   (first-non-zero
+     (saw-tooth-interval 0.0 0.3 :ease-in)
+     (saw-tooth-interval 0.3 0.5 :linear)
+     (saw-tooth-interval 0.5 1.0 :ease-out))
    ```"
   [& curves]
   (let [curves (map t/curve curves)
@@ -312,6 +340,31 @@
          (if (> T 1.0)
            (.transform curve 1.0)
            (.transform curve T)))))))
+
+(defn first-non-zero
+  "Creates a curve that returns the first non-zero value from a sequence of curves.\\
+   This is particularly useful when concatenating interval curves to avoid value\\
+   addition at interval boundaries. Unlike `add`, which would sum overlapping\\
+   intervals (potentially exceeding 1.0), `first-non-zero` ensures clean transitions.
+   ```clojure
+   ;; Clean transition between intervals
+   (first-non-zero
+    (saw-tooth-interval 0.0 0.3 :ease-in-out) 
+    (saw-tooth-interval 0.3 0.6 :ease-in-out))
+   
+   ;; Using add here would result in values > 1.0 at 0.3
+   ;; where the intervals overlap
+   ```"
+  [& curves]
+  (let [curves (map t/curve curves)]
+    (t/AnyCurve
+     (fn [t]
+       (or
+        (some (fn [curve]
+                (let [value (.transform curve t)]
+                  (when-not (zero? value) value)))
+              curves)
+        0.0)))))
 
 (def linear a/Curves.linear)
 (def bounce-in a/Curves.bounceIn)
