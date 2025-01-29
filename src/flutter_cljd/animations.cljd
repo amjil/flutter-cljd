@@ -439,6 +439,15 @@
     (-parallel (into {} (partition 2 kvs)))))
 
 (defn repeat
+  "Repeats an animation a specified number of times.\\
+   Takes a count and an animation, returns a new animation that repeats the input animation.\\
+   The total duration will be the animation's duration multiplied by the count.\\
+   If count is 0 or negative, returns an instant animation.\\
+   If count is 1, returns the original animation unchanged.
+   ```clojure
+   (repeat 3 (to 0 100))  ;; Goes 0->100 three times
+   (repeat 2 {:dur 1000} (to 0 100))  ;; Takes 2000ms total
+   ```"
   ([cnt animation]
    (cond
      (<= cnt 0) (instant)
@@ -458,6 +467,14 @@
           :dur (some-> (or (when dur {:microseconds (* (in-mcs dur) cnt)}) exp-dur) t/duration)})))))
 
 (defn autoreverse
+  "Creates an animation that plays forward then reverses.\\
+   Takes an animation and returns a new animation that plays the input animation\\
+   forward then plays it in reverse.\\
+   The total duration will be double the original animation's duration.
+   ```clojure
+   (autoreverse (to 0 100))  ;; Goes 0->100->0
+   (autoreverse {:dur 1000} (to 0 100))  ;; Takes 2000ms total
+   ```"
   ([animation]
    (fn [value exp-dur]
      (let [loop-dur (when exp-dur {:microseconds (/ (in-mcs exp-dur) 2)})
