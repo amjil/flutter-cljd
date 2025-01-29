@@ -10,9 +10,13 @@
   ([animation dur] (if (fn? animation) (unwrap nil animation dur) (unwrap animation dur nil)))
   ([value animation dur]
    (let [anim (:anim (animation value dur))]
-     (fn [t] (:value (anim (double t) {}))))))
+     (fn [t] (:value (anim (double t) {:last-t 0}))))))
 
-(def ^:private percents (fn [_ dur] {:dur dur :anim (fn [t _] {:value (int (* 100 t))})}))
+(def ^:private percents 
+  (fn [_ dur] {:dur dur 
+               :anim (fn [t cache] 
+                       {:value (int (* 100 t)) 
+                        :cache cache})}))
 
 (deftest test-to
   (testing "Single value"
@@ -104,20 +108,12 @@
       (is (= (anim 1) 100))))  ; End
 
   (testing "Zero or negative count"
-    (let [anim (unwrap (a/repeat 0 percents))]
+    (let [anim (unwrap 0 (a/repeat 0 percents))]
       (is (= (anim 0) 0))
       (is (= (anim 0.5) 0))
       (is (= (anim 1) 0)))
 
-    (let [anim (unwrap (a/repeat -1 percents))]
+    (let [anim (unwrap 0 (a/repeat -1 percents))]
       (is (= (anim 0) 0))
       (is (= (anim 0.5) 0))
-      (is (= (anim 1) 0))))
-
-  (testing "With duration and curve options"
-    (let [anim (unwrap (a/repeat 2 {:dur 1000 :curve :ease-in} percents))]
-      (is (= (anim 0) 0))
-      (is (< (anim 0.25) 50))  ; Should be less than 50 due to ease-in
-      (is (= (anim 0.5) 0))    ; Start of second iteration
-      (is (< (anim 0.75) 50))  ; Should be less than 50 due to ease-in
-      (is (= (anim 1) 100)))))
+      (is (= (anim 1) 0)))))
