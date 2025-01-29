@@ -100,10 +100,10 @@
      (interval value 1.0)
      (interval (first value) (second value)))))
 
-(defn saw-tooth-interval
+(defn segment
   "A curve that is 0.0 until begin, then curved (according to curve) from 0.0 at begin to 1.0 at end, then remains 0.0 past end.
 
-   An saw-tooth-interval can be used to concat animations."
+   A segment can be used with first-non-zero to create sequential animations with precise timing control."
   ([start end curve]
    (let [curve (t/curve curve)]
      (t/AnyCurve
@@ -113,12 +113,12 @@
           (.transform curve t))))))
   ([start end]
    (if (coll? start)
-     (saw-tooth-interval (first start) (second start) end)
-     (saw-tooth-interval start end nil)))
+     (segment (first start) (second start) end)
+     (segment start end nil)))
   ([value]
    (if (number? value)
-     (saw-tooth-interval value 1.0)
-     (saw-tooth-interval (first value) (second value)))))
+     (segment value 1.0)
+     (segment (first value) (second value)))))
 
 (defn cubic
   "Creates a cubic Bézier curve.\\
@@ -292,9 +292,9 @@
      
    ;; For custom timing, use first-non-zero:
    (first-non-zero
-     (saw-tooth-interval 0.0 0.3 :ease-in)
-     (saw-tooth-interval 0.3 0.5 :linear)
-     (saw-tooth-interval 0.5 1.0 :ease-out))
+     (segment 0.0 0.3 :ease-in)
+     (segment 0.3 0.5 :linear)
+     (segment 0.5 1.0 :ease-out))
    ```"
   [& curves]
   (let [curves (map t/curve curves)
