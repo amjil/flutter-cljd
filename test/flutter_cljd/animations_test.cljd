@@ -5,17 +5,17 @@
             [flutter-cljd.animations :as a]
             ["package:flutter/material.dart" :as m]))
 
-(defn- unwrap 
+(defn- unwrap
   ([animation] (unwrap nil animation nil))
   ([animation dur] (if (fn? animation) (unwrap nil animation dur) (unwrap animation dur nil)))
   ([value animation dur]
    (let [anim (:anim (animation value dur))]
      (fn [t] (:value (anim (double t) {:last-t 0}))))))
 
-(def ^:private percents 
-  (fn [_ dur] {:dur dur 
-               :anim (fn [t cache] 
-                       {:value (int (* 100 t)) 
+(def ^:private percents
+  (fn [_ dur] {:dur dur
+               :anim (fn [t cache]
+                       {:value (int (* 100 t))
                         :cache cache})}))
 
 (deftest test-to
@@ -32,7 +32,7 @@
       (is (= (anim 0.5) 50))
       (is (= (anim 0.75) 75))
       (is (= (anim 1) 100))))
-  
+
   (testing "Valid between many values"
     (let [anim (unwrap (a/to 0 100 200 300 400 500))]
       (is (= (anim 0) 0))
@@ -41,7 +41,7 @@
       (is (= (anim 0.6) 300))
       (is (= (anim 0.8) 400))
       (is (= (anim 1) 500))))
-  
+
   (testing "With initial value"
     (let [anim (unwrap 100 (a/to 200))]
       (is (= (anim 0) 100))
@@ -52,7 +52,7 @@
   (testing "Duration option"
     (let [anim ((a/with {:dur 100} percents) nil nil)]
       (is (= (.-inMilliseconds (:dur anim)) 100))))
-  
+
   (testing "Start time option"
     (let [anim (unwrap (a/with {:at 500 :dur 1000} percents))]
       (is (= (anim 0) 0))
@@ -60,7 +60,7 @@
       (is (= (anim 0.5) 25))  ; After start
       (is (= (anim 0.75) 62)) ; Mid-animation
       (is (= (anim 1) 100)))) ; End
-  
+
   (testing "Duration ratio option"
     (let [anim (unwrap (a/with {:dur-ratio 0.5} percents))]
       (is (= (anim 0) 0))
@@ -68,31 +68,31 @@
       (is (= (anim 0.5) 100))
       (is (= (anim 0.75) 100))
       (is (= (anim 1) 100))))
-  
+
   (testing "Start time ratio option"
     (let [anim (unwrap (a/with {:at-ratio 0.5 :dur-ratio 0.5} percents))]
       (is (= (anim 0) 0))
       (is (= (anim 0.5) 0))
       (is (= (anim 0.75) 50))
       (is (= (anim 1) 100))))
-  
+
   (testing "Curve option"
     (let [anim (unwrap (a/with {:curve (constantly 0)} percents))]
       (is (= (anim 0) 0))
       (is (= (anim 0.5) 0))
       (is (= (anim 1) 0))))
-  
+
   (testing "Curve :ease-in option"
     (let [anim (unwrap (a/with {:curve :ease-in} percents))]
       (is (= (anim 0) 0))
       (is (< (anim 0.5) 50))
       (is (= (anim 1) 100))))
-  
+
   (testing "Combined options"
-    (let [anim (unwrap (a/with {:dur 1000 
-                               :at 500
-                               :curve :ease-in-out} 
-                              percents))]
+    (let [anim (unwrap (a/with {:dur 1000
+                                :at 500
+                                :curve :ease-in-out}
+                               percents))]
       (is (= (anim 0) 0))
       (is (= (anim 0.25) 0))
       (is (not= (anim 0.75) 50)) ; Should not be linear due to ease-in-out
@@ -104,7 +104,7 @@
           repeated (a/repeat 2 (a/with {:dur base-dur} (a/to 0 100)))
           {:keys [dur]} (repeated nil nil)]
       (is (= (.-inMilliseconds dur) (* base-dur 2)) "Duration should be doubled")
-      
+
       (let [anim (unwrap repeated)]
         (is (= (anim 0) 0))
         (is (= (anim 0.25) 50))  ; First iteration at 50%
@@ -123,25 +123,39 @@
       (is (= (anim 0.5) 0))
       (is (= (anim 1) 0)))))
 
+(deftest test-autoreverse
+  (testing "Basic autoreverse functionality"
+    (let [base-dur 1000
+          reversed (a/autoreverse (a/with {:dur base-dur} percents))
+          {:keys [dur]} (reversed nil nil)]
+      (is (= (.-inMilliseconds dur) (* base-dur 2)) "Duration should be doubled")
+
+      (let [anim (unwrap reversed)]
+        (is (= (anim 0) 0))      ; Start
+        (is (= (anim 0.25) 50))  ; Forward halfway
+        (is (= (anim 0.5) 100))  ; Forward complete
+        (is (= (anim 0.75) 50))  ; Reverse halfway
+        (is (= (anim 1) 0))))))    ; Back to start
+
 (deftest test-curves
   (testing "Constant curve"
     (let [curve (c/constant 0.5)]
       (is (= (.transform curve 0.0) 0.5))
       (is (= (.transform curve 0.5) 0.5))
       (is (= (.transform curve 1.0) 0.5))))
-      
+
   (testing "Reversed curve"
     (let [curve (c/reversed :ease-in)]
       (is (= (.transform curve 0.0) 1.0))
       (is (< (.transform curve 0.5) 0.5))
       (is (= (.transform curve 1.0) 0.0))))
-  
+
   (testing "Inversed curve"
     (let [curve (c/inversed :ease-in)]
       (is (= (.transform curve 0.0) 1.0))
       (is (> (.transform curve 0.5) 0.5))
       (is (= (.transform curve 1.0) 0.0))))
-      
+
   (testing "Autoreversed curve"
     (let [curve (c/autoreversed :ease-in)]
       (is (= (.transform curve 0.0) 0.0))
@@ -149,7 +163,7 @@
       (is (= (.transform curve 0.5) 1.0))
       (is (< (.transform curve 0.75) 0.5) "Second half ease-in reversed")
       (is (= (.transform curve 1.0) 0.0))))
-      
+
   (testing "Repeated curve"
     (let [curve (c/repeat 2 :ease-in)]
       (is (= (.transform curve 0.0) 0.0))
@@ -157,45 +171,30 @@
       (is (= (.transform curve 0.5) 0.0))
       (is (< (.transform curve 0.75) 0.5) "Second iteration ease-in")
       (is (= (.transform curve 1.0) 1.0))))
-      
+
   (testing "Concatenated curves"
     (let [curve (c/concat :ease-in :ease-out)]
       (is (= (.transform curve 0.0) 0.0))
       (is (< (.transform curve 0.25) 0.5) "First half ease-in")
       (is (> (.transform curve 0.75) 0.5) "Second half ease-out")
       (is (= (.transform curve 1.0) 1.0))))
-      
+
   (testing "Average of curves"
     (let [curve (c/average :ease-in :ease-out)]
       (is (= (.transform curve 0.0) 0.0))
       (is (= (.transform curve 0.5) 0.5) "Should be linear at midpoint")
       (is (= (.transform curve 1.0) 1.0))))
-      
+
   (testing "Multiply curves"
     (let [curve (c/multiply :ease-in :ease-out)]
       (is (= (.transform curve 0.0) 0.0))
       (is (< (.transform curve 0.5) 0.25) "Product should be less than either curve")
       (is (= (.transform curve 1.0) 1.0))))
-  
+
   (testing "Segment"
     (let [curve (c/segment 0.25 0.75 :ease-in)]
       (is (= (.transform curve 0.0) 0.0))
       (is (= (.transform curve 0.25) 0.0))
       (is (< (.transform curve 0.5) 0.5))
       (is (= (.transform curve 0.75) 1.0))
-      (is (= (.transform curve 1.0) 0.0))))
-  )
-
-(deftest test-autoreverse
-  (testing "Basic autoreverse functionality"
-    (let [base-dur 1000
-          reversed (a/autoreverse (a/with {:dur base-dur} percents))
-          {:keys [dur]} (reversed nil nil)]
-      (is (= (.-inMilliseconds dur) (* base-dur 2)) "Duration should be doubled")
-      
-      (let [anim (unwrap reversed)]
-        (is (= (anim 0) 0))      ; Start
-        (is (= (anim 0.25) 50))  ; Forward halfway
-        (is (= (anim 0.5) 100))  ; Forward complete
-        (is (= (anim 0.75) 50))  ; Reverse halfway
-        (is (= (anim 1) 0))))))    ; Back to start
+      (is (= (.transform curve 1.0) 0.0)))))
