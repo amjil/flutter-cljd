@@ -100,12 +100,17 @@
 
 (deftest test-repeat
   (testing "Basic repeat functionality"
-    (let [anim (unwrap (a/repeat 2 (a/to 0 100)))]
-      (is (= (anim 0) 0))
-      (is (= (anim 0.25) 50))  ; First iteration at 50%
-      (is (= (anim 0.5) 0))    ; Start of second iteration
-      (is (= (anim 0.75) 50))  ; Second iteration at 50%
-      (is (= (anim 1) 100))))  ; End
+    (let [base-dur 1000
+          repeated (a/repeat 2 (a/with {:dur base-dur} (a/to 0 100)))
+          {:keys [dur]} (repeated nil nil)]
+      (is (= (.-inMicroseconds dur) (* base-dur 2)) "Duration should be doubled")
+      
+      (let [anim (unwrap repeated)]
+        (is (= (anim 0) 0))
+        (is (= (anim 0.25) 50))  ; First iteration at 50%
+        (is (= (anim 0.5) 0))    ; Start of second iteration
+        (is (= (anim 0.75) 50))  ; Second iteration at 50%
+        (is (= (anim 1) 100)))))  ; End
 
   (testing "Zero or negative count"
     (let [anim (unwrap 0 (a/repeat 0 percents))]
@@ -120,9 +125,14 @@
 
 (deftest test-autoreverse
   (testing "Basic autoreverse functionality"
-    (let [anim (unwrap (a/autoreverse percents))]
-      (is (= (anim 0) 0))      ; Start
-      (is (= (anim 0.25) 50))  ; Forward halfway
-      (is (= (anim 0.5) 100))  ; Forward complete
-      (is (= (anim 0.75) 50))  ; Reverse halfway
-      (is (= (anim 1) 0)))))    ; Back to start
+    (let [base-dur 1000
+          reversed (a/autoreverse (a/with {:dur base-dur} percents))
+          {:keys [dur]} (reversed nil nil)]
+      (is (= (.-inMicroseconds dur) (* base-dur 2)) "Duration should be doubled")
+      
+      (let [anim (unwrap reversed)]
+        (is (= (anim 0) 0))      ; Start
+        (is (= (anim 0.25) 50))  ; Forward halfway
+        (is (= (anim 0.5) 100))  ; Forward complete
+        (is (= (anim 0.75) 50))  ; Reverse halfway
+        (is (= (anim 1) 0)))))    ; Back to start
