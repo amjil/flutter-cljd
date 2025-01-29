@@ -139,6 +139,38 @@
                (action value))
              {:value value :cache cache})}))
 
+(defn to
+  "Animate to a value.\\
+     `to` takes a value and returns an animation that animates from the current value to the provided values.\\
+     If the current value is nil, the first value is used as the initial value.
+     ```clojure
+     (to 10.0)
+     (to 5.0 10.0)
+     (to Colors.blue Colors.red Colors.green)
+     ```"
+  [value & values]
+  (fn [from exp-dur]
+    (let [values (if (some? from)
+                   (concat [from value] values)
+                   (cons value values))
+          int-cnt (dec (count values))
+          dur (if (zero? int-cnt) 0 (when exp-dur (/ (in-mcs exp-dur) int-cnt)))]
+      {:anim (case int-cnt
+               0 (const-anim (first values))
+               1 (no-cache-anim (ut/lerp (first values) (second values)))
+               (no-cache-anim
+                (fn [T]
+                  (condp = T
+                    0.0 (first values)
+                    1.0 (last values)
+                    (let [k (* T int-cnt)
+                          i (int k)
+                          t (- k i)]
+                      (if (< i int-cnt)
+                        (ut/lerp (nth values i) (nth values (inc i)) t)
+                        (last values)))))))
+       :dur (when dur (t/duration {:microseconds dur}))})))
+
 (defn anim
   [animation]
   (cond
@@ -153,10 +185,7 @@
     nil
 
     :else
-    (fn [from dur]
-      (if (some? from)
-        (no-cache-anim (ut/lerp from animation) dur)
-        (no-cache-anim (constantly animation) 0)))))
+    (to animation)))
 
 (defn- -sequential [animations]
   (fn [value exp-dur]
@@ -355,35 +384,6 @@
   ([duration]
    (fn [value, _] (const-anim value duration))))
 
-(defn to
-  "Animate to a value.\\
-     `to` takes a value and returns an animation that animates from the current value to the provided values.\\
-     If the current value is nil, the first value is used as the initial value.
-     ```clojure
-     (to 10.0)
-     (to 5.0 10.0)
-     (to Colors.blue Colors.red Colors.green)
-     ```"
-  [value & values]
-  (fn [from exp-dur]
-    (let [values (if (some? from)
-                   (concat [from value] values)
-                   (cons value values))
-          int-cnt (dec (count values))
-          dur (if (zero? int-cnt) 0 (when exp-dur (/ (in-mcs exp-dur) int-cnt)))]
-      {:anim (case int-cnt
-               0 (const-anim (first values))
-               1 (no-cache-anim (ut/lerp (first values) (second values)))
-               (no-cache-anim
-                (fn [T]
-                  (let [k (* T int-cnt)
-                        i (int k)
-                        t (- k i)]
-                    (if (< i int-cnt)
-                      (ut/lerp (nth values i) (nth values (inc i)) t)
-                      (last values))))))
-       :dur (when dur (t/duration {:microseconds dur}))})))
-
 (defn seq
   "Sequential animations of the value.\\
    `seq` takes a list of animations and applies them one after the other.
@@ -439,43 +439,34 @@
     (-parallel (into {} (partition 2 kvs)))))
 
 (defn repeat
-  ([cnt options animation]
-   (with options (repeat cnt animation)))
   ([cnt animation]
    (cond
-     (<= cnt 0) (instant) 
+     (<= cnt 0) (instant)
      (= cnt 1) animation
      :else
      (fn [value exp-dur]
-       (let [dur-ratio (/ 1.0 cnt)
-             dur (when exp-dur {:microseconds (* (in-mcs exp-dur) dur-ratio)})
-             loop-anim ((anim animation) value dur)
-             initial-value (or value (:value ((:anim loop-anim) 0.0 {})))]
+       (let [dur-ratio (/ cnt)
+             loop-dur (when exp-dur {:microseconds (* (in-mcs exp-dur) dur-ratio)})
+             {:keys [dur anim]} ((anim animation) value loop-dur)]
          {:anim
           (fn [T cache]
             (let [transform-t #(if (= % 1.0) 1.0 (mod (* % cnt) 1.0))
                   t (transform-t T)
                   last-T (:last-t cache)
-                  last-t (when last-T (transform-t last-T))
-                  result (loop-anim t (assoc cache :last-t last-t))]
-              (assoc result :value (or (:value result) initial-value))))
-          :dur exp-dur})))))
+                  last-t (when last-T (transform-t last-T))]
+              (anim t (assoc cache :last-t last-t))))
+          :dur (some-> (or (when dur {:microseconds (* (in-mcs dur) cnt)}) exp-dur) t/duration)})))))
 
 (defn autoreverse
-  ([options animation]
-   (with options (autoreverse animation)))
   ([animation]
    (fn [value exp-dur]
-     (let [dur (when exp-dur {:microseconds (/ (in-mcs exp-dur) 2)})
-           loop-anim ((anim animation) value dur)]
+     (let [loop-dur (when exp-dur {:microseconds (/ (in-mcs exp-dur) 2)})
+           {:keys [dur anim]} ((anim animation) value loop-dur)]
        {:anim
         (fn [T cache]
-          (let [t (* T 2)
+          (let [transform-t #(* (if (<= % 0.5) % (- 1.0 %)) 2)
+                t (transform-t T)
                 last-T (:last-t cache)
-                last-t (when last-T (* last-T 2))]
-            (if (<= T 0.5)
-              (loop-anim t (assoc cache :last-t last-t))
-              (loop-anim
-               (- 1.0 t)
-               (assoc cache :last-t (when last-t (- 1.0 last-t)))))))
-        :dur exp-dur}))))
+                last-t (when last-T (transform-t last-T))]
+            (anim t (assoc cache :last-t last-t))))
+        :dur (some-> (or (when dur {:microseconds (* (in-mcs dur) 2)}) exp-dur) t/duration)}))))
