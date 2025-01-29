@@ -135,6 +135,46 @@
         (is (= (anim 0.75) 50))  ; Reverse halfway
         (is (= (anim 1) 0))))))    ; Back to start
 
+(deftest test-par
+  (testing "Basic parallel animation"
+    (let [anim (unwrap (a/par 
+                        :color (a/to 0 100)
+                        :offset (a/to 200 300)))]
+      (is (= (anim 0) {:color 0 :offset 200}))
+      (is (= (anim 0.5) {:color 50 :offset 250}))
+      (is (= (anim 1) {:color 100 :offset 300}))))
+  
+  (testing "With different durations"
+    (let [anim (unwrap (a/par
+                        :fast (a/with {:dur-ratio 0.5} (a/to 0 100))
+                        :slow (a/to 0 100)))]
+      (is (= (anim 0) {:fast 0 :slow 0}))
+      (is (= (anim 0.5) {:fast 100 :slow 50}))
+      (is (= (anim 1) {:fast 100 :slow 100}))))
+  
+  (testing "Nested parallel animations"
+    (let [anim (unwrap (a/par
+                        :outer (a/to 0 100)
+                        :inner (a/par
+                               :x (a/to 0 10)
+                               :y (a/to 0 20))))]
+      (is (= (anim 0) {:outer 0 :inner {:x 0 :y 0}}))
+      (is (= (anim 0.5) {:outer 50 :inner {:x 5 :y 10}}))
+      (is (= (anim 1) {:outer 100 :inner {:x 10 :y 20}}))))
+  
+  (testing "With options"
+    (let [anim (unwrap (a/with {:dur 1000} 
+                        (a/par
+                         :a (a/to 0 100)
+                         :b (a/with {:dur-ratio 0.5} (a/to 0 50)))))]
+      (is (= (anim 0) {:a 0 :b 0}))
+      (is (= (anim 0.5) {:a 50 :b 50}))
+      (is (= (anim 1) {:a 100 :b 50}))))
+  
+  (testing "Error cases"
+    (is (thrown? js/Error (a/par :single-key))
+        "Should throw on odd number of arguments")))
+
 (deftest test-curves
   (testing "Constant curve"
     (let [curve (c/constant 0.5)]
