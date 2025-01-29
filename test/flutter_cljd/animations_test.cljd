@@ -1,9 +1,7 @@
 (ns flutter-cljd.animations-test
   (:require [clojure.test :refer [deftest is testing]]
-            [flutter-cljd.types :as t]
             [flutter-cljd.curves :as c]
-            [flutter-cljd.animations :as a]
-            ["package:flutter/material.dart" :as m]))
+            [flutter-cljd.animations :as a]))
 
 (defn- unwrap
   ([animation] (unwrap nil animation nil))
