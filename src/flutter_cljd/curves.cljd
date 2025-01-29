@@ -161,7 +161,9 @@
 
 (defn add
   "Creates a curve that adds the output of multiple curves.\\
-   Takes any number of curves and returns their sum at each point.
+   Takes any number of curves and returns their sum at each point.\\
+   Note: When working with interval curves, consider using `first-non-zero`\\
+   instead to avoid unwanted value addition at interval boundaries.
    ```clojure
    (add curve1 curve2)  ;; Sum of two curves
    (add curve1 curve2 curve3)  ;; Sum of three curves
@@ -266,11 +268,19 @@
            (.transform curve T)))))))
 
 (defn first-non-zero
-  "```clojure
-(first-non-zero
- (interval 0.0 0.3 :ease-in-out) 
- (interval 0.3 (reversed :ease-in-out)))
-```"
+  "Creates a curve that returns the first non-zero value from a sequence of curves.\\
+   This is particularly useful when concatenating interval curves to avoid value\\
+   addition at interval boundaries. Unlike `add`, which would sum overlapping\\
+   intervals (potentially exceeding 1.0), `first-non-zero` ensures clean transitions.
+   ```clojure
+   ;; Clean transition between intervals
+   (first-non-zero
+    (interval 0.0 0.3 :ease-in-out) 
+    (interval 0.3 0.6 :ease-in-out))
+   
+   ;; Using add here would result in values > 1.0 at 0.3
+   ;; where the intervals overlap
+   ```"
   [& curves]
   (let [curves (map t/curve curves)]
     (t/AnyCurve
