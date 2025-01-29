@@ -101,9 +101,36 @@
      (interval (first value) (second value)))))
 
 (defn segment
-  "A curve that is 0.0 until begin, then curved (according to curve) from 0.0 at begin to 1.0 at end, then remains 0.0 past end.
-
-   A segment can be used with first-non-zero to create sequential animations with precise timing control."
+  "Creates a curve that is active only during a specific time segment.\\
+   The curve outputs 0.0 before start time, follows the specified curve from\\
+   0.0 to 1.0 during its active period, then returns to 0.0 after end time.\\
+   
+   Key features:
+   - Clean transitions between segments (no value accumulation at boundaries)
+   - Precise timing control when used with first-non-zero
+   - Supports any curve for the active period
+   
+   Common use cases:
+   1. Creating sequential animations with custom timing
+   2. Building complex animations from simpler pieces
+   3. Controlling when effects start and stop
+   
+   ```clojure
+   ;; Basic segment from 0.3 to 0.7 using ease-in-out
+   (segment 0.3 0.7 :ease-in-out)
+   
+   ;; Multiple segments for complex timing
+   (first-non-zero
+     (segment 0.0 0.3 :ease-in)    ;; First third
+     (segment 0.3 0.8 :linear)     ;; Middle portion
+     (segment 0.8 1.0 :ease-out))  ;; Final fifth
+   
+   ;; Shorthand for segment to end
+   (segment 0.5)  ;; From 0.5 to 1.0
+   
+   ;; Vector syntax for start/end
+   (segment [0.2 0.5] :ease-in)  ;; From 0.2 to 0.5
+   ```"
   ([start end curve]
    (let [curve (t/curve curve)]
      (t/AnyCurve
