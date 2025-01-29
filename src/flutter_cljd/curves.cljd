@@ -232,9 +232,16 @@
 (defn concat
   "Creates a curve that concatenates multiple curves sequentially.\\
    Takes any number of curves and returns a new curve that runs each\\
-   input curve for an equal portion of the total time.
+   input curve for an equal portion of the total time.\\
+   Note: For custom timing proportions, use `first-non-zero` with `interval` curves instead.
    ```clojure
-   (concat :ease-in :linear :ease-out)  ;; Runs three curves in sequence
+   (concat :ease-in :linear :ease-out)  ;; Runs three curves in equal time segments
+   
+   ;; For custom timing, use first-non-zero:
+   (first-non-zero
+     (interval 0.0 0.3 :ease-in)
+     (interval 0.3 0.5 :linear)
+     (interval 0.5 1.0 :ease-out))
    ```"
   [& curves]
   (let [curves (map t/curve curves)
