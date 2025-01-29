@@ -116,4 +116,34 @@
     (let [anim (unwrap 0 (a/repeat -1 percents))]
       (is (= (anim 0) 0))
       (is (= (anim 0.5) 0))
+      (is (= (anim 1) 0))))
+
+(deftest test-autoreverse
+  (testing "Basic autoreverse functionality"
+    (let [anim (unwrap (a/autoreverse (a/to 0 100)))]
+      (is (= (anim 0) 0))      ; Start
+      (is (= (anim 0.25) 50))  ; Forward halfway
+      (is (= (anim 0.5) 100))  ; Forward complete
+      (is (= (anim 0.75) 50))  ; Reverse halfway
+      (is (= (anim 1) 0))))    ; Back to start
+      
+  (testing "With duration option"
+    (let [anim (unwrap (a/autoreverse {:dur 1000} (a/to 0 100)))]
+      (is (= (anim 0) 0))
+      (is (= (anim 0.25) 50))
+      (is (= (anim 0.5) 100))
+      (is (= (anim 0.75) 50))
+      (is (= (anim 1) 0)))
+    
+    (let [anim (unwrap (a/autoreverse {:dur 0} (a/to 0 100)))]
+      (is (= (anim 0) 0))
+      (is (= (anim 0.5) 100))
+      (is (= (anim 1) 0))))
+      
+  (testing "With curve option"
+    (let [anim (unwrap (a/autoreverse {:curve :ease-in} (a/to 0 100)))]
+      (is (= (anim 0) 0))
+      (is (< (anim 0.25) 50))  ; Should be less than 50 due to ease-in
+      (is (= (anim 0.5) 100))
+      (is (> (anim 0.75) 50))  ; Should be more than 50 due to ease-in in reverse
       (is (= (anim 1) 0)))))
