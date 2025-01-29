@@ -176,17 +176,15 @@
       (is (= (.transform curve 0.0) 0.0))
       (is (< (.transform curve 0.5) 0.25) "Product should be less than either curve")
       (is (= (.transform curve 1.0) 1.0))))
-      
-  (testing "Add curves"
-    (let [curve (c/add (c/interval 0 0.5) (c/interval 0.5 1.0))]
+  
+  (testing "Segment"
+    (let [curve (c/segment 0.25 0.75 :ease-in)]
       (is (= (.transform curve 0.0) 0.0))
-      (is (= (.transform curve 1.0) 2.0))))
-      
-  (testing "First interval multiplies"
-    (let [curve (c/multiply (c/interval 0 0.5) (c/interval 0.5 1.0))]
-      (is (= (.transform curve 0.0) 0.0))
-      (is (<= (.transform curve 0.5) 1.0))
-      (is (= (.transform curve 1.0) 1.0)))))
+      (is (= (.transform curve 0.25) 0.0))
+      (is (< (.transform curve 0.5) 0.5))
+      (is (= (.transform curve 0.75) 1.0))
+      (is (= (.transform curve 1.0) 0.0))))
+  )
 
 (deftest test-autoreverse
   (testing "Basic autoreverse functionality"
