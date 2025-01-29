@@ -446,7 +446,6 @@
    If count is 1, returns the original animation unchanged.
    ```clojure
    (repeat 3 (to 0 100))  ;; Goes 0->100 three times
-   (repeat 2 {:dur 1000} (to 0 100))  ;; Takes 2000ms total
    ```"
   ([cnt animation]
    (cond
@@ -473,7 +472,6 @@
    The total duration will be double the original animation's duration.
    ```clojure
    (autoreverse (to 0 100))  ;; Goes 0->100->0
-   (autoreverse {:dur 1000} (to 0 100))  ;; Takes 2000ms total
    ```"
   ([animation]
    (fn [value exp-dur]

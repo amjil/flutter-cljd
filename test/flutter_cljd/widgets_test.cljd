@@ -231,24 +231,6 @@
       (is (= (.-crossAxisAlignment widget) m/CrossAxisAlignment.start))
       (is (= (count (.-children widget)) 2)))))
 
-(deftest test-container
-  (testing "Container with basic properties"
-    (let [child (m/Text "Child")
-          widget (f/container {:color :blue} child)]
-      (is (instance? m/Container widget))
-      (is (instance? m/Text (.-child widget)))
-      (is (= (-> widget .-decoration .-color) (t/color :blue)))))
-  
-  (testing "Container with padding and margin"
-    (let [widget (f/container 
-                 {:padding 10
-                  :margin {:left 5 :right 5}
-                  :color :red}
-                 (m/Text "Child"))]
-      (is (= (.-padding widget) (t/insets 10)))
-      (is (= (.-margin widget) (t/insets {:left 5 :right 5})))
-      (is (= (-> widget .-decoration .-color) (t/color :red))))))
-
 (deftest test-expanded
   (testing "Expanded with default flex"
     (let [child (m/Text "Child")

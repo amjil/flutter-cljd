@@ -105,7 +105,7 @@
   ([from to]
    (cond
      (satisfies? f/ITweenable from) 
-     (f/lerp from to) 
+     (f/lerp from to)
      
      (and (int? from) (int? to))
      (fn [t] (.round (+ (* (- 1 t) (double from)) (* t (double to)))))

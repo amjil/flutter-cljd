@@ -156,10 +156,10 @@
 (deftest test-duration
   (testing "Duration from seconds"
     (let [dur (t/duration 2)]
-      (is (= (.-inSeconds dur) 2))))
+      (is (= (.-inMilliseconds dur) 2))))
   
   (testing "Duration from fractional seconds"
-    (let [dur (t/duration 0.5)]
+    (let [dur (t/duration 500)]
       (is (= (.-inMilliseconds dur) 500))))
   
   (testing "Duration from map"

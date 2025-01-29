@@ -957,7 +957,7 @@
    ```"
   (cond
     (instance? dc/Duration value) value
-    (integer? value) (dc/Duration .seconds value)
+    (integer? value) (dc/Duration .milliseconds value)
     (number? value) (dc/Duration .microseconds (int (* value 1000.0)))
     (map? value) (dc/Duration
                   .days (int (:d value (:day value 0)))
@@ -972,7 +972,7 @@
 (deftype AnyCurve
   [curve]
   :extends (a/Curve)
-  (transform [_ t] (curve t)))
+  (transform [_ t] (double (curve t))))
 
 (defn curve [curve]
   (cond

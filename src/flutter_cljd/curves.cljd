@@ -58,14 +58,37 @@
   [count]
   (a/SawTooth (int count)))
 
+(defn elastic-in 
+  "An oscillating curve that grows in magnitude while overshooting its bounds."
+  ([] a/Curves.elasticIn)
+  ([period] (a/ElasticInCurve (double period))))
+
+(defn elastic-out
+  "An oscillating curve that shrinks in magnitude while overshooting its bounds."
+  ([] a/Curves.elasticOut)
+  ([period] (a/ElasticOutCurve (double period))))
+
+(defn elastic-in-out
+  "An oscillating curve that grows and then shrinks in magnitude while overshooting its bounds."
+  ([] a/Curves.elasticInOut)
+  ([period] (a/ElasticInOutCurve (double period))))
+
+(defn flipped 
+  "A curve that is the reversed inversion of its given curve.
+
+   This curve evaluates the given curve in reverse (i.e., from 1.0 to 0.0 as t increases from 0.0 to 1.0)
+   and returns the inverse of the given curve's value (i.e., 1.0 minus the given curve's value)."
+  [curve]
+  (a/FlippedCurve (t/curve curve)))
+
 (defn interval
   "A curve that is 0.0 until begin, then curved (according to curve) from 0.0 at begin to 1.0 at end, then remains 1.0 past end.
 
    An Interval can be used to delay an animation. For example, a six second animation that uses an Interval with its begin set to 0.5 and its end set to 1.0 will essentially become a three-second animation that starts three seconds later."
   ([start end curve]
    (a/Interval
-    (max 0.0 (min 1.0 start end))
-    (min 1.0 (max 0.0 end start))
+    (double (max 0.0 (min 1.0 start end)))
+    (double (min 1.0 (max 0.0 end start)))
     .curve (t/curve (or curve a/Curves.linear))))
   ([start end]
    (if (coll? start)
@@ -126,7 +149,7 @@
    (transform #(* %1 %2) curve1 curve2)  ;; Multiplies outputs
    ```"
   [transform & curves]
-  (let [curves (map t/curve curves)]
+  (let [curves (->> curves flatten (map t/curve))]
     (t/AnyCurve
      (if (empty? curves)
        identity
@@ -161,9 +184,7 @@
 
 (defn add
   "Creates a curve that adds the output of multiple curves.\\
-   Takes any number of curves and returns their sum at each point.\\
-   Note: When working with interval curves, consider using `first-non-zero`\\
-   instead to avoid unwanted value addition at interval boundaries.
+   Takes any number of curves and returns their sum at each point.
    ```clojure
    (add curve1 curve2)  ;; Sum of two curves
    (add curve1 curve2 curve3)  ;; Sum of three curves
@@ -179,13 +200,26 @@
    Takes a curve and returns a new curve that runs backwards,\\
    effectively flipping the curve horizontally.
    ```clojure
-   (reversed :ease-in)  ;; Creates an ease-out from an ease-in
+   (reversed :ease-in)
    ```"
   [curve]
   (let [curve (t/curve curve)]
     (t/AnyCurve
      (fn [t]
        (.transform curve (- 1.0 t))))))
+
+(defn inversed
+  "Creates a curve that inverts another curve.\\
+   Takes a curve and returns a new curve that inverts the output,\\
+   effectively flipping the curve vertically.
+   ```clojure
+   (inversed :ease-in)
+   ```"
+  [curve]
+  (let [curve (t/curve curve)]
+    (t/AnyCurve
+     (fn [t]
+       (- 1.0 (.transform curve t))))))
 
 (defn autoreversed
   "Creates a curve that plays forward then reverses.\\
@@ -210,13 +244,11 @@
    (repeat 3 :ease-in)  ;; Repeats ease-in three times
    ```"
   [count curve]
-  ([curve (t/curve curve)]
-   (t/AnyCurve
-    (fn [T]
-      (let [mult (* T count)
-            curve (t/curve curve)
-            t (if (= T 1.0) 1.0 (mod mult 1.0))]
-        (.transform curve t))))))
+  (let [curve (t/curve curve)]
+    (t/AnyCurve
+     (fn [T]
+       (let [t (if (= T 1.0) 1.0 (mod (* T count) 1.0))]
+         (.transform curve t))))))
 
 (defn constant
   "Creates a curve that always returns the same value.\\
@@ -233,15 +265,8 @@
   "Creates a curve that concatenates multiple curves sequentially.\\
    Takes any number of curves and returns a new curve that runs each\\
    input curve for an equal portion of the total time.\\
-   Note: For custom timing proportions, use `first-non-zero` with `interval` curves instead.
    ```clojure
    (concat :ease-in :linear :ease-out)  ;; Runs three curves in equal time segments
-   
-   ;; For custom timing, use first-non-zero:
-   (first-non-zero
-     (interval 0.0 0.3 :ease-in)
-     (interval 0.3 0.5 :linear)
-     (interval 0.5 1.0 :ease-out))
    ```"
   [& curves]
   (let [curves (map t/curve curves)
@@ -255,6 +280,20 @@
                curve (nth curves i)
                t (if (= T 1.0) 1.0 (mod mult 1.0))]
            (.transform curve t)))))))
+
+(defn split
+  "A curve that progresses according to beginCurve until split, then according to endCurve.
+
+   Split curves are useful in situations where a widget must track the user's finger (which requires a linear animation),
+   but can also be flung using a curve specified with the endCurve argument, after the finger is released.
+   In such a case, the value of split would be the progress of the animation at the time when the finger was released.
+
+   For example, if split is set to 0.5, begin is :linear, and end is :ease-out-cubic,
+   then the bottom-left quarter of the curve will be a straight line, and the top-right quarter will contain the entire :ease-out-cubic curve."
+  ([begin end]
+   (split 0.5 begin end))
+  ([at begin end]
+   (a/Split (double at) .beginCurve (t/curve begin) .endCurve (t/curve end))))
 
 (defn clamped
   "Creates a curve that clamps its input to [0.0, 1.0].\\
@@ -273,31 +312,6 @@
          (if (> T 1.0)
            (.transform curve 1.0)
            (.transform curve T)))))))
-
-(defn first-non-zero
-  "Creates a curve that returns the first non-zero value from a sequence of curves.\\
-   This is particularly useful when concatenating interval curves to avoid value\\
-   addition at interval boundaries. Unlike `add`, which would sum overlapping\\
-   intervals (potentially exceeding 1.0), `first-non-zero` ensures clean transitions.
-   ```clojure
-   ;; Clean transition between intervals
-   (first-non-zero
-    (interval 0.0 0.3 :ease-in-out) 
-    (interval 0.3 0.6 :ease-in-out))
-   
-   ;; Using add here would result in values > 1.0 at 0.3
-   ;; where the intervals overlap
-   ```"
-  [& curves]
-  (let [curves (map t/curve curves)]
-    (t/AnyCurve
-     (fn [t]
-       (or
-        (some (fn [curve]
-                (let [value (.transform curve t)]
-                  (when-not (zero? value) value)))
-              curves)
-        0.0)))))
 
 (def linear a/Curves.linear)
 (def bounce-in a/Curves.bounceIn)
@@ -334,9 +348,6 @@
 (def ease-out-quart a/Curves.easeOutQuart)
 (def ease-out-quint a/Curves.easeOutQuint)
 (def ease-out-sine a/Curves.easeOutSine)
-(def elastic-in a/Curves.elasticIn)
-(def elastic-in-out a/Curves.elasticInOut)
-(def elastic-out a/Curves.elasticOut)
 (def fast-ease-in-to-slow-ease-out a/Curves.fastEaseInToSlowEaseOut)
 (def fast-linear-to-slow-ease-in a/Curves.fastLinearToSlowEaseIn)
 (def fast-out-slow-in a/Curves.fastOutSlowIn)
