@@ -49,6 +49,12 @@
                                  .endHandle (some-> end-handle offset)))
 
 (defn saw-tooth
+  "Creates a sawtooth curve that repeats count times.\\
+   A sawtooth pattern starts at 0.0 and increases linearly to 1.0\\
+   over each interval, then drops back to 0.0 at the start of the next interval.
+   ```clojure
+   (saw-tooth 3)  ;; Repeats the 0.0->1.0 pattern 3 times
+   ```"
   [count]
   (a/SawTooth (int count)))
 
@@ -70,7 +76,14 @@
      (interval value 1.0)
      (interval (first value) (second value)))))
 
-(defn cubic [p1x p1y p2x p2y]
+(defn cubic 
+  "Creates a cubic Bézier curve.\\
+   Takes four parameters that specify the two control points that define the shape.\\
+   The curve will start at (0,0) and end at (1,1), with p1 and p2 as control points.
+   ```clojure
+   (cubic 0.25 0.1 0.25 1.0)  ;; Creates a cubic curve with control points at (0.25,0.1) and (0.25,1.0)
+   ```"
+  [p1x p1y p2x p2y]
   (a/Cubic (double p1x) (double p1y) (double p2x) (double p2y)))
 
 (deftype SpringCurve
@@ -81,6 +94,16 @@
       (+ (.x sim t) (* t (- 1.0 (.x sim 1.0)))))))
 
 (defn spring
+  "Creates a spring curve that simulates spring physics.\\
+   Takes optional parameters to configure the spring behavior:\\
+   - `:damping` (default: 20) - How quickly oscillations decrease
+   - `:stiffness` (default: 180) - Spring stiffness constant
+   - `:mass` (default: 1) - Mass of the object on spring
+   - `:velocity` (default: 0) - Initial velocity
+   ```clojure
+   (spring)  ;; Default spring curve
+   (spring :damping 10 :stiffness 100)  ;; Bouncy spring
+   ```"
   ([& {:keys [damping stiffness mass velocity]
        :or {damping 20 stiffness 180 mass 1 velocity 0}}]
    (SpringCurve
@@ -94,6 +117,14 @@
      (double velocity)))))
 
 (defn transform
+  "Creates a curve that transforms the output of other curves.\\
+   Takes a transform function and one or more curves.\\
+   The transform function receives the output values of all curves\\
+   and returns the final transformed value.
+   ```clojure
+   (transform + curve1 curve2)  ;; Adds outputs of two curves
+   (transform #(* %1 %2) curve1 curve2)  ;; Multiplies outputs
+   ```"
   [transform & curves]
   (let [curves (map t/curve curves)]
     (t/AnyCurve
@@ -103,6 +134,12 @@
          (apply transform (map #(.transform % t) curves)))))))
 
 (defn average
+  "Creates a curve that averages the output of multiple curves.\\
+   Takes any number of curves and returns their arithmetic mean at each point.
+   ```clojure
+   (average curve1 curve2)  ;; Average of two curves
+   (average curve1 curve2 curve3)  ;; Average of three curves
+   ```"
   [& curves]
   (transform
    (fn [& values]
@@ -110,6 +147,12 @@
    curves))
 
 (defn multiply
+  "Creates a curve that multiplies the output of multiple curves.\\
+   Takes any number of curves and returns their product at each point.
+   ```clojure
+   (multiply curve1 curve2)  ;; Product of two curves
+   (multiply curve1 curve2 curve3)  ;; Product of three curves
+   ```"
   [& curves]
   (transform
    (fn [& values]
@@ -117,6 +160,12 @@
    curves))
 
 (defn add
+  "Creates a curve that adds the output of multiple curves.\\
+   Takes any number of curves and returns their sum at each point.
+   ```clojure
+   (add curve1 curve2)  ;; Sum of two curves
+   (add curve1 curve2 curve3)  ;; Sum of three curves
+   ```"
   [& curves]
   (transform
    (fn [& values]
@@ -124,6 +173,12 @@
    curves))
 
 (defn reversed
+  "Creates a curve that reverses another curve.\\
+   Takes a curve and returns a new curve that runs backwards,\\
+   effectively flipping the curve horizontally.
+   ```clojure
+   (reversed :ease-in)  ;; Creates an ease-out from an ease-in
+   ```"
   [curve]
   (let [curve (t/curve curve)]
     (t/AnyCurve
@@ -131,6 +186,12 @@
        (.transform curve (- 1.0 t))))))
 
 (defn autoreversed
+  "Creates a curve that plays forward then reverses.\\
+   Takes a curve and returns a new curve that runs the input curve\\
+   forward for the first half, then backwards for the second half.
+   ```clojure
+   (autoreversed :ease-in)  ;; Goes ease-in then ease-out
+   ```"
   [curve]
   (let [curve (t/curve curve)]
     (t/AnyCurve
@@ -140,6 +201,12 @@
          (.transform curve (* 2.0 (- 1.0 t))))))))
 
 (defn repeat
+  "Creates a curve that repeats another curve multiple times.\\
+   Takes a count and a curve, returns a new curve that repeats\\
+   the input curve the specified number of times.
+   ```clojure
+   (repeat 3 :ease-in)  ;; Repeats ease-in three times
+   ```"
   [count curve]
   ([curve (t/curve curve)]
    (t/AnyCurve
@@ -150,11 +217,23 @@
         (.transform curve t))))))
 
 (defn constant
+  "Creates a curve that always returns the same value.\\
+   Takes a value and returns a curve that outputs that value\\
+   regardless of the input time.
+   ```clojure
+   (constant 0.5)  ;; Always returns 0.5
+   ```"
   [value]
   (t/AnyCurve
    (fn [_] value)))
 
 (defn concat
+  "Creates a curve that concatenates multiple curves sequentially.\\
+   Takes any number of curves and returns a new curve that runs each\\
+   input curve for an equal portion of the total time.
+   ```clojure
+   (concat :ease-in :linear :ease-out)  ;; Runs three curves in sequence
+   ```"
   [& curves]
   (let [curves (map t/curve curves)
         len (count curves)]
@@ -169,6 +248,13 @@
            (.transform curve t)))))))
 
 (defn clamped
+  "Creates a curve that clamps its input to [0.0, 1.0].\\
+   Takes a curve and returns a new curve that ensures the input\\
+   time value stays within valid bounds before being passed to\\
+   the original curve.
+   ```clojure
+   (clamped :ease-in)  ;; Safe version of ease-in
+   ```"
   [curve]
   (let [curve (t/curve curve)]
     (t/AnyCurve
