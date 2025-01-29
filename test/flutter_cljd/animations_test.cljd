@@ -103,7 +103,7 @@
     (let [base-dur 1000
           repeated (a/repeat 2 (a/with {:dur base-dur} (a/to 0 100)))
           {:keys [dur]} (repeated nil nil)]
-      (is (= (.-inMicroseconds dur) (* base-dur 2)) "Duration should be doubled")
+      (is (= (.-inMilliseconds dur) (* base-dur 2)) "Duration should be doubled")
       
       (let [anim (unwrap repeated)]
         (is (= (anim 0) 0))
@@ -128,11 +128,11 @@
     (let [base-dur 1000
           reversed (a/autoreverse (a/with {:dur base-dur} percents))
           {:keys [dur]} (reversed nil nil)]
-      (is (= (.-inMicroseconds dur) (* base-dur 2)) "Duration should be doubled")
+      (is (= (.-inMilliseconds dur) (* base-dur 2)) "Duration should be doubled")
       
       (let [anim (unwrap reversed)]
         (is (= (anim 0) 0))      ; Start
         (is (= (anim 0.25) 50))  ; Forward halfway
         (is (= (anim 0.5) 100))  ; Forward complete
         (is (= (anim 0.75) 50))  ; Reverse halfway
-        (is (= (anim 1) 0)))))    ; Back to start
+        (is (= (anim 1) 0))))))    ; Back to start
