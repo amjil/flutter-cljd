@@ -169,7 +169,27 @@
                          :b (a/with {:dur-ratio 0.5} (a/to 0 50)))))]
       (is (= (anim 0) {:a 0 :b 0}))
       (is (= (anim 0.5) {:a 50 :b 50}))
-      (is (= (anim 1) {:a 100 :b 50})))))
+      (is (= (anim 1) {:a 100 :b 50}))))
+  
+  (testing "Duration computation"
+    (let [anim1 (a/par
+                 :a (a/with {:dur 1000} (a/to 0 100))
+                 :b (a/with {:dur 2000} (a/to 0 100)))
+          {:keys [dur]} (anim1 nil nil)]
+      (is (= (.-inMilliseconds dur) 2000) "Should use longest child duration"))
+    
+    (let [anim2 (a/par
+                 :a (a/with {:dur-ratio 0.5} (a/to 0 100))
+                 :b (a/with {:dur-ratio 0.7} (a/to 0 100)))
+          {:keys [dur]} (anim2 nil nil)]
+      (is (nil? dur) "Should not compute duration from ratios alone"))
+    
+    (let [anim3 (a/with {:dur 1000}
+                 (a/par
+                  :a (a/with {:dur 500} (a/to 0 100))
+                  :b (a/with {:dur 2000} (a/to 0 100))))
+          {:keys [dur]} (anim3 nil nil)]
+      (is (= (.-inMilliseconds dur) 2000) "Should use max of parent and children durations")))))
 
 (deftest test-curves
   (testing "Constant curve"
