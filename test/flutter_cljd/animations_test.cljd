@@ -94,7 +94,27 @@
       (is (= (anim 0) 0))
       (is (= (anim 0.25) 0))
       (is (not= (anim 0.75) 50)) ; Should not be linear due to ease-in-out
-      (is (= (anim 1) 100)))))
+      (is (= (anim 1) 100))))
+
+  (testing "Nested with"
+    (let [anim (unwrap (a/with {:dur 1000}
+                         (a/with {:dur-ratio 0.5}
+                           (a/with {:curve :ease-in}
+                             percents))))]
+      (is (= (anim 0) 0))
+      (is (< (anim 0.25) 25) "Should be affected by ease-in")
+      (is (= (anim 0.5) 100) "Should complete at halfway due to dur-ratio")
+      (is (= (anim 1) 100)))
+    
+    (let [anim (unwrap (a/with {:dur 1000}
+                         (a/with {:at-ratio 0.5}
+                           (a/with {:dur-ratio 0.5}
+                             percents))))]
+      (is (= (anim 0) 0))
+      (is (= (anim 0.4) 0) "Should not start before at-ratio")
+      (is (= (anim 0.5) 0) "Should start at at-ratio")
+      (is (= (anim 0.75) 50))
+      (is (= (anim 1) 100))))))
 
 (deftest test-repeat
   (testing "Basic repeat functionality"
