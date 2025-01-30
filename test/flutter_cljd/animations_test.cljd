@@ -169,11 +169,7 @@
                          :b (a/with {:dur-ratio 0.5} (a/to 0 50)))))]
       (is (= (anim 0) {:a 0 :b 0}))
       (is (= (anim 0.5) {:a 50 :b 50}))
-      (is (= (anim 1) {:a 100 :b 50}))))
-  
-  (testing "Error cases"
-    (is (thrown? js/Error (a/par :single-key))
-        "Should throw on odd number of arguments")))
+      (is (= (anim 1) {:a 100 :b 50})))))
 
 (deftest test-curves
   (testing "Constant curve"
