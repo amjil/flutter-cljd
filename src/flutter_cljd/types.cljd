@@ -970,9 +970,10 @@
     :else (throw (Exception. (str "Invalid duration: " value)))))
 
 (deftype AnyCurve
-  [curve]
+  [curve description]
   :extends (a/Curve)
-  (transform [_ t] (double (curve t))))
+  (transform [_ t] (double (curve t)))
+  (toString [_] (str (or description "AnyCurve"))))
 
 (defn curve [curve]
   (cond
@@ -1024,7 +1025,7 @@
       :slow-middle a/Curves.slowMiddle
       (throw (Exception. (str "Unknown curve: " curve)))) 
     
-    (fn? curve) (AnyCurve curve)
+    (fn? curve) (AnyCurve curve nil)
 
     :else
     (throw (Exception. (str "Invalid curve: " curve)))))

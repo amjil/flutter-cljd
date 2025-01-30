@@ -1,5 +1,6 @@
 (ns flutter-cljd.curves
   (:require
+   [cljd.string :as str]
    ["package:flutter/animation.dart" :as a]
    [flutter-cljd.drawing :as dr :refer [offset]]
    [flutter-cljd.types :as t]
@@ -86,15 +87,23 @@
 
    An Interval can be used to delay an animation. For example, a six second animation that uses an Interval with
    its begin set to 0.5 and its end set to 1.0 will essentially become a three-second animation that starts three seconds later."
-  ([start end curve]
-   (a/Interval
-    (double (max 0.0 (min 1.0 start end)))
-    (double (min 1.0 (max 0.0 end start)))
-    .curve (t/curve (or curve a/Curves.linear))))
-  ([start end]
-   (if (coll? start)
-     (interval (first start) (second start) end)
-     (interval start end nil)))
+  ([begin end curve] 
+   (let [duration (- end begin)
+         from (double (min begin end 1.0))
+         to (double (max begin end 0.0))
+         curve (t/curve curve)]
+     (t/AnyCurve
+      (fn [t]
+        (.transform curve (cond
+                            (<= t from) 0.0
+                            (>= t to) 1.0
+                            (zero? duration) 0.0
+                            :else (/ (- t from) duration))))
+      (str "(interval " begin ", " end ", " (.toString curve) ")"))))
+  ([begin end]
+   (if (coll? begin)
+     (interval (first begin) (second begin) end)
+     (interval begin end nil)))
   ([value]
    (if (number? value)
      (interval value 1.0)
@@ -121,16 +130,19 @@
    ```"
   ([start end curve]
    (let [curve (t/curve curve)
-         interval (- end start)]
+         interval (- end start)
+         description (str "(segment " start ", " end ", " (.toString curve) ")")]
      (if (<= interval 0)
        (t/AnyCurve
         (fn [t]
-          (if (= t start) t 0.0)))
+          (if (= t start) t 0.0))
+        description)
        (t/AnyCurve
         (fn [t]
           (if (or (< t start) (> t end))
             0.0
-            (.transform curve (/ (- t start) interval))))))))
+            (.transform curve (/ (- t start) interval))))
+        description))))
   ([start end]
    (if (coll? start)
      (segment (first start) (second start) end)
@@ -195,7 +207,8 @@
      (if (empty? curves)
        identity
        (fn [t]
-         (apply transform (map #(.transform % t) curves)))))))
+         (apply transform (map #(.transform % t) curves))))
+     (str "(transform transform-fn " (str/join " " (map #(.toString %) curves)) ")"))))
 
 (defn average
   "Creates a curve that averages the output of multiple curves.\\
@@ -247,7 +260,8 @@
   (let [curve (t/curve curve)]
     (t/AnyCurve
      (fn [t]
-       (.transform curve (- 1.0 t))))))
+       (.transform curve (- 1.0 t)))
+     (str "(reversed " (.toString curve) ")"))))
 
 (defn inversed
   "Creates a curve that inverts another curve.\\
@@ -260,7 +274,8 @@
   (let [curve (t/curve curve)]
     (t/AnyCurve
      (fn [t]
-       (- 1.0 (.transform curve t))))))
+       (- 1.0 (.transform curve t)))
+     (str "(inversed " (.toString curve) ")"))))
 
 (defn autoreversed
   "Creates a curve that plays forward then reverses.\\
@@ -275,7 +290,8 @@
      (fn [t]
        (if (< t 0.5)
          (.transform curve (* 2.0 t))
-         (.transform curve (* 2.0 (- 1.0 t))))))))
+         (.transform curve (* 2.0 (- 1.0 t)))))
+     (str "(autoreversed " (.toString curve) ")"))))
 
 (defn repeat
   "Creates a curve that repeats another curve multiple times.\\
@@ -289,7 +305,8 @@
     (t/AnyCurve
      (fn [T]
        (let [t (if (= T 1.0) 1.0 (mod (* T count) 1.0))]
-         (.transform curve t))))))
+         (.transform curve t)))
+     (str "(repeat " count " " (.toString curve) ")"))))
 
 (defn constant
   "Creates a curve that always returns the same value.\\
@@ -300,7 +317,8 @@
    ```"
   [value]
   (t/AnyCurve
-   (fn [_] value)))
+   (fn [_] value)
+   (str "(constant " value ")")))
 
 (defn concat
   "Creates a curve that concatenates multiple curves sequentially.\\
@@ -327,7 +345,8 @@
                i (max 0 (min (dec len) (int mult)))
                curve (nth curves i)
                t (if (= T 1.0) 1.0 (mod mult 1.0))]
-           (.transform curve t)))))))
+           (.transform curve t))))
+     (str "(concat " (str/join " " (map #(.toString %) curves)) ")"))))
 
 (defn split
   "A curve that progresses according to beginCurve until split, then according to endCurve.
@@ -359,7 +378,8 @@
          (.transform curve 0.0)
          (if (> T 1.0)
            (.transform curve 1.0)
-           (.transform curve T)))))))
+           (.transform curve T))))
+     (str "(clamped " (.toString curve) ")"))))
 
 (defn first-non-zero
   "Creates a curve that returns the first non-zero value from a sequence of curves.\\
@@ -384,7 +404,8 @@
                 (let [value (.transform curve t)]
                   (when-not (zero? value) value)))
               curves)
-        0.0)))))
+        0.0))
+     (str "(first-non-zero " (str/join " " (map #(.toString %) curves)) ")"))))
 
 (def linear a/Curves.linear)
 (def bounce-in a/Curves.bounceIn)
