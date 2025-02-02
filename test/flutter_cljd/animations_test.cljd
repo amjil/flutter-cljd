@@ -209,6 +209,73 @@
           {:keys [duration]} (anim3 nil nil)]
       (is (= (.-inMilliseconds duration) 2000) "Should use max of parent and children durations"))))
 
+(deftest test-seq
+  (testing "Basic sequential animation"
+    (let [anim (unwrap (a/seq
+                        (a/to 0 50)
+                        (a/to 50 100)))]
+      (is (= (anim 0) 0))
+      (is (= (anim 0.25) 25))
+      (is (= (anim 0.5) 50))
+      (is (= (anim 0.75) 75))
+      (is (= (anim 1) 100))))
+
+  (testing "With different durations"
+    (let [anim (unwrap (a/seq
+                        (a/with {:relative-duration 0.25} (a/to 0 50))
+                        (a/with {:relative-duration 0.75} (a/to 50 100))))]
+      (is (= (anim 0) 0))
+      (is (= (anim 0.25) 50))
+      (is (= (anim 0.5) 67))
+      (is (= (anim 0.75) 83))
+      (is (= (anim 1) 100))))
+
+  (testing "With initial value map"
+    (let [anim (unwrap (a/seq
+                        {:x 0 :y 0}
+                        (a/par
+                          :x (a/to 100)
+                          :y (a/to 200))))]
+      (is (= (anim 0) {:x 0 :y 0}))
+      (is (= (anim 0.5) {:x 50 :y 100}))
+      (is (= (anim 1) {:x 100 :y 200}))))
+
+  (testing "Nested sequences"
+    (let [anim (unwrap (a/seq
+                        (a/to 0 25)
+                        (a/seq
+                          (a/to 25 50)
+                          (a/to 50 75))
+                        (a/to 75 100)))]
+      (is (= (anim 0) 0))
+      (is (= (anim 0.25) 25))
+      (is (= (anim 0.5) 50))
+      (is (= (anim 0.75) 75))
+      (is (= (anim 1) 100))))
+
+  (testing "With options"
+    (let [anim (unwrap (a/seq
+                        {:duration 1000 :curve :ease-in}
+                        (a/to 0 50)
+                        (a/to 50 100)))]
+      (is (= (anim 0) 0))
+      (is (< (anim 0.25) 25) "Should be affected by ease-in")
+      (is (< (anim 0.75) 75) "Should be affected by ease-in")
+      (is (= (anim 1) 100))))
+
+  (testing "Duration computation"
+    (let [anim1 (a/seq
+                  (a/with {:duration 1000} (a/to 0 50))
+                  (a/with {:duration 2000} (a/to 50 100)))
+          {:keys [duration]} (anim1 nil nil)]
+      (is (= (.-inMilliseconds duration) 3000) "Should sum child durations"))
+
+    (let [anim2 (a/seq {:duration 5000}
+                  (a/with {:relative-duration 0.2} (a/to 0 50))
+                  (a/with {:relative-duration 0.8} (a/to 50 100)))
+          {:keys [duration]} (anim2 nil nil)]
+      (is (= (.-inMilliseconds duration) 5000) "Should use parent duration"))))
+
 (deftest test-curves
   (testing "Constant curve"
     (let [curve (c/constant 0.5)]
