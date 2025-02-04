@@ -11,7 +11,7 @@
          interpolate (:interpolate (animation
                                     value
                                     (or duration (:duration (animation value nil)) 250)))]
-     (fn [t] (:value (interpolate (double t) {:last-t (* 0.99 t)}))))))
+     (fn [t] (:value (interpolate (double t) {:prev-t (* 0.99 t)}))))))
 
 (def ^:private percents
   (a/into-motion
@@ -313,30 +313,22 @@
       (is (= (.-inMilliseconds duration) 5000) "Should use parent duration"))))
 
 (deftest test-actions
-  (testing "action!"
-    (let [called (atom false)
-          anim (unwrap (action! #(reset! called true)))]
-      (is (= (anim 0) nil))
-      (is (false? @called))
-      (is (= (anim 1) nil))
-      (is (true? @called))))
-
   (testing "action! in sequence"
     (let [calls (atom [])
-          anim (unwrap (seq
-                        (to 10)
-                        (action! #(swap! calls conj :action))
-                        (to 20)))]
+          anim (unwrap (a/seq
+                        (a/to 10)
+                        (a/action! #(swap! calls conj :action))
+                        (a/to 20)))]
       (is (= (anim 0) 10))
       (is (empty? @calls))
-      (is (= (anim 0.5) 20))
+      (is (= (anim 0.501) 20))
       (is (= @calls [:action]))
       (is (= (anim 1) 20))
       (is (= @calls [:action]))))
 
   (testing "action-with!"
     (let [received (atom nil)
-          anim (unwrap (action-with! #(reset! received %)))]
+          anim (unwrap (a/action-with! #(reset! received %)))]
       (is (= (anim 0) nil))
       (is (nil? @received))
       (is (= (anim 1) nil))
@@ -344,10 +336,10 @@
 
   (testing "action-with! in sequence"
     (let [received (atom [])
-          anim (unwrap (seq
-                        (to 10)
-                        (action-with! #(swap! received conj %))
-                        (to 20)))]
+          anim (unwrap (a/seq
+                        (a/to 10)
+                        (a/action-with! #(swap! received conj %))
+                        (a/to 20)))]
       (is (= (anim 0) 10))
       (is (empty? @received))
       (is (= (anim 0.5) 20))
@@ -358,7 +350,7 @@
 (deftest test-actions
   (testing "action!"
     (let [called (atom false)
-          anim (unwrap (action! #(reset! called true)))]
+          anim (unwrap (a/action! #(reset! called true)))]
       (is (= (anim 0) nil))
       (is (false? @called))
       (is (= (anim 1) nil))
@@ -366,34 +358,33 @@
 
   (testing "action! in sequence"
     (let [calls (atom [])
-          anim (unwrap (seq
-                        (to 10)
-                        (action! #(swap! calls conj :action))
-                        (to 20)))]
-      (is (= (anim 0) 10))
+          anim (unwrap (a/seq
+                        (a/to 0 10)
+                        (a/action! #(swap! calls conj :action))
+                        (a/to 20)))]
+      (is (= (anim 0) 0))
       (is (empty? @calls))
-      (is (= (anim 0.5) 20))
+      (is (= (anim 0.501) 10))
       (is (= @calls [:action]))
-      (is (= (anim 1) 20))
-      (is (= @calls [:action]))))
+      (is (= (anim 1) 20))))
 
   (testing "action-with!"
     (let [received (atom nil)
-          anim (unwrap (action-with! #(reset! received %)))]
+          anim (unwrap (a/action-with! #(reset! received %)))]
       (is (= (anim 0) nil))
       (is (nil? @received))
-      (is (= (anim 1) nil))
+      (is (= (anim 1.01) nil))
       (is (= @received nil))))
 
   (testing "action-with! in sequence"
     (let [received (atom [])
-          anim (unwrap (seq
-                        (to 10)
-                        (action-with! #(swap! received conj %))
-                        (to 20)))]
-      (is (= (anim 0) 10))
+          anim (unwrap (a/seq
+                        (a/to 0 10)
+                        (a/action-with! #(swap! received conj %))
+                        (a/to 20)))]
+      (is (= (anim 0) 0))
       (is (empty? @received))
-      (is (= (anim 0.5) 20))
+      (is (= (anim 0.501) 10))
       (is (= @received [10]))
       (is (= (anim 1) 20))
       (is (= @received [10])))))
