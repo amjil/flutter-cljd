@@ -125,11 +125,10 @@
      ```"
   [value & values]
   (let [values (cons value values)]
-    {:prepare-motion 
+    {:prepare-motion
      (fn [from exp-dur]
        (let [values (if (some? from) (concat [from] values) values)
              int-cnt (dec (count values))
-             duration (if (zero? int-cnt) 0 (when exp-dur (/ (in-mcs exp-dur) int-cnt)))
              lerp #(ut/lerp %1 %2)]
          {:interpolate (case int-cnt
                          0 (const-anim (first values))
@@ -145,7 +144,7 @@
                                 (if (< i int-cnt)
                                   ((lerp (nth values i) (nth values (inc i))) t)
                                   (last values)))))))
-          :duration (from-mcs duration)}))
+          :duration (if (zero? int-cnt) (t/duration 0) exp-dur)}))
      :description
      (str "(to " (str/join " " values) ")")}))
 
@@ -178,12 +177,12 @@
    (instant 10.0)
    (instant)
    ```"
-  ([] 
-   (into-motion 
+  ([]
+   (into-motion
     (fn [value _] (const-anim value 0))
     "(instant)"))
   ([value]
-   (into-motion 
+   (into-motion
     (fn [_ _] (const-anim value 0))
     (str "(instant " value ")"))))
 
@@ -201,42 +200,60 @@
                      {:value value :cache cache})})
    "(action fn)"))
 
+(defn- flat-motions [motions]
+  (->> motions
+       (mapcat
+        #(if (sequential? %) (flat-motions %) [%]))))
+
 (defn- -sequential [motions]
-  (let [motions  (->> motions flatten into-motion (filter some?))]
+  (let [motions (->> motions flat-motions (filter some?) (map into-motion))
+        clamp #(min 1.0 (max 0.0 %))]
     (into-motion
      (fn [value exp-dur]
-       (let [{:keys [sum-abs sum-rel cnt-any cnt-abs items]}
+       (let [{:keys [sum-abs sum-rel cnt-any items intr-dur]}
              (reduce
               (fn [res motion]
                 (if (some? motion)
                   (let [{:keys [value sum-abs sum-rel]} res
                         {:keys [duration relative-duration interpolate]} ((:prepare-motion motion) value nil)
                         next-value (:value (interpolate 1.0 {}))
-                        duration (in-mcs duration)]
+                        duration (in-mcs duration)
+                        relative (when (and (nil? duration) relative-duration) (clamp relative-duration))]
                     {:value next-value
-                     :sum-abs (if duration (+ duration sum-abs) sum-abs)
-                     :sum-rel (+ sum-rel (or relative-duration 0.0))
-                     :cnt-any (+ (:cnt-any res) (if (or duration relative-duration) 0 1))
+                     :sum-abs (if duration (+ duration (or sum-abs 0.0)) sum-abs)
+                     :sum-rel (+ sum-rel (or relative 0.0))
+                     :cnt-any (+ (:cnt-any res) (if (or duration relative) 0 1))
                      :cnt-abs (+ (:cnt-abs res) (if duration 1 0))
-                     :items (conj (:items res) {:duration duration :relative-duration relative-duration :interpolate interpolate})})
+                     :intr-dur (when (and duration relative-duration (< 0 relative-duration)) (/ duration relative-duration))
+                     :items (conj (:items res) {:duration duration :relative-duration relative :interpolate interpolate})})
                   res))
-              {:value value :sum-abs 0.0 :sum-rel 0.0 :cnt-any 0 :cnt-abs 0 :items []}
+              {:value value :sum-abs nil :sum-rel 0.0 :cnt-any 0 :cnt-abs 0 :items []}
               motions)
-             sum-rel (min 1.0 (max 0.0 sum-rel))
-             min-dur (* sum-abs (- 1.0 sum-rel))
+             rel-k (if (< 1 sum-rel) (/ sum-rel) 1.0)
+             sum-rel (clamp sum-rel)
+             min-dur (if (and sum-abs sum-rel (< sum-rel 1.0)) (/ sum-abs (- 1.0 sum-rel)) sum-abs)
              exp-dur (in-mcs exp-dur)
-             res-dur (if exp-dur
-                       (max min-dur exp-dur)
-                       (when (and (zero? cnt-any) (> cnt-abs 0)) min-dur))
-             any-dur (if (and res-dur (> cnt-any 0)) (/ (- res-dur min-dur) cnt-any res-dur) 0.0)
+             res-dur (let [durs (->> 
+                                 [exp-dur intr-dur]
+                                 (concat (if (< 0 cnt-any) [] [min-dur]))
+                                 (filter some?))]
+                       (when-not (empty? durs) (apply max durs)))
+             any-dur (if (> cnt-any 0)
+                       (if (and res-dur min-dur (> res-dur 0))
+                         (/ (- (/ (- res-dur min-dur) res-dur) sum-rel) cnt-any)
+                         (/ (- 1.0 sum-rel) cnt-any))
+                       0.0)
              final-items (reduce
                           (fn [res item]
                             (let [{:keys [duration relative-duration]} item
+                                  relative-duration (when relative-duration (* rel-k relative-duration))
                                   t (if (empty? res) 0.0 (:end (last res)))
                                   rel-dur (or relative-duration
-                                              (if (< 0 res-dur)
-                                                (/ (or duration any-dur) res-dur)
-                                                1.0))
+                                              (when res-dur
+                                                (if (< 0 res-dur)
+                                                  (if duration (/ duration res-dur) any-dur)
+                                                  1.0))
+                                              any-dur)
                                   end (+ t rel-dur)]
                               (conj res (assoc item :start t :end end :rel-dur rel-dur))))
                           []
@@ -249,29 +266,61 @@
                          (fn [t cache]
                            (let [items-cache (:items cache {})
                                  last-t (:last-t cache)
-                                 x (min 1.0 (max 0.0 t))
-                                 items (->> final-items
-                                            (map-indexed (fn [i item] [i item]))
-                                            (drop-while #(< (:end (last %)) x))
-                                            (take-while #(let [[_ {:keys [start end rel-dur]}] %]
-                                                           (or (and (< start x) (<= x end)) (and (zero? rel-dur) (= end x))))))
-                                 results (map
-                                          (fn [[i {:keys [start rel-dur interpolate]}]]
-                                            (let [transform-t #(if (zero? rel-dur) 1.0 (/ (- % start) rel-dur))
-                                                  anim-t (transform-t t)
-                                                  last-anim-t (when last-t (transform-t last-t))]
-                                              [i (interpolate
-                                                  anim-t
-                                                  (merge
-                                                   (assoc cache :items nil)
-                                                   (get items-cache i {})
-                                                   {:last-t last-anim-t}))]))
-                                          items)
-                                 new-value (some-> results last last :value)
-                                 new-items-cache (into items-cache (map (fn [[i {:keys [cache]}]] [i cache]) results))]
-                             {:value (if (empty? results) value new-value)
+                                 is-forward? (or (nil? last-t) (when last-t (< last-t t)) (= last-t t 0.0))
+                                 start-key (if is-forward? :start :end)
+                                 end-key (if is-forward? :end :start)
+                                 start-point (if is-forward? 0.0 1.0)
+                                 end-point (if is-forward? 1.0 0.0)
+                                 strict-compare (if is-forward? < >)
+                                 soft-compare (if is-forward? <= >=)
+                                 last-i (- cnt 1)
+                                 clamp-start #(if is-forward? (max 0.0 %) (min 1.0 %)) 
+                                 clamp-end #(if is-forward? (min 1.0 %) (max 0.0 %))
+                                 is-last? #(if is-forward? (= last-i %) (= 0 %))
+                                 is-first? #(if is-forward? (= 0 %) (= last-i %))
+                                 filtered (->> final-items
+                                               (map-indexed (fn [i item] [i item]))
+                                               (filter #(let [[i item] %
+                                                              rel-dur (:rel-dur item)
+                                                              start (start-key item)
+                                                              end (end-key item)]
+                                                          (and (not (and last-t (strict-compare end last-t)))
+                                                               (or (and (soft-compare start t) (strict-compare t end))
+                                                                   (and (zero? rel-dur) (= end t))
+                                                                   (and (is-first? i) (strict-compare t start))
+                                                                   (and (is-last? i) (soft-compare end t)))))))
+                                 items (map (fn [[i {:keys [rel-dur interpolate] :as item}]]
+                                              (let [start (start-key item)
+                                                    end (end-key item)
+                                                    transform-t #(if (zero? rel-dur) end-point (/ (- % (:start item)) rel-dur))
+                                                    clamped-t #(cond 
+                                                                 (is-first? i) (clamp-end (transform-t %)) 
+                                                                 (is-last? i) (clamp-start (transform-t %))  
+                                                                 :else (clamp (transform-t %)))
+                                                    anim-t (clamped-t t)
+                                                    last-anim-t (when last-t (clamped-t last-t))
+                                                    item-cache-fn #(merge
+                                                                    (assoc cache :items nil)
+                                                                    (get items-cache i {})
+                                                                    {:last-t %})
+                                                    value-fn #(interpolate %1 %2)
+                                                    last-t (or last-t start)
+                                                    value (cond
+                                                            (or (zero? rel-dur) (soft-compare last-t start end t))
+                                                            (value-fn end-point (item-cache-fn start-point))
+
+                                                            (soft-compare start last-t end t)
+                                                            (value-fn end-point (item-cache-fn last-anim-t))
+
+                                                            :else
+                                                            (value-fn anim-t (item-cache-fn last-anim-t)))]
+                                                [i value]))
+                                            (if is-forward? filtered (reverse filtered)))
+                                 new-value (some-> items last last :value)
+                                 new-items-cache (into items-cache (map (fn [[i {:keys [cache]}]] [i cache]) items))]
+                             {:value (if (empty? items) value new-value)
                               :cache (assoc cache :items new-items-cache)})))}))
-     (str "(seq" (str/join " " (map :description motions)) ")"))))
+     (str "(seq " (str/join " " (map :description motions)) ")"))))
 
 (defn- -parallel [motions]
   (let [motions (map (fn [[k v]] [k (into-motion v)]) motions)]
@@ -330,7 +379,7 @@
                                new-items-cache (into items-cache (map (fn [[k {:keys [cache]}]] [k cache]) results))]
                            {:value new-value
                             :cache (assoc cache :items new-items-cache)}))}))
-     (str "(par " (str/join " " (map (fn [[k v]] (str k (:description v))) motions)) ")"))))
+     (str "(par " (str/join " " (map (fn [[k v]] (str k " " (:description v))) motions)) ")"))))
 
 (defn duration
   [duration motion]
@@ -353,14 +402,14 @@
 (defn curve
   [curve motion]
   (let [motion (into-motion motion)
-        curve (t/curve curve)] 
-  (into-motion
-   (fn [value exp-dur]
-     (let [{:keys [interpolate duration relative-duration]} ((:prepare-motion motion) value exp-dur)]
-       {:interpolate #(interpolate (.transform curve (double %1)) %2)
-        :relative-duration relative-duration
-        :duration duration}))
-   (str "(curve " (.toString curve) " " (:description motion) ")"))))
+        curve (t/curve curve)]
+    (into-motion
+     (fn [value exp-dur]
+       (let [{:keys [interpolate duration relative-duration]} ((:prepare-motion motion) value exp-dur)]
+         {:interpolate #(interpolate (.transform curve (double %1)) %2)
+          :relative-duration relative-duration
+          :duration duration}))
+     (str "(curve " (.toString curve) " " (:description motion) ")"))))
 
 (defn relative-duration
   [ratio motion]
@@ -376,8 +425,8 @@
 (defn relative-delay
   [delay motion]
   (let [motion (into-motion motion)]
-    (fn [value exp-dur]
-      (into-motion
+    (into-motion
+     (fn [value exp-dur]
        (let [exp-dur-mcs (in-mcs exp-dur)
              delay-mcs (when exp-dur-mcs (* delay exp-dur-mcs))
              dur-mcs (when exp-dur-mcs (* exp-dur-mcs (- 1.0 delay)))
@@ -386,8 +435,8 @@
              curve (curves/interval delay 1.0 :linear)]
          {:interpolate #(interpolate (.transform curve (double %1)) %2)
           :relative-duration (when relative-duration (+ delay relative-duration))
-          :duration (from-mcs dur-mcs)})
-       (str "(relative-delay" delay " " (:description motion) ")")))))
+          :duration (from-mcs dur-mcs)}))
+     (str "(relative-delay" delay " " (:description motion) ")"))))
 
 (defn delay
   [delay motion]
@@ -430,7 +479,7 @@
    (with {:duration 100 :curve :ease-in-out} w/Colors.blue)
    (with {:duration 100} (to 10.0))
    ```"
-  [{:keys [relative-delay delay relative-duration duration curve]} motion] 
+  [{:keys [relative-delay delay relative-duration duration curve]} motion]
   (cond->> (into-motion motion)
     curve (flutter-cljd.animations/curve curve)
     duration (flutter-cljd.animations/duration duration)
@@ -454,7 +503,7 @@
      (wait) ;; Wait for 400ms
      (with {:duration 100} w/Colors.red))
    ```"
-  ([] 
+  ([]
    (into-motion
     (fn [value, exp-dur] (const-anim value exp-dur))
     "(wait)"))
@@ -536,7 +585,8 @@
         (fn [value exp-dur]
           (let [relative-duration (/ cnt)
                 loop-dur (when exp-dur {:microseconds (* (in-mcs exp-dur) relative-duration)})
-                {:keys [duration interpolate]} ((:prepare-motion motion) value loop-dur)]
+                prepare-motion (:prepare-motion motion)
+                {:keys [duration interpolate]} (prepare-motion value loop-dur)]
             {:interpolate
              (fn [T cache]
                (let [transform-t #(if (= % 1.0) 1.0 (mod (* % cnt) 1.0))

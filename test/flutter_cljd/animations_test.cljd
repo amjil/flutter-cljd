@@ -7,14 +7,19 @@
   ([animation] (unwrap nil animation nil))
   ([animation duration] (if (fn? animation) (unwrap nil animation duration) (unwrap animation duration nil)))
   ([value animation duration]
-   (let [anim (:interpolate (animation value (or duration (:duration (animation value nil)) 250)))]
-     (fn [t] (:value (anim (double t) {:last-t 0}))))))
+   (let [animation (:prepare-motion animation)
+         interpolate (:interpolate (animation
+                                    value
+                                    (or duration (:duration (animation value nil)) 250)))]
+     (fn [t] (:value (interpolate (double t) {:last-t (* 0.99 t)}))))))
 
 (def ^:private percents
-  (fn [_ duration] {:duration duration
-               :interpolate (fn [t cache]
-                       {:value (int (* 100 t))
-                        :cache cache})}))
+  (a/into-motion
+   (fn [_ duration]
+     {:duration duration
+      :interpolate (fn [t cache]
+                     {:value (int (* 100 t))
+                      :cache cache})})))
 
 (deftest test-to
   (testing "Single value"
@@ -29,6 +34,14 @@
       (is (= (anim 0.25) 25))
       (is (= (anim 0.5) 50))
       (is (= (anim 0.75) 75))
+      (is (= (anim 1) 100))))
+
+  (testing "Valid between two non zero values"
+    (let [anim (unwrap (a/to 50 100))]
+      (is (= (anim 0) 50))
+      (is (= (anim 0.25) 63))
+      (is (= (anim 0.5) 75))
+      (is (= (anim 0.75) 88))
       (is (= (anim 1) 100))))
 
   (testing "Valid between many values"
@@ -48,7 +61,7 @@
 
 (deftest test-with
   (testing "Duration option"
-    (let [anim ((a/with {:duration 100} percents) nil nil)]
+    (let [anim ((:prepare-motion (a/with {:duration 100} percents)) nil nil)]
       (is (= (.-inMilliseconds (:duration anim)) 100))))
 
   (testing "Start time option"
@@ -98,17 +111,17 @@
 
   (testing "Nested with"
     (let [anim (unwrap (a/with {:duration 1000}
-                         (a/with {:relative-duration 0.5}
-                           (a/with {:curve :ease-in}
-                             percents))))]
+                               (a/with {:relative-duration 0.5}
+                                       (a/with {:curve :ease-in}
+                                               percents))))]
       (is (= (anim 0) 0))
       (is (< (anim 0.5) 50) "Should be affected by ease-in")
       (is (= (anim 1) 100)))
-     
+
     (let [anim (unwrap (a/with {:duration 1000}
-                         (a/with {:relative-delay 0.5}
-                           (a/with {:relative-duration 0.5}
-                             percents))))]
+                               (a/with {:relative-delay 0.5}
+                                       (a/with {:relative-duration 0.5}
+                                               percents))))]
       (is (= (anim 0) 0))
       (is (= (anim 0.4) 0) "Should not start before relative-delay")
       (is (= (anim 0.5) 0) "Should start at relative-delay")
@@ -118,11 +131,12 @@
 (deftest test-repeat
   (testing "Basic repeat functionality"
     (let [base-dur 1000
-          repeated (a/repeat 2 (a/with {:duration base-dur} percents))
+          repeated (:prepare-motion (a/repeat 2 (a/with {:duration base-dur} percents)))
           {:keys [duration]} (repeated nil nil)]
       (is (= (.-inMilliseconds duration) (* base-dur 2)) "Duration should be doubled")
 
-      (let [anim (unwrap repeated)]
+      (let [repeated (a/repeat 2 (a/with {:duration base-dur} percents))
+            anim (unwrap repeated)]
         (is (= (anim 0) 0))
         (is (= (anim 0.25) 50))  ; First iteration at 50%
         (is (= (anim 0.5) 0))    ; Start of second iteration
@@ -143,11 +157,12 @@
 (deftest test-autoreverse
   (testing "Basic autoreverse functionality"
     (let [base-dur 1000
-          reversed (a/autoreverse (a/with {:duration base-dur} percents))
+          reversed (:prepare-motion (a/autoreverse (a/with {:duration base-dur} percents)))
           {:keys [duration]} (reversed nil nil)]
       (is (= (.-inMilliseconds duration) (* base-dur 2)) "Duration should be doubled")
 
-      (let [anim (unwrap reversed)]
+      (let [reversed (a/autoreverse (a/with {:duration base-dur} percents))
+            anim (unwrap reversed)]
         (is (= (anim 0) 0))      ; Start
         (is (= (anim 0.25) 50))  ; Forward halfway
         (is (= (anim 0.5) 100))  ; Forward complete
@@ -191,21 +206,24 @@
       (is (= (anim 1) {:a 100 :b 50}))))
 
   (testing "Duration computation"
-    (let [anim1 (a/par
-                 :a (a/with {:duration 1000} (a/to 0 100))
-                 :b (a/with {:duration 2000} (a/to 0 100)))
+    (let [anim1 (:prepare-motion
+                 (a/par
+                  :a (a/with {:duration 1000} (a/to 0 100))
+                  :b (a/with {:duration 2000} (a/to 0 100))))
           {:keys [duration]} (anim1 nil nil)]
       (is (= (.-inMilliseconds duration) 2000) "Should use longest child duration"))
 
-    (let [anim2 (a/par
-                 :a (a/with {:relative-duration 0.5} (a/to 0 100))
-                 :b (a/with {:relative-duration 0.7} (a/to 0 100)))
+    (let [anim2 (:prepare-motion
+                 (a/par
+                  :a (a/with {:relative-duration 0.5} (a/to 0 100))
+                  :b (a/with {:relative-duration 0.7} (a/to 0 100))))
           {:keys [duration]} (anim2 nil nil)]
       (is (nil? duration) "Should not compute duration from ratios alone"))
 
-    (let [anim3 (a/par {:duration 1000}
-                 :a (a/with {:duration 500} (a/to 0 100))
-                 :b (a/with {:duration 2000} (a/to 0 100)))
+    (let [anim3 (:prepare-motion
+                 (a/par {:duration 1000}
+                        :a (a/with {:duration 500} (a/to 0 100))
+                        :b (a/with {:duration 2000} (a/to 0 100))))
           {:keys [duration]} (anim3 nil nil)]
       (is (= (.-inMilliseconds duration) 2000) "Should use max of parent and children durations"))))
 
@@ -213,7 +231,7 @@
   (testing "Basic sequential animation"
     (let [anim (unwrap (a/seq
                         (a/to 0 50)
-                        (a/to 50 100)))]
+                        (a/to 100)))]
       (is (= (anim 0) 0))
       (is (= (anim 0.25) 25))
       (is (= (anim 0.5) 50))
@@ -222,8 +240,31 @@
 
   (testing "With different durations"
     (let [anim (unwrap (a/seq
-                        (a/with {:relative-duration 0.25} (a/to 0 50))
-                        (a/with {:relative-duration 0.75} (a/to 50 100))))]
+                        (->> (a/to 0 50) (a/duration 25))
+                        (->> 100 (a/duration 75))))]
+      (is (= (anim 0) 0))
+      (is (= (anim 0.25) 50))
+      (is (= (anim 0.5) 67))
+      (is (= (anim 0.75) 83))
+      (is (= (anim 1) 100))))
+
+  (testing "With different relative durations"
+    (let [anim (unwrap (a/seq
+                        0
+                        (->> 50 (a/relative-duration 0.25))
+                        100))]
+      (is (= (anim 0) 0))
+      (is (= (anim 0.25) 50))
+      (is (= (anim 0.5) 67))
+      (is (= (anim 0.75) 83))
+      (is (= (anim 1) 100))))
+
+  (testing "With mixed durations"
+    (let [anim (unwrap
+                (a/seq
+                 0
+                 (->> 50 (a/duration 25))
+                 (->> 100 (a/relative-duration 0.75))))]
       (is (= (anim 0) 0))
       (is (= (anim 0.25) 50))
       (is (= (anim 0.5) 67))
@@ -234,22 +275,18 @@
     (let [anim (unwrap (a/seq
                         {:x 0 :y 0}
                         (a/par
-                          :x (a/to 100)
-                          :y (a/to 200))))]
+                         :x (a/to 100)
+                         :y (a/to 200))))]
       (is (= (anim 0) {:x 0 :y 0}))
       (is (= (anim 0.5) {:x 50 :y 100}))
       (is (= (anim 1) {:x 100 :y 200}))))
 
   (testing "Nested sequences"
-    (let [anim (unwrap (a/seq
-                        (a/to 0 25)
-                        (a/seq
-                          (a/to 25 50)
-                          (a/to 50 75))
-                        (a/to 75 100)))]
+    (let [anim (unwrap (a/seq 0 33 (a/seq 50 67) 100))]
       (is (= (anim 0) 0))
       (is (= (anim 0.25) 25))
       (is (= (anim 0.5) 50))
+      (is (= (anim 0.67) 67))
       (is (= (anim 0.75) 75))
       (is (= (anim 1) 100))))
 
@@ -264,15 +301,17 @@
       (is (= (anim 1) 100))))
 
   (testing "Duration computation"
-    (let [anim1 (a/seq
-                  (a/with {:duration 1000} (a/to 0 50))
-                  (a/with {:duration 2000} (a/to 50 100)))
+    (let [anim1 (:prepare-motion
+                 (a/seq
+                  (a/duration 1000 (a/to 0 50))
+                  (a/duration 2000 (a/to 50 100))))
           {:keys [duration]} (anim1 nil nil)]
       (is (= (.-inMilliseconds duration) 3000) "Should sum child durations"))
 
-    (let [anim2 (a/seq {:duration 5000}
-                  (a/with {:relative-duration 0.2} (a/to 0 50))
-                  (a/with {:relative-duration 0.8} (a/to 50 100)))
+    (let [anim2 (:prepare-motion
+                 (a/seq {:duration 5000}
+                        (a/with {:relative-duration 0.2} (a/to 0 50))
+                        (a/with {:relative-duration 0.8} (a/to 50 100))))
           {:keys [duration]} (anim2 nil nil)]
       (is (= (.-inMilliseconds duration) 5000) "Should use parent duration"))))
 

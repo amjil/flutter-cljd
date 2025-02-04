@@ -53,23 +53,23 @@
 
 (extend-protocol f/ITweenable
   w/Offset
-  (-tween [end] 
-    (f/tween-with 
-     (fn [begin end]  
+  (-tween [end]
+    (f/tween-with
+     (fn [begin end]
        (fn [t] (w/Offset.lerp begin end t)))
      end))
 
   w/Shadow
   (-tween [end]
-    (f/tween-with 
-     (fn [begin end] 
+    (f/tween-with
+     (fn [begin end]
        (fn [t] (w/Shadow.lerp begin end t)))
      end))
 
   w/BoxShadow
   (-tween [end]
-    (f/tween-with 
-     (fn [begin end] 
+    (f/tween-with
+     (fn [begin end]
        (fn [t] (w/BoxShadow.lerp begin end t)))
      end)))
 
@@ -100,17 +100,17 @@
    ;; Maps
    ((lerp {:x 0} {:x 10}) 0.5) ; => {:x 5}
    ```"
-  ([from to t] 
+  ([from to t]
    ((lerp from to) t))
   ([from to]
    (cond
-     (satisfies? f/ITweenable from) 
+     (satisfies? f/ITweenable from)
      (f/lerp from to)
-     
+
      (and (int? from) (int? to))
      (fn [t] (.round (+ (* (- 1 t) (double from)) (* t (double to)))))
 
-     (and (number? from) (number? to)) 
+     (and (number? from) (number? to))
      #(+ (* (- 1 %) from) (* % to))
 
      (and (vector? from) (vector? to) (= (count from) (count to)))
@@ -118,27 +118,27 @@
 
      (and (map? from) (map? to))
      (fn [t]
-      (let [all-keys (set (concat (keys from) (keys to)))]
-        (reduce (fn [acc k]
-                  (cond
+       (let [all-keys (set (concat (keys from) (keys to)))]
+         (reduce (fn [acc k]
+                   (cond
                         ;; Key exists in both maps - interpolate
-                    (and (contains? from k) (contains? to k))
-                    (assoc acc k ((lerp (get from k) (get to k)) t))
-    
+                     (and (contains? from k) (contains? to k))
+                     (assoc acc k ((lerp (get from k) (get to k)) t))
+
                         ;; Key only in 'from' - keep if t < 0.5
-                    (contains? from k)
-                    (if (< t 0.5)
-                      (assoc acc k (get from k))
-                      acc)
-    
+                     (contains? from k)
+                     (if (< t 0.5)
+                       (assoc acc k (get from k))
+                       acc)
+
                         ;; Key only in 'to' - keep if t >= 0.5
-                    :else
-                    (if (>= t 0.5)
-                      (assoc acc k (get to k))
-                      acc)))
-                {}
-                all-keys)))
-     
+                     :else
+                     (if (>= t 0.5)
+                       (assoc acc k (get to k))
+                       acc)))
+                 {}
+                 all-keys)))
+
      :else
      #(if (> % 0.5) to from))))
 
@@ -189,3 +189,14 @@
   [args children]
   [(if (map? args) args {})
    (flatten-children (if (map? args) children (cons args children)))])
+
+(defmacro dbg 
+  "Prints variable names and their values.
+    
+    ```clojure
+    (let [x 10 y 20]
+      (dbg x y))
+    ;; Output: x: 10 y: 20
+   ```"
+  [& vars]
+  `(println ~@(map (fn [v] `(str '~v ": " (if (nil? ~v) "nil" ~v))) vars)))
