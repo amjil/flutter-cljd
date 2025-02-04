@@ -355,6 +355,49 @@
       (is (= (anim 1) 20))
       (is (= @received [10])))))
 
+(deftest test-actions
+  (testing "action!"
+    (let [called (atom false)
+          anim (unwrap (action! #(reset! called true)))]
+      (is (= (anim 0) nil))
+      (is (false? @called))
+      (is (= (anim 1) nil))
+      (is (true? @called))))
+
+  (testing "action! in sequence"
+    (let [calls (atom [])
+          anim (unwrap (seq
+                        (to 10)
+                        (action! #(swap! calls conj :action))
+                        (to 20)))]
+      (is (= (anim 0) 10))
+      (is (empty? @calls))
+      (is (= (anim 0.5) 20))
+      (is (= @calls [:action]))
+      (is (= (anim 1) 20))
+      (is (= @calls [:action]))))
+
+  (testing "action-with!"
+    (let [received (atom nil)
+          anim (unwrap (action-with! #(reset! received %)))]
+      (is (= (anim 0) nil))
+      (is (nil? @received))
+      (is (= (anim 1) nil))
+      (is (= @received nil))))
+
+  (testing "action-with! in sequence"
+    (let [received (atom [])
+          anim (unwrap (seq
+                        (to 10)
+                        (action-with! #(swap! received conj %))
+                        (to 20)))]
+      (is (= (anim 0) 10))
+      (is (empty? @received))
+      (is (= (anim 0.5) 20))
+      (is (= @received [10]))
+      (is (= (anim 1) 20))
+      (is (= @received [10])))))
+
 (deftest test-curves
   (testing "Constant curve"
     (let [curve (c/constant 0.5)]
