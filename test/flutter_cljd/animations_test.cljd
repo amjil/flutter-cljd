@@ -61,7 +61,7 @@
 
 (deftest test-with
   (testing "Duration option"
-    (let [anim ((:prepare-motion (a/with {:duration 100} percents)) nil nil)]
+    (let [anim ((:prepare-motion (a/with :duration 100 percents)) nil nil)]
       (is (= (.-inMilliseconds (:duration anim)) 100))))
 
   (testing "Start time option"
@@ -81,7 +81,7 @@
       (is (= (anim 1) 100))))
 
   (testing "Start time ratio option"
-    (let [anim (unwrap (a/with {:relative-delay 0.5 :relative-duration 0.5} percents))]
+    (let [anim (unwrap (a/with :rel-delay 0.5 :rel-dur 0.5 percents))]
       (is (= (anim 0) 0))
       (is (= (anim 0.5) 0))
       (is (= (anim 0.75) 50))
@@ -110,10 +110,7 @@
       (is (= (anim 1) 100))))
 
   (testing "Nested with"
-    (let [anim (unwrap (a/with {:duration 1000}
-                               (a/with {:relative-duration 0.5}
-                                       (a/with {:curve :ease-in}
-                                               percents))))]
+    (let [anim (unwrap (a/with :dur 1000 (a/with :rel-dur 0.5 (a/with :curve :ease-in percents))))]
       (is (= (anim 0) 0))
       (is (< (anim 0.5) 50) "Should be affected by ease-in")
       (is (= (anim 1) 100)))
@@ -310,10 +307,53 @@
 
     (let [anim2 (:prepare-motion
                  (a/seq {:duration 5000}
-                        (a/with {:relative-duration 0.2} (a/to 0 50))
+                        (a/with {:relative-duration 0.2} (a/to 0 50 ))
                         (a/with {:relative-duration 0.8} (a/to 50 100))))
           {:keys [duration]} (anim2 nil nil)]
       (is (= (.-inMilliseconds duration) 5000) "Should use parent duration"))))
+
+(deftest test-actions
+  (testing "action!"
+    (let [called (atom false)
+          anim (unwrap (action! #(reset! called true)))]
+      (is (= (anim 0) nil))
+      (is (false? @called))
+      (is (= (anim 1) nil))
+      (is (true? @called))))
+
+  (testing "action! in sequence"
+    (let [calls (atom [])
+          anim (unwrap (seq
+                        (to 10)
+                        (action! #(swap! calls conj :action))
+                        (to 20)))]
+      (is (= (anim 0) 10))
+      (is (empty? @calls))
+      (is (= (anim 0.5) 20))
+      (is (= @calls [:action]))
+      (is (= (anim 1) 20))
+      (is (= @calls [:action]))))
+
+  (testing "action-with!"
+    (let [received (atom nil)
+          anim (unwrap (action-with! #(reset! received %)))]
+      (is (= (anim 0) nil))
+      (is (nil? @received))
+      (is (= (anim 1) nil))
+      (is (nil? @received))))
+
+  (testing "action-with! in sequence"
+    (let [received (atom [])
+          anim (unwrap (seq
+                        (to 10)
+                        (action-with! #(swap! received conj %))
+                        (to 20)))]
+      (is (= (anim 0) 10))
+      (is (empty? @received))
+      (is (= (anim 0.5) 20))
+      (is (= @received [10]))
+      (is (= (anim 1) 20))
+      (is (= @received [10])))))
 
 (deftest test-curves
   (testing "Constant curve"

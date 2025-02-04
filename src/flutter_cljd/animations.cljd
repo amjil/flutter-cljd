@@ -7,7 +7,8 @@
    ["package:flutter/widgets.dart" :as w]
    ["package:flutter/animation.dart" :as a]
    [flutter-cljd.utils :as ut]
-   [cljd.string :as str]))
+   [cljd.string :as str]
+   [flutter-cljd.internal.opacity :as op]))
 
 (extend-protocol c/IFn
   a/Curve
@@ -96,10 +97,20 @@
 (defn- from-mcs [mcs]
   (when mcs (t/duration {:microseconds mcs})))
 
+(def ^:private options-keys #{:duration :dur :rel-dur :rel-delay :curve :lerp :relative-duration :delay :relative-delay})
+
 (defn- is-options? [x]
   (and
    (map? x)
-   (superset? #{:duration :curve :lerp :relative-duration :delay :relative-delay} (set (keys x)))))
+   (superset? options-keys (set (keys x)))))
+
+(defn- motion-options [value]
+  {:duration (:duration value (:dur value))
+   :delay (:delay value)
+   :relative-delay (:relative-delay value (:rel-delay value))
+   :relative-duration (:relative-duration value (:rel-dur value))
+   :curve (:curve value)
+   :lerp (:lerp value)})
 
 (defn- const-anim
   ([value]
@@ -113,6 +124,11 @@
   ([transform duration]
    {:interpolate (no-cache-anim transform)
     :duration duration}))
+
+(defn- flat-motions [motions]
+  (->> motions
+       (mapcat
+        #(if (sequential? %) (flat-motions %) [%]))))
 
 (defn to
   "Animate to a value.\\
@@ -145,25 +161,44 @@
                                   ((lerp (nth values i) (nth values (inc i))) t)
                                   (last values)))))))
           :duration (if (zero? int-cnt) (t/duration 0) exp-dur)}))
-     :description
-     (str "(to " (str/join " " values) ")")}))
+     :to-string
+     (fn [] (str "(to " (str/join " " values) ")"))}))
 
 (defn into-motion
-  ([motion string]
+  "Converts a value to an motion.\\
+   Motion is a map with the following keys:
+    - `:prepare-motion` - A function that takes the current value and the duration and returns a map with the following keys:
+        - `:interpolate` - A function that takes the progress and the cache and returns the value and the cache.
+        - `:duration` - Duration of the motion.
+    - `:to-string` - A function that returns a string representation of the motion.
+   
+   `into-motion` takes a value and returns an motion that animates to the provided value.\\
+   If the value is a function, it's used as the prepare-motion function.\\
+   If the value is an instance of `Animatable`, it's used as the animation.\\
+   If the value is nil, returns nil.
+   If the value is a map with the keys `:prepare-motion` and `:to-string`, returns the value as is.
+   Otherwise, returns the value wrapped in a `to` motion.
+   ```clojure
+   (into-motion 10.0)
+   (into-motion (fn [t] (* 10 t)))
+   (into-motion Colors.blue)
+   (into-motion nil)
+   ```"
+  ([motion to-string]
    (when motion
-     (assoc (into-motion motion) :description string)))
+     (assoc (into-motion motion) :to-string to-string)))
   ([motion]
    (cond
-     (and (map? motion) (superset? #{:prepare-motion :description} (set (keys motion))))
+     (and (map? motion) (superset? #{:prepare-motion :to-string} (set (keys motion))))
      motion
 
      (fn? motion)
-     {:prepare-motion motion :description "motion"}
+     {:prepare-motion motion :to-string (constantly "motion")}
 
      (instance? w/Animatable motion)
      {:prepare-motion (fn [_ duration]
                         (no-cache-anim #(.transform motion %) duration))
-      :description (.toString motion)}
+      :to-string #(.toString motion)}
 
      (nil? motion)
      nil
@@ -180,30 +215,11 @@
   ([]
    (into-motion
     (fn [value _] (const-anim value 0))
-    "(instant)"))
+    (constantly "(instant)")))
   ([value]
    (into-motion
     (fn [_ _] (const-anim value 0))
-    (str "(instant " value ")"))))
-
-(defn action
-  [action]
-  (into-motion
-   (fn [value _]
-     {:duration 0
-      :interpolate (fn [t cache]
-                     (when (and
-                            (= 1.0 t)
-                            (:is-animating cache)
-                            (not= 1.0 (:last-t cache)))
-                       (action value))
-                     {:value value :cache cache})})
-   "(action fn)"))
-
-(defn- flat-motions [motions]
-  (->> motions
-       (mapcat
-        #(if (sequential? %) (flat-motions %) [%]))))
+    (fn [] (str "(instant " value ")")))))
 
 (defn- -sequential [motions]
   (let [motions (->> motions flat-motions (filter some?) (map into-motion))
@@ -233,7 +249,7 @@
              sum-rel (clamp sum-rel)
              min-dur (if (and sum-abs sum-rel (< sum-rel 1.0)) (/ sum-abs (- 1.0 sum-rel)) sum-abs)
              exp-dur (in-mcs exp-dur)
-             res-dur (let [durs (->> 
+             res-dur (let [durs (->>
                                  [exp-dur intr-dur]
                                  (concat (if (< 0 cnt-any) [] [min-dur]))
                                  (filter some?))]
@@ -274,7 +290,7 @@
                                  strict-compare (if is-forward? < >)
                                  soft-compare (if is-forward? <= >=)
                                  last-i (- cnt 1)
-                                 clamp-start #(if is-forward? (max 0.0 %) (min 1.0 %)) 
+                                 clamp-start #(if is-forward? (max 0.0 %) (min 1.0 %))
                                  clamp-end #(if is-forward? (min 1.0 %) (max 0.0 %))
                                  is-last? #(if is-forward? (= last-i %) (= 0 %))
                                  is-first? #(if is-forward? (= 0 %) (= last-i %))
@@ -293,9 +309,9 @@
                                               (let [start (start-key item)
                                                     end (end-key item)
                                                     transform-t #(if (zero? rel-dur) end-point (/ (- % (:start item)) rel-dur))
-                                                    clamped-t #(cond 
-                                                                 (is-first? i) (clamp-end (transform-t %)) 
-                                                                 (is-last? i) (clamp-start (transform-t %))  
+                                                    clamped-t #(cond
+                                                                 (is-first? i) (clamp-end (transform-t %))
+                                                                 (is-last? i) (clamp-start (transform-t %))
                                                                  :else (clamp (transform-t %)))
                                                     anim-t (clamped-t t)
                                                     last-anim-t (when last-t (clamped-t last-t))
@@ -320,7 +336,7 @@
                                  new-items-cache (into items-cache (map (fn [[i {:keys [cache]}]] [i cache]) items))]
                              {:value (if (empty? items) value new-value)
                               :cache (assoc cache :items new-items-cache)})))}))
-     (str "(seq " (str/join " " (map :description motions)) ")"))))
+     (fn [] (str "(seq " (str/join " " (map #((:to-string %)) motions)) ")")))))
 
 (defn- -parallel [motions]
   (let [motions (map (fn [[k v]] [k (into-motion v)]) motions)]
@@ -379,9 +395,49 @@
                                new-items-cache (into items-cache (map (fn [[k {:keys [cache]}]] [k cache]) results))]
                            {:value new-value
                             :cache (assoc cache :items new-items-cache)}))}))
-     (str "(par " (str/join " " (map (fn [[k v]] (str k " " (:description v))) motions)) ")"))))
+     (fn [] (str "(par " (str/join " " (map (fn [[k v]] (str k " " ((:to-string v)))) motions)) ")")))))
+
+(defn action-with!
+  "Action motion that calls a function with the value.
+   ```clojure
+   (seq
+     (to 10.0)
+     (action-with! println)) ;; Prints 10.0
+   ```
+   
+   If you need to call a function without the value, you can use `action!`"
+  [action]
+  (into-motion
+   (fn [value _]
+     {:duration 0
+      :interpolate (fn [t cache]
+                     (when (= (- 1.0 t) (:last-t cache)) 
+                       (action value))
+                     {:value value :cache cache})})
+   (constantly "(action-with! fn)")))
+
+(defn action!
+  "Action motion that calls a function.
+   ```clojure
+   (seq
+     (to 10.0)
+     (action! HapticFeedback.selectionClick)
+     (to 20.0))
+   ```
+   
+   If you need to call a function with the value, you can use `action-with!`"
+  [action]
+  (into-motion
+   (:prepare-motion (action-with! (fn [_] (action))))
+   (constantly "(action! fn)")))
 
 (defn duration
+  "Set the duration of the motion.\\
+   `duration` takes a duration and an motion and returns a new motion with the provided duration.\\
+   The duration is applied to the motion.
+   ```clojure
+   (duration 100 (to 10.0))
+   ```"
   [duration motion]
   (let [motion (into-motion motion)]
     (into-motion
@@ -397,9 +453,15 @@
                          interpolate)
           :relative-duration relative-duration
           :duration (from-mcs max-duration)}))
-     (str "(duration " duration " " (:description motion) ")"))))
+     (fn [] (str "(duration " duration " " ((:to-string motion)) ")")))))
 
 (defn curve
+  "Set the curve of the motion.\\
+   `curve` takes a curve and an motion and returns a new motion with the provided curve.\\
+   The curve is applied to the motion.
+   ```clojure
+   (curve :ease-in-out (to 10.0))
+   ```"
   [curve motion]
   (let [motion (into-motion motion)
         curve (t/curve curve)]
@@ -409,9 +471,15 @@
          {:interpolate #(interpolate (.transform curve (double %1)) %2)
           :relative-duration relative-duration
           :duration duration}))
-     (str "(curve " (.toString curve) " " (:description motion) ")"))))
+     (fn [] (str "(curve " (.toString curve) " " ((:to-string motion)) ")")))))
 
 (defn relative-duration
+  "Set the duration of the motion relative to the parent animation.\\
+   `relative-duration` takes a ratio and an motion and returns a new motion with the provided relative duration.\\
+   The duration is applied to the motion.
+   ```clojure
+   (relative-duration 0.5 (to 10.0))
+   ```"
   [ratio motion]
   (let [motion (into-motion motion)]
     (into-motion
@@ -420,9 +488,15 @@
          {:interpolate interpolate
           :duration duration
           :relative-duration (if relative-duration (* ratio relative-duration) ratio)}))
-     (str "(relative-duration" ratio " " (:description motion) ")"))))
+     (fn [] (str "(relative-duration " ratio " " ((:to-string motion)) ")")))))
 
 (defn relative-delay
+  "Set the start time of the motion relative to the duration.\\
+   `relative-delay` takes a ratio and an motion and returns a new motion with the provided relative delay.\\
+   The delay is applied to the motion.
+   ```clojure
+   (relative-delay 0.5 (to 10.0))
+   ```"
   [delay motion]
   (let [motion (into-motion motion)]
     (into-motion
@@ -436,9 +510,15 @@
          {:interpolate #(interpolate (.transform curve (double %1)) %2)
           :relative-duration (when relative-duration (+ delay relative-duration))
           :duration (from-mcs dur-mcs)}))
-     (str "(relative-delay" delay " " (:description motion) ")"))))
+     (fn [] (str "(relative-delay " delay " " ((:to-string motion)) ")")))))
 
-(defn delay
+(defn delay 
+  "Set the start time of the motion.\\
+   `delay` takes a duration and an motion and returns a new motion with the provided delay.\\
+   The delay is applied to the motion.
+   ```clojure
+   (delay 100 (to 10.0))
+   ```"
   [delay motion]
   (let [motion (into-motion motion)]
     (into-motion
@@ -461,31 +541,51 @@
                          interpolate)
           :relative-duration relative-duration
           :duration (from-mcs full-dur-mcs)}))
-     (str "(delay" delay " " (:description motion) ")"))))
+     (fn [] (str "(delay " delay " " ((:to-string motion)) ")")))))
+
+(defn- separate-options [args]
+  (if (is-options? (first args))
+    {:options (first args) :items (vec (drop 1 args))}
+    (reduce
+     (fn [res arg]
+       (let [{:keys [key options items finished]} res]
+         (if (not finished)
+           (if (nil? key)
+             (if (and (keyword? arg) (options-keys arg))
+               (assoc res :key arg)
+               (assoc res :items (conj items arg) :finished true))
+             (assoc res :key nil :options (assoc options key arg)))
+           (assoc res :items (conj items arg)))))
+     {:options {} :items []}
+     args)))
 
 (defn with
   "Add options to an animation.\\
-   `with` takes a map of options and an motion and returns a new motion with the provided options.\\
+   `with` takes a map or key value pairs of options and an motion and returns a new motion with the provided options.\\
    The options are merged with the existing options of the animation.\\
    Options:
-    - `:duration` - Duration of the motion in milliseconds, or Duration object or map.
+    - `:duration` or `:dur` - Duration of the motion in milliseconds, or Duration object or map.
     - `:delay` - Start time of the motion in milliseconds or Duration object or map.
-    - `:relative-duration` - Duration of the motion relative to the parent animation.
-    - `:relative-delay` - Start time ratio of the motion relative to the duration.
+    - `:relative-duration` or `:rel-dur` - Duration of the motion relative to the parent animation.
+    - `:relative-delay` or `:rel-delay` - Start time ratio of the motion relative to the duration.
     - `:curve` - Curve of the animation.
    
    ```clojure
    (with {:duration 100} w/Colors.blue)
-   (with {:duration 100 :curve :ease-in-out} w/Colors.blue)
-   (with {:duration 100} (to 10.0))
+   (with :dur 100 :curve :ease-in-out w/Colors.blue)
+   (with :duration 100 (to 10.0))
    ```"
-  [{:keys [relative-delay delay relative-duration duration curve]} motion]
-  (cond->> (into-motion motion)
-    curve (flutter-cljd.animations/curve curve)
-    duration (flutter-cljd.animations/duration duration)
-    relative-duration (flutter-cljd.animations/relative-duration relative-duration)
-    delay (flutter-cljd.animations/delay delay)
-    relative-delay (flutter-cljd.animations/relative-delay relative-delay)))
+  ([k v & kvs-motion]
+   (let [{:keys [options] [motion] :items} (separate-options (concat [k v] kvs-motion))]
+     (with options motion)))
+  ([options motion]
+   (let [{:keys [relative-delay delay relative-duration duration curve]} (motion-options options)]
+     (cond->> (into-motion motion)
+       curve (flutter-cljd.animations/curve curve)
+       duration (flutter-cljd.animations/duration duration)
+       relative-duration (flutter-cljd.animations/relative-duration relative-duration)
+       delay (flutter-cljd.animations/delay delay)
+       relative-delay (flutter-cljd.animations/relative-delay relative-delay)))))
 
 (defn wait
   "Do nothing for a given duration. Duration is optional.
@@ -510,7 +610,7 @@
   ([duration]
    (into-motion
     (fn [value, _] (const-anim value duration))
-    (str "(wait " duration ")"))))
+    (fn [] (str "(wait " duration ")")))))
 
 (defn seq
   "Sequential motions of the value.\\
@@ -595,7 +695,7 @@
                      last-t (when last-T (transform-t last-T))]
                  (interpolate t (assoc cache :last-t last-t))))
              :duration (some-> (or (when duration {:microseconds (* (in-mcs duration) cnt)}) exp-dur) t/duration)})))
-      (str "(repeat " cnt " " (:description motion) ")")))))
+      (fn [] (str "(repeat " cnt " " ((:to-string motion)) ")"))))))
 
 (defn autoreverse
   "Creates an motion that plays forward then reverses.\\
@@ -603,7 +703,7 @@
    forward then plays it in reverse.\\
    The total duration will be double the original motion's duration.
    ```clojure
-   (autoreverse (to 0 100))  ;; Goes 0->100->0
+   (autoreverse (to 0 100))  ;; Goes 0 -> 100 -> 0
    ```"
   ([motion]
    (let [motion (into-motion motion)]
@@ -619,4 +719,4 @@
                    last-t (when last-T (transform-t last-T))]
                (interpolate t (assoc cache :last-t last-t))))
            :duration (some-> (or (when duration {:microseconds (* (in-mcs duration) 2)}) exp-dur) t/duration)}))
-      (str "(autoreverse " (:description motion) ")")))))
+      (fn [] (str "(autoreverse " ((:to-string motion)) ")"))))))
