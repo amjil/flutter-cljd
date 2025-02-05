@@ -6,9 +6,10 @@
    [flutter-cljd.curves :as curves]
    ["package:flutter/widgets.dart" :as w]
    ["package:flutter/animation.dart" :as a]
+   ["package:flutter/scheduler.dart" :as sc]
+   ["dart:core" :as dc]
    [flutter-cljd.utils :as ut]
-   [cljd.string :as str]
-   [flutter-cljd.internal.opacity :as op]))
+   [cljd.string :as str]))
 
 (extend-protocol c/IFn
   a/Curve
@@ -19,77 +20,150 @@
   (-invoke [this t]
     (.transform this t)))
 
-;; (deftype TransformedAnimation
-;;          [^a/Animation parent transform]
-;;   :extends a/Animation
-;;   (isAnimating [this] (-> this .-parent .-isAnimating))
-;;   (isCompleted [this] (-> this .-parent .-isCompleted))
-;;   (isDismissed [this] (-> this .-parent .-isDismissed))
-;;   (isForwardOrCompleted [this] (-> this .-parent .-isForwardOrCompleted))
-;;   (status [this] (-> this .-parent .-status))
-;;   (value [this] ((.-transform this) (-> this .-parent .-value)))
-;;   (addListener [this listener] (.addListener (.-parent this) listener))
-;;   (removeListener [this listener] (.removeListener (.-parent this) listener))
-;;   (addStatusListener [this listener] (.addStatusListener (.-parent this) listener))
-;;   (removeStatusListener [this listener] (.removeStatusListener (.-parent this) listener)))
+(deftype TransformedAnimation
+         [^a/Animation parent transform]
+  :extends a/Animation
+  (value [this] ((.-transform this) (-> this .-parent .-value)))
+  ^:mixin a/AnimationWithParentMixin)
 
-;; (defn animation-of
-;;   ([^a/Animation value transform]
-;;    (TransformedAnimation value transform)))
+(extend-protocol c/ILookup
+  a/Animation
+  (-lookup [this key] (c/-lookup this key nil))
+  (-lookup [this key not-found]
+    (TransformedAnimation this (fn [value] (c/-lookup value key not-found))))
+  (-contains-key? [this key]
+    (c/-contains-key? (.-value this) key)))
 
-;; (defn- set-value [this new-value]
-;;   (let [old-value (-> this .-tween .-end)
-;;         tween (.-tween this)]
-;;     (when-not (= new-value old-value)
-;;       (.-begin! tween (.evaluate tween this))
-;;       (.-end! tween new-value)
-;;       (if-not (.-isAnimating this)
-;;         (.forward this .from 0.0)
-;;         (let [progress (.-value this)]
-;;           (.forward this .from 0.0)
-;;           (.-value! this progress)))
-;;       nil)))
+(defn- set-value [this new-value]
+  (let [old-value (-> this .-tween .-end)
+        tween (.-tween this)
+        controller (.-controller this)]
+    (when-not (= new-value old-value)
+      (.-begin! tween (.evaluate tween this))
+      (.-end! tween new-value)
+      (if-not (.-isAnimating controller)
+        (.forward controller .from 0.0)
+        (let [progress (.-value controller)]
+          (.forward controller .from 0.0)
+          (.-value! controller progress)))
+      nil)))
 
-;; (defn- get-state [this]
-;;   (-> this .-tween .-end))
+(defn- get-state [this]
+  (-> this .-tween .-end))
 
-;; (deftype AnimatedValue
-;;          [tween
-;;           ^a/TickerProvider vsync
-;;           duration
-;;           curve]
-;;   :extends (a/AnimationController
-;;              .vsync vsync
-;;              .duration duration)
-;;   c/IEquiv
-;;   (-equiv [o other] (identical? o other))
-;;   c/IDeref
-;;   (-deref [this] (get-state this))
-;;   c/ISwap
-;;   (-swap! [this f] (set-value this (f (get-state this))))
-;;   (-swap! [this f a] (set-value this (f (get-state this) a)))
-;;   (-swap! [this f a b] (set-value this (f (get-state this) a b)))
-;;   (-swap! [this f a b xs] (set-value this (apply f (get-state this) a b xs)))
-;;   c/IReset
-;;   (-reset! [this new-value] (set-value this new-value))
-;;   c/IFn
-;;   (-invoke [this transform]
-;;     (animation-of this transform)))
+(deftype AnimatedValue
+         [tween
+          ^a/AnimationController controller
+          ^a/Animation parent]
+  :extends (a/Animation)
+  (value [this]
+    (-> this .-tween (.lerp (-> this .-controller .-value))))
+  c/IEquiv
+  (-equiv [o other] (identical? o other))
+  c/IDeref
+  (-deref [this] (get-state this))
+  c/ISwap
+  (-swap! [this f] (set-value this (f (get-state this))))
+  (-swap! [this f a] (set-value this (f (get-state this) a)))
+  (-swap! [this f a b] (set-value this (f (get-state this) a b)))
+  (-swap! [this f a b xs] (set-value this (apply f (get-state this) a b xs)))
+  c/IReset
+  (-reset! [this new-value] (set-value this new-value))
+  ^:mixin a/AnimationWithParentMixin)
 
-;; (defn animated-value
-;;   ([initial-value vsync] (animated-value initial-value vsync {}))
-;;   ([initial-value vsync options]
-;;    (let [options (t/animation-options options)]
-;;      (AnimatedValue
-;;       (t/tween (:lerp options) initial-value initial-value)
-;;       vsync
-;;       (:duration options)
-;;       (:curve options)))))
+(defn ^AnimatedValue animated-value
+  ([initial-value vsync] (animated-value initial-value vsync {}))
+  ([initial-value vsync options]
+   (let [options (t/animation-options options)
+         controller (a/AnimationController
+                     .vsync vsync
+                     .duration (:duration options))]
+     (AnimatedValue
+      (t/tween (:lerp options) initial-value initial-value)
+      controller
+      (a/CurvedAnimation
+       .parent controller
+       .curve (:curve options a/Curves.linear)
+       .reverseCurve (some-> options :reverse-curve t/curve))))))
 
-;; (defn anim-cntr
-;;   ([options motions])
+;; (defprotocol Controller
+;;   (dispose [this])
+;;   (^sc/TickerFuture animateBack [this target {:keys [duration curve] :or {curve :linear}}])
+;;   (^sc/TickerFuture animateTo [this target {:keys [duration curve] :or {curve :linear}}])
+;;   (^sc/TickerFuture forward [this {:keys [from] :or {from nil}}])
+;;   (^sc/TickerFuture repeat [this {:keys [min max reverse period count] :or {reverse false}}])
+;;   (reset [this])
+;;   (resync [this vsync])
+;;   (^sc/TickerFuture reverse [this {:keys [from] :or {from nil}}])
+;;   (stop [this {:keys [canceled] :or {canceled true}}])
+;;   (^sc/TickerFuture toggle [this {:keys [from] :or {from nil}}]))
 
-;;   ([motions]))
+;; (extend-protocol Controller
+;;   a/AnimationController)
+
+(defn- set-cached-value [this]
+  (.-cached-value! this ((.-interpolate this) (-> this .-controller .-value) (-> this .-cache))))
+
+(defn- reset-cached-value [this]
+  (.-cached-value! this nil))
+
+(deftype MotionController
+         [^:mutable motion
+          ^:mutable interpolate
+          ^:mutable cache
+          ^:mutable cached-value
+          ^a/AnimationController parent]
+  :extends (a/Animation)
+  (value [^MotionController this]
+    (if (or (.-isAnimating this) (nil? (.-cached-value this)))
+      ((.-interpolate this) (-> this .-controller .-value) (-> this .-cache))
+      (.-cached-value this)))
+  dc/Object
+  (toString [^MotionController this]
+    ((-> this .-motion :to-string)))
+  c/IEquiv
+  (-equiv [o other] (identical? o other))
+  (progress [^MotionController this]
+    (-> this .-controller .-value))
+  (^:setter progress [^MotionController this new-value]
+    (.-value! (-> this .-controller) (double new-value))
+    nil)
+  (dispose [^MotionController this]
+    (.dispose (.-parent this))
+    (reset-cached-value this))
+  (^sc/TickerFuture animateBack [^MotionController this target & {:keys [duration curve] :or {curve a/Curves.linear}}]
+    (reset-cached-value this)
+    (.animateBack (.-parent this) (double target) .duration (some-> duration t/duration) .curve (t/curve curve)))
+  (^sc/TickerFuture animateTo [^MotionController this target & {:keys [duration curve] :or {curve a/Curves.linear}}]
+    (reset-cached-value this)
+    (.animateTo (.-parent this) (double target) .duration (some-> duration t/duration) .curve (t/curve curve)))
+  (^sc/TickerFuture forward [^MotionController this & {:keys [from] :or {from nil}}]
+    (reset-cached-value this)
+    (.forward (.-parent this) .from (some-> from double)))
+  (^sc/TickerFuture repeat [^MotionController this & {:keys [min max reverse period count] :or {reverse false}}]
+    (reset-cached-value this)
+    (.repeat (.-parent this)
+             .min (some-> min double)
+             .max (some-> max double)
+             .reverse (boolean reverse)
+             .period (some-> period t/duration)
+             .count (some-> count int)))
+  (reset [^MotionController this]
+    (.reset (.-parent this))
+    (set-cached-value this))
+  (resync [^MotionController this vsync]
+    (.resync (.-parent this) vsync)
+    (set-cached-value this))
+  (^sc/TickerFuture reverse [^MotionController this & {:keys [from] :or {from nil}}]
+    (reset-cached-value this)
+    (.reverse (.-parent this) .from (some-> from double)))
+  (stop [^MotionController this & {:keys [canceled] :or {canceled true}}]
+    (.stop (.-parent this) .canceled (boolean canceled))
+    (set-cached-value this))
+  (^sc/TickerFuture toggle [^MotionController this & {:keys [from] :or {from nil}}]
+    (reset-cached-value this)
+    (.toggle (.-parent this) .from (some-> from double)))
+  ^:mixin a/AnimationWithParentMixin)
 
 (defn- in-mcs [duration]
   (some-> duration t/duration .-inMicroseconds double))
@@ -135,7 +209,7 @@
 
 (defn- separate-options [args]
   (if (is-options? (first args))
-    {:options (first args) :items (vec (drop 1 args))}
+    {:options (first args) :items (drop 1 args)}
     (reduce
      (fn [res arg]
        (let [{:keys [key options items finished]} res]
@@ -151,7 +225,7 @@
 
 (defn- separate-last-options [args]
   (if (is-options? (last args))
-    {:options (last args) :items (vec (drop-last 1 args))}
+    {:options (last args) :items (drop-last 1 args)}
     (reduce
      (fn [res arg]
        (let [{:keys [options items]} res]
@@ -234,6 +308,20 @@
 
      :else
      (values motion))))
+
+(defn motion-controller
+  ([motion]
+   (let [{:keys [prepare-motion] :as motion} (into-motion motion)
+         {:keys [duration interpolate]} (prepare-motion nil nil)
+         {:keys [duration]} (t/animation-options {:duration duration})]
+     (MotionController
+      motion
+      interpolate
+      {}
+      (interpolate 0 {})
+      (a/AnimationController
+       .duration duration)))))
+
 
 (defn instant
   "Instant motion with zero duration.
@@ -604,7 +692,7 @@
   "Animate to a value.\\
    `to` takes a value and returns an motion that animates from the current value to the provided values eventually.\\
    If the current value is nil, the first value is used as the initial value.\\
-   Also, `to` can take options after the values.\\
+   Also, `to` can take key-value pairs or a map of options after the values.\\
    ```clojure
    (to 10.0 :dur 100)
    (to 5.0 10.0)

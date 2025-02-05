@@ -1,7 +1,6 @@
 (ns flutter-cljd.widgets
   "The Flutter widgets framework. [Docs](https://api.flutter.dev/flutter/widgets/widgets-library.html)"
   (:require
-   ["package:flutter/widgets.dart" :as w]
    [flutter-cljd.inherited-keys :as inh]
    [flutter-cljd.internal.builder :as bd]
    [flutter-cljd.internal.layout-builder :as lbd]
@@ -25,7 +24,7 @@
    [flutter-cljd.internal.column-row-flex :as crf]
    [flutter-cljd.internal.action-listener :as aclr]
    [flutter-cljd.internal.text :as txt]
-   [flutter-cljd.internal.container :as cnt]
+   [flutter-cljd.animations :as a]
    [flutter-cljd.internal.spacer :as sp]
    [flutter-cljd.internal.opacity :as op]
    [flutter-cljd.internal.stack :as st]
