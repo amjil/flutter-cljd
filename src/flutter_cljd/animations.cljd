@@ -133,39 +133,64 @@
 (defn- is-forward? [t prev-t]
   (or (nil? prev-t) (when prev-t (< prev-t t)) (= prev-t t 0.0)))
 
-(defn to
-  "Animate to a value.\\
-     `to` takes a value and returns an motion that animates from the current value to the provided values.\\
+(defn- separate-options [args]
+  (if (is-options? (first args))
+    {:options (first args) :items (vec (drop 1 args))}
+    (reduce
+     (fn [res arg]
+       (let [{:keys [key options items finished]} res]
+         (if (not finished)
+           (if (nil? key)
+             (if (and (keyword? arg) (options-keys arg))
+               (assoc res :key arg)
+               (assoc res :items (conj items arg) :finished true))
+             (assoc res :key nil :options (assoc options key arg)))
+           (assoc res :items (conj items arg)))))
+     {:options {} :items []}
+     args)))
+
+(defn- separate-last-options [args]
+  (if (is-options? (last args))
+    {:options (last args) :items (vec (drop-last 1 args))}
+    (reduce
+     (fn [res arg]
+       (let [{:keys [options items]} res]
+         (if (and (= (count items) 1) (keyword? arg) (options-keys arg))
+           {:items [] :options (assoc options arg (first items))}
+           {:items (cons arg items) :options options})))
+     {:options {} :items []}
+     (reverse args))))
+
+(defn values
+  "Animate values. Same as (to) but doesn't accept animation options\\
+     `values` takes a sequence of values and returns an motion that animates from the current value to the provided values.\\
      If the current value is nil, the first value is used as the initial value.
      ```clojure
-     (to 10.0)
-     (to 5.0 10.0)
-     (to Colors.blue Colors.red Colors.green)
+     (values [5.0 10.0])
      ```"
-  [value & values]
-  (let [values (cons value values)]
-    {:prepare-motion
-     (fn [from exp-dur]
-       (let [values (if (some? from) (concat [from] values) values)
-             int-cnt (dec (count values))
-             lerp #(ut/lerp %1 %2)]
-         {:interpolate (case int-cnt
-                         0 (const-anim (first values))
-                         1 (no-cache-anim (lerp (first values) (second values)))
-                         (no-cache-anim
-                          (fn [T]
-                            (condp = T
-                              0.0 (first values)
-                              1.0 (last values)
-                              (let [k (* T int-cnt)
-                                    i (int k)
-                                    t (- k i)]
-                                (if (< i int-cnt)
-                                  ((lerp (nth values i) (nth values (inc i))) t)
-                                  (last values)))))))
-          :duration (if (zero? int-cnt) (t/duration 0) exp-dur)}))
-     :to-string
-     (fn [] (str "(to " (str/join " " values) ")"))}))
+  [values]
+  {:prepare-motion
+   (fn [from exp-dur]
+     (let [values (if (some? from) (concat [from] values) values)
+           int-cnt (dec (count values))
+           lerp #(ut/lerp %1 %2)]
+       {:interpolate (case int-cnt
+                       0 (const-anim (first values))
+                       1 (no-cache-anim (lerp (first values) (second values)))
+                       (no-cache-anim
+                        (fn [T]
+                          (condp = T
+                            0.0 (first values)
+                            1.0 (last values)
+                            (let [k (* T int-cnt)
+                                  i (int k)
+                                  t (- k i)]
+                              (if (< i int-cnt)
+                                ((lerp (nth values i) (nth values (inc i))) t)
+                                (last values)))))))
+        :duration (if (zero? int-cnt) (t/duration 0) exp-dur)}))
+   :to-string
+   (fn [] (str "(values " values ")"))})
 
 (defn into-motion
   "Converts a value to an motion.\\
@@ -207,7 +232,7 @@
      nil
 
      :else
-     (to motion))))
+     (values [motion]))))
 
 (defn instant
   "Instant motion with zero duration.
@@ -546,22 +571,6 @@
           :duration (from-mcs full-dur-mcs)}))
      (fn [] (str "(delay " delay " " ((:to-string motion)) ")")))))
 
-(defn- separate-options [args]
-  (if (is-options? (first args))
-    {:options (first args) :items (vec (drop 1 args))}
-    (reduce
-     (fn [res arg]
-       (let [{:keys [key options items finished]} res]
-         (if (not finished)
-           (if (nil? key)
-             (if (and (keyword? arg) (options-keys arg))
-               (assoc res :key arg)
-               (assoc res :items (conj items arg) :finished true))
-             (assoc res :key nil :options (assoc options key arg)))
-           (assoc res :items (conj items arg)))))
-     {:options {} :items []}
-     args)))
-
 (defn with
   "Add options to an animation.\\
    `with` takes a map or key value pairs of options and an motion and returns a new motion with the provided options.\\
@@ -589,6 +598,26 @@
        relative-duration (flutter-cljd.animations/relative-duration relative-duration)
        delay (flutter-cljd.animations/delay delay)
        relative-delay (flutter-cljd.animations/relative-delay relative-delay)))))
+
+(defn to
+  "Animate to a value.\\
+     `to` takes a value and returns an motion that animates from the current value to the provided values eventually.\\
+     If the current value is nil, the first value is used as the initial value.\\
+   Also, `to` can take options after the values.\\
+     ```clojure
+     (to 10.0 :dur 100)
+     (to 5.0 10.0)
+     (to Colors.blue Colors.red Colors.green {:delay 10})
+     ```"
+  [value & values]
+  (let [values (cons value values)
+        {:keys [options items]} (separate-last-options values)]
+    (assoc
+     (if (empty? options)
+       (flutter-cljd.animations/values items)
+       (with options (flutter-cljd.animations/values items)))
+     :to-string
+     (fn [] (str "(to " (str/join " " values) ")")))))
 
 (defn wait
   "Do nothing for a given duration. Duration is optional.
@@ -643,9 +672,10 @@
    ```
    If you need animate evenly spaced values, you can use `to` instead."
   [& motions]
-  (if (is-options? (first motions))
-    (with (first motions) (-sequential (drop 1 motions)))
-    (-sequential motions)))
+  (let [{:keys [options items]} (separate-options motions)]
+    (if-not (empty? options)
+      (with options (-sequential items))
+      (-sequential items))))
 
 (defn par
   "Parallel motions of multiple properties of the value.\\

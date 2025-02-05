@@ -60,31 +60,28 @@
       (is (= (anim 1) 200))))
 
   (testing "With duration option"
-    (let [anim (unwrap (a/to {:duration 100} 0 100))]
+    (let [anim (unwrap (a/to 0 100 :dur 100))]
       (is (= (anim 0) 0))
       (is (= (anim 0.5) 50))
       (is (= (anim 1) 100))))
 
   (testing "With curve option"
-    (let [anim (unwrap (a/to {:curve :ease-in} 0 100))]
+    (let [anim (unwrap (a/to 0 100 :curve :ease-in))]
       (is (= (anim 0) 0))
       (is (< (anim 0.5) 50) "Should be affected by ease-in curve")
       (is (= (anim 1) 100))))
 
-  (testing "With relative duration option"
-    (let [anim (unwrap (a/to {:relative-duration 0.5} 0 100))]
+  (testing "With relative delay option"
+    (let [anim (unwrap (a/to 0 100 {:rel-delay 0.5}))]
       (is (= (anim 0) 0))
-      (is (= (anim 0.25) 50))
-      (is (= (anim 0.5) 100))
+      (is (= (anim 0.5) 0))
+      (is (= (anim 0.75) 50))
       (is (= (anim 1) 100))))
 
   (testing "With combined options"
-    (let [anim (unwrap (a/to {:duration 1000 
-                             :curve :ease-in-out
-                             :relative-duration 0.5} 0 100))]
+    (let [anim (unwrap (a/to 0 100 :dur 1000 :curve :ease-in))]
       (is (= (anim 0) 0))
-      (is (not= (anim 0.25) 50) "Should be affected by ease-in-out curve")
-      (is (= (anim 0.5) 100))
+      (is (not= (anim 0.5) 50) "Should be affected by ease-in curve")
       (is (= (anim 1) 100)))))
 
 (deftest test-with
