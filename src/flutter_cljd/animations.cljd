@@ -162,13 +162,14 @@
      (reverse args))))
 
 (defn values
-  "Animate values. Same as (to) but doesn't accept animation options\\
-     `values` takes a sequence of values and returns an motion that animates from the current value to the provided values.\\
-     If the current value is nil, the first value is used as the initial value.
-     ```clojure
-     (values [5.0 10.0])
-     ```"
-  [values]
+  "Animate values. Same as (to) but doesn't accept animation options.\\
+   Use it when you want be sure that provided values will not be iterpretated as animation options.\\
+   `values` takes values and returns an motion that animates from the current value to the provided values.\\
+   If the current value is nil, the first value is used as the initial value.
+   ```clojure
+   (values 5.0 10.0)
+   ```"
+  [& values]
   {:prepare-motion
    (fn [from exp-dur]
      (let [values (if (some? from) (concat [from] values) values)
@@ -190,7 +191,7 @@
                                 (last values)))))))
         :duration (if (zero? int-cnt) (t/duration 0) exp-dur)}))
    :to-string
-   (fn [] (str "(values " values ")"))})
+   (fn [] (str "(values " (str/join " " values) ")"))})
 
 (defn into-motion
   "Converts a value to an motion.\\
@@ -232,7 +233,7 @@
      nil
 
      :else
-     (values [motion]))))
+     (values motion))))
 
 (defn instant
   "Instant motion with zero duration.
@@ -601,21 +602,22 @@
 
 (defn to
   "Animate to a value.\\
-     `to` takes a value and returns an motion that animates from the current value to the provided values eventually.\\
-     If the current value is nil, the first value is used as the initial value.\\
+   `to` takes a value and returns an motion that animates from the current value to the provided values eventually.\\
+   If the current value is nil, the first value is used as the initial value.\\
    Also, `to` can take options after the values.\\
-     ```clojure
-     (to 10.0 :dur 100)
-     (to 5.0 10.0)
-     (to Colors.blue Colors.red Colors.green {:delay 10})
-     ```"
+   ```clojure
+   (to 10.0 :dur 100)
+   (to 5.0 10.0)
+   (to Colors.blue Colors.red Colors.green {:delay 10})
+   ```
+   If you want to be sure that provided values will not be interpreted as animation options, you can use `values` instead."
   [value & values]
   (let [values (cons value values)
         {:keys [options items]} (separate-last-options values)]
     (assoc
      (if (empty? options)
-       (flutter-cljd.animations/values items)
-       (with options (flutter-cljd.animations/values items)))
+       (apply flutter-cljd.animations/values items)
+       (with options (apply flutter-cljd.animations/values items)))
      :to-string
      (fn [] (str "(to " (str/join " " values) ")")))))
 
@@ -649,7 +651,8 @@
    `seq` takes a list of motions and applies them one after the other.
    
    If `seq` has a duration, the duration is partitioned between the motions according to their options or evenly if not provided.\\
-   If `seq` has a curve, the curve is partitioned between the motions and merged with the motion's curve if provided.
+   If `seq` has a curve, the curve is partitioned between the motions and merged with the motion's curve if provided.\\
+   `seq` can accept key-value pairs or a map of options before the motions.
    ```clojure
    (seq
      (with {:duration 50} w/Colors.blue)
@@ -659,6 +662,10 @@
      (par :color (with {:duration 50} w/Colors.blue)
           :offset (with {:duration 100} 10.0))
      (par :color (with {:duration 50} w/Colors.red)))
+   
+    (seq :duration 200 :delay 10
+      (to w/Colors.blue :relative-duration 0.7)
+      w/Colors.red)
    ```
    
    `seq` can be used to define initial value of the motion:
@@ -685,12 +692,19 @@
    If `par` has a curve, the curve is applied to all animations.
    ```clojure
    (par
-      :color (with {:duration 50} w/Colors.blue)
-      :offset (with {:duration 100} 10.0))
+      :color (to w/Colors.blue :duration 50)
+      :offset (to 10.0 :duration 100))
    ```
    It's possible to nest `par` calls to animate nested properties:
    ```clojure
    (par :offset (par :dx (with {:duration 100} 10.0)))
+   ```
+   
+   `par` can accept a map of options as the first argument:
+   ```clojure
+   (par {:duration 200 :curve :ease-in-out}
+     :color (to w/Colors.blue)
+     :offset (to 10.0 :duration 100))
    ```"
   [& kvs]
   (if (odd? (count kvs))
