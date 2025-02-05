@@ -163,8 +163,8 @@
 
 (defn values
   "Animate values. Same as (to) but doesn't accept animation options.\\
-   Use it when you want be sure that provided values will not be iterpretated as animation options.\\
-   `values` takes values and returns an motion that animates from the current value to the provided values.\\
+   Use it when you want to be sure that provided values will not be interpreted as animation options.\\
+   `values` takes values and returns a motion that animates from the current value to the provided values.\\
    If the current value is nil, the first value is used as the initial value.
    ```clojure
    (values 5.0 10.0)
@@ -194,8 +194,8 @@
    (fn [] (str "(values " (str/join " " values) ")"))})
 
 (defn into-motion
-  "Converts a value to an motion.\\
-   Motion is a map with the following keys:
+  "Converts a value to a motion.\\
+   A motion is a map with the following keys:
     - `:prepare-motion` - A function that takes the current value and the duration and returns a map with the following keys:
         - `:interpolate` - A function that takes the progress and the cache and returns the value and the cache.
         - `:duration` - Duration of the motion.
@@ -677,7 +677,7 @@
        :color (with {:duration 50} w/Colors.blue)
        :dx (with {:duration 100} 10.0)))
    ```
-   If you need animate evenly spaced values, you can use `to` instead."
+   If you need to animate evenly spaced values, you can use `to` instead."
   [& motions]
   (let [{:keys [options items]} (separate-options motions)]
     (if-not (empty? options)
@@ -687,7 +687,7 @@
 (defn par
   "Parallel motions of multiple properties of the value.\\
    `par` takes a list of key-value pairs, where the key is the property to animate and the value is the animation.\\
-   It's useful when you want to animate multiple properties with different motions delay the same time.\\
+   It's useful when you want to animate multiple properties with different motions at the same time.\\
    If `par` has a duration, the duration is applied to all animations.\\
    If `par` has a curve, the curve is applied to all animations.
    ```clojure
@@ -714,8 +714,8 @@
     (-parallel (partition 2 kvs))))
 
 (defn repeat
-  "Repeats an motion a specified number of times.\\
-   Takes a count and an motion, returns a new motion that repeats the input animation.\\
+  "Repeats a motion a specified number of times.\\
+   Takes a count and a motion, returns a new motion that repeats the input animation.\\
    The total duration will be the motion's duration multiplied by the count.\\
    If count is 0 or negative, returns an instant animation.\\
    If count is 1, returns the original motion unchanged.
@@ -745,8 +745,8 @@
       (fn [] (str "(repeat " cnt " " ((:to-string motion)) ")"))))))
 
 (defn autoreverse
-  "Creates an motion that plays forward then reverses.\\
-   Takes an motion and returns a new motion that plays the input animation\\
+  "Creates a motion that plays forward then reverses.\\
+   Takes a motion and returns a new motion that plays the input animation\\
    forward then plays it in reverse.\\
    The total duration will be double the original motion's duration.
    ```clojure
