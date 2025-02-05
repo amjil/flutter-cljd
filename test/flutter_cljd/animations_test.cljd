@@ -289,7 +289,7 @@
 
   (testing "With options"
     (let [anim (unwrap (a/seq
-                        {:duration 1000 :curve :ease-in}
+                        :duration 1000 :curve :ease-in
                         (a/to 0 50)
                         (a/to 50 100)))]
       (is (= (anim 0) 0))
@@ -337,12 +337,12 @@
   (testing "action-with! in sequence"
     (let [received (atom [])
           anim (unwrap (a/seq
-                        (a/to 10)
+                        (a/to 0 10)
                         (a/action-with! #(swap! received conj %))
                         (a/to 20)))]
-      (is (= (anim 0) 10))
+      (is (= (anim 0) 0))
       (is (empty? @received))
-      (is (= (anim 0.5) 20))
+      (is (= (anim 0.501) 10))
       (is (= @received [10]))
       (is (= (anim 1) 20))
       (is (= @received [10])))))
