@@ -1,7 +1,30 @@
 (ns flutter-cljd.animations-test
   (:require [clojure.test :refer [deftest is testing]]
             [flutter-cljd.curves :as c]
-            [flutter-cljd.animations :as a]))
+            [flutter-cljd.animations :as a]
+            [cljd.string :as str]))
+
+(deftest test-transformed-animation
+  (testing "Numeric transformation"
+    (let [parent (reify a/Animation
+                  (value [_] 5))
+          transform #(* % 3)
+          anim (a/transformed-animation parent transform)]
+      (is (= (.-value anim) 15))))
+
+  (testing "Map transformation"
+    (let [parent (reify a/Animation
+                  (value [_] {:x 10 :y 20}))
+          transform #(update % :x inc)
+          anim (a/transformed-animation parent transform)]
+      (is (= (.-value anim) {:x 11 :y 20}))))
+
+  (testing "String transformation"
+    (let [parent (reify a/Animation
+                  (value [_] "hello"))
+          transform str/upper-case
+          anim (a/transformed-animation parent transform)]
+      (is (= (.-value anim) "HELLO")))))
 
 (defn- unwrap
   ([animation] (unwrap nil animation nil))
