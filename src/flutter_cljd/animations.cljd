@@ -56,19 +56,21 @@
           ^a/AnimationController controller
           ^a/Animation parent]
   :extends (a/Animation)
-  (value [this]
+  (value [^AnimatedValue this]
     (-> this .-tween (.lerp (-> this .-controller .-value))))
   c/IEquiv
   (-equiv [o other] (identical? o other))
   c/IDeref
-  (-deref [this] (get-state this))
+  (-deref [^AnimatedValue this] (get-state this))
   c/ISwap
-  (-swap! [this f] (set-value this (f (get-state this))))
-  (-swap! [this f a] (set-value this (f (get-state this) a)))
-  (-swap! [this f a b] (set-value this (f (get-state this) a b)))
-  (-swap! [this f a b xs] (set-value this (apply f (get-state this) a b xs)))
+  (-swap! [^AnimatedValue this f] (set-value this (f (get-state this))))
+  (-swap! [^AnimatedValue this f a] (set-value this (f (get-state this) a)))
+  (-swap! [^AnimatedValue this f a b] (set-value this (f (get-state this) a b)))
+  (-swap! [^AnimatedValue this f a b xs] (set-value this (apply f (get-state this) a b xs)))
   c/IReset
-  (-reset! [this new-value] (set-value this new-value))
+  (-reset! [^AnimatedValue this new-value] (set-value this new-value))
+  (dispose [^AnimatedValue this]
+    (.dispose (.-controller this)))
   ^:mixin a/AnimationWithParentMixin)
 
 (defn ^AnimatedValue animated-value
@@ -101,32 +103,35 @@
 ;; (extend-protocol Controller
 ;;   a/AnimationController)
 
-(defn- set-cached-value [this]
-  (.-cached-value! this ((.-interpolate this) (-> this .-controller .-value) (-> this .-cache))))
 
-(defn- reset-cached-value [this]
-  (.-cached-value! this nil))
+(declare MotionController)
+
+(defn- set-cached-value [^MotionController this]
+  (.-cachedValue! this ((.-interpolate this) (-> this .-parent .-value) (-> this .-cache))))
+
+(defn- reset-cached-value [^MotionController this]
+  (.-cachedValue! this nil))
 
 (deftype MotionController
          [^:mutable motion
           ^:mutable interpolate
           ^:mutable cache
-          ^:mutable cached-value
+          ^:mutable cachedValue
           ^a/AnimationController parent]
   :extends (a/Animation)
   (value [^MotionController this]
-    (if (or (.-isAnimating this) (nil? (.-cached-value this)))
-      ((.-interpolate this) (-> this .-controller .-value) (-> this .-cache))
-      (.-cached-value this)))
+    (if (or (.-isAnimating this) (nil? (.-cachedValue this)))
+      ((.-interpolate this) (-> this .-parent .-value) (-> this .-cache))
+      (.-cachedValue this)))
   dc/Object
   (toString [^MotionController this]
     ((-> this .-motion :to-string)))
   c/IEquiv
   (-equiv [o other] (identical? o other))
   (progress [^MotionController this]
-    (-> this .-controller .-value))
+    (-> this .-parent .-value))
   (^:setter progress [^MotionController this new-value]
-    (.-value! (-> this .-controller) (double new-value))
+    (.-value! (-> this .-parent) (double new-value))
     nil)
   (dispose [^MotionController this]
     (.dispose (.-parent this))
@@ -188,13 +193,13 @@
 
 (defn- const-anim
   ([value]
-   (fn [_ cache] {:value value :cache cache}))
+   (constantly value))
   ([value duration]
    {:interpolate (const-anim value)
     :duration duration}))
 
 (defn- no-cache-anim
-  ([transform] (fn [t cache] {:value (transform t) :cache cache}))
+  ([transform] transform)
   ([transform duration]
    {:interpolate (no-cache-anim transform)
     :duration duration}))
@@ -203,9 +208,6 @@
   (->> motions
        (mapcat
         #(if (sequential? %) (flat-motions %) [%]))))
-
-(defn- is-forward? [t prev-t]
-  (or (nil? prev-t) (when prev-t (< prev-t t)) (= prev-t t 0.0)))
 
 (defn- separate-options [args]
   (if (is-options? (first args))
@@ -309,18 +311,18 @@
      :else
      (values motion))))
 
-(defn motion-controller
-  ([motion]
-   (let [{:keys [prepare-motion] :as motion} (into-motion motion)
-         {:keys [duration interpolate]} (prepare-motion nil nil)
-         {:keys [duration]} (t/animation-options {:duration duration})]
-     (MotionController
-      motion
-      interpolate
-      {}
-      (interpolate 0 {})
-      (a/AnimationController
-       .duration duration)))))
+;; (defn motion-controller
+;;   ([motion]
+;;    (let [{:keys [prepare-motion] :as motion} (into-motion motion)
+;;          {:keys [duration interpolate]} (prepare-motion nil nil)
+;;          {:keys [duration]} (t/animation-options {:duration duration})]
+;;      (MotionController
+;;       motion
+;;       interpolate
+;;       {}
+;;       (interpolate 0 {})
+;;       (a/AnimationController
+;;        .duration duration)))))
 
 
 (defn instant
@@ -349,7 +351,7 @@
                 (if (some? motion)
                   (let [{:keys [value sum-abs sum-rel]} res
                         {:keys [duration relative-duration interpolate]} ((:prepare-motion motion) value nil)
-                        next-value (:value (interpolate 1.0 {}))
+                        next-value (interpolate 1.0)
                         duration (in-mcs duration)
                         relative (when (and (nil? duration) relative-duration) (clamp relative-duration))]
                     {:value next-value
@@ -396,63 +398,19 @@
           :interpolate (case cnt
                          0 (const-anim value)
                          1 (:interpolate (first final-items))
-                         (fn [t cache]
-                           (let [items-cache (:items cache {})
-                                 prev-t (:prev-t cache)
-                                 is-forward? (is-forward? t prev-t)
-                                 start-key (if is-forward? :start :end)
-                                 end-key (if is-forward? :end :start)
-                                 start-point (if is-forward? 0.0 1.0)
-                                 end-point (if is-forward? 1.0 0.0)
-                                 strict-compare (if is-forward? < >)
-                                 soft-compare (if is-forward? <= >=)
-                                 last-i (- cnt 1)
-                                 clamp-start #(if is-forward? (max 0.0 %) (min 1.0 %))
-                                 clamp-end #(if is-forward? (min 1.0 %) (max 0.0 %))
-                                 is-last? #(if is-forward? (= last-i %) (= 0 %))
-                                 is-first? #(if is-forward? (= 0 %) (= last-i %))
-                                 filtered (->> final-items
-                                               (map-indexed (fn [i item] [i item]))
-                                               (filter #(let [[i item] %
-                                                              rel-dur (:rel-dur item)
-                                                              start (start-key item)
-                                                              end (end-key item)]
-                                                          (and (not (and prev-t (strict-compare end prev-t)))
-                                                               (or (and (soft-compare start t) (strict-compare t end))
-                                                                   (and (zero? rel-dur) prev-t (soft-compare prev-t start end t))
-                                                                   (and (is-first? i) (soft-compare t start))
-                                                                   (and (is-last? i) (soft-compare end t)))))))
-                                 items (map (fn [[i {:keys [rel-dur interpolate] :as item}]]
-                                              (let [start (start-key item)
-                                                    end (end-key item)
-                                                    transform-t #(if (zero? rel-dur) end-point (/ (- % (:start item)) rel-dur))
-                                                    clamped-t #(cond
-                                                                 (is-first? i) (clamp-end (transform-t %))
-                                                                 (is-last? i) (clamp-start (transform-t %))
-                                                                 :else (clamp (transform-t %)))
-                                                    anim-t (clamped-t t)
-                                                    prev-anim-t (when prev-t (clamped-t prev-t))
-                                                    item-cache-fn #(merge
-                                                                    (assoc cache :items nil)
-                                                                    (get items-cache i {})
-                                                                    {:prev-t %})
-                                                    value-fn #(interpolate %1 %2)
-                                                    prev-t (or prev-t start)
-                                                    value (cond
-                                                            (and (soft-compare prev-t start end) (strict-compare end t))
-                                                            (value-fn end-point (item-cache-fn start-point))
-
-                                                            (soft-compare start prev-t end t)
-                                                            (value-fn end-point (item-cache-fn prev-anim-t))
-
-                                                            :else
-                                                            (value-fn anim-t (item-cache-fn prev-anim-t)))]
-                                                [i value]))
-                                            (if is-forward? filtered (reverse filtered)))
-                                 new-value (some-> items last last :value)
-                                 new-items-cache (into items-cache (map (fn [[i {:keys [cache]}]] [i cache]) items))]
-                             {:value (if (empty? items) value new-value)
-                              :cache (assoc cache :items new-items-cache)})))}))
+                         (fn [T]
+                           (let [[i {:keys [rel-dur start interpolate]}]
+                                 (->> final-items
+                                      (map-indexed (fn [i item] [i item]))
+                                      (reverse)
+                                      (some #(let [[i {:keys [start end] :as item}] %]
+                                               (when (or (<= start T end) (zero? i)) [i item]))))
+                                 t (if (zero? rel-dur) 1.0 (/ (- T start) rel-dur))
+                                 anim-t (cond
+                                          (zero? i) (min 1.0 t)
+                                          (= i (- cnt 1)) (max 0.0 t)
+                                          :else (clamp t))]
+                             (interpolate anim-t))))}))
      (fn [] (str "(seq " (str/join " " (map #((:to-string %)) motions)) ")")))))
 
 (defn- -parallel [motions]
@@ -490,28 +448,17 @@
                          :rel-dur (if duration (/ duration full-dur) 1.0)}))
                      items)]
          {:duration (some-> (or (from-mcs full-dur) exp-dur) t/duration)
-          :interpolate (fn [T cache]
-                         (let [prev-T (:prev-t cache)
-                               items-cache (:items cache {})
-                               results (map
+          :interpolate (fn [T]
+                         (let [results (map
                                         (fn [[k {:keys [interpolate rel-dur]}]]
                                           (let [transform-t #(cond
                                                                (zero? rel-dur) (if (= % 0.0) 0.0 1.0)
                                                                (= 1.0 rel-dur) %
                                                                :else (min 1.0 (/ % rel-dur)))
-                                                t (transform-t T)
-                                                prev-t (transform-t prev-T)]
-                                            [k (interpolate
-                                                t
-                                                (merge
-                                                 (assoc cache :items nil)
-                                                 (get items-cache k {})
-                                                 {:prev-t prev-t}))]))
-                                        items)
-                               new-value (into value (map (fn [[k {:keys [value]}]] [k value]) results))
-                               new-items-cache (into items-cache (map (fn [[k {:keys [cache]}]] [k cache]) results))]
-                           {:value new-value
-                            :cache (assoc cache :items new-items-cache)}))}))
+                                                t (transform-t T)]
+                                            [k (interpolate t)]))
+                                        items)]
+                           (into value results)))}))
      (fn [] (str "(par " (str/join " " (map (fn [[k v]] (str k " " ((:to-string v)))) motions)) ")")))))
 
 (defn action-with!
@@ -527,10 +474,8 @@
   (into-motion
    (fn [value _]
      {:duration 0
-      :interpolate (fn [t {:keys [prev-t] :as cache}]
-                     (when (and prev-t (or (and (< prev-t 1.0) (<= 1.0 t)) (and (> prev-t 1.0) (>= 0.0 t))))
-                       (action value))
-                     {:value value :cache cache})})
+      :interpolate (constantly value)
+      :side-effects [{:at 1.0 :action #(action value)}]})
    (constantly "(action-with! fn)")))
 
 (defn action!
@@ -566,7 +511,7 @@
              end (when (and dur-mcs (not= dur-mcs max-duration) (< 0 max-duration)) (/ dur-mcs max-duration))
              curve (when end (curves/interval 0.0 end :linear))]
          {:interpolate (if curve
-                         #(interpolate (.transform curve (double %1)) %2)
+                         #(interpolate (.transform curve (double %)))
                          interpolate)
           :relative-duration relative-duration
           :duration (from-mcs max-duration)}))
@@ -585,7 +530,7 @@
     (into-motion
      (fn [value exp-dur]
        (let [{:keys [interpolate duration relative-duration]} ((:prepare-motion motion) value exp-dur)]
-         {:interpolate #(interpolate (.transform curve (double %1)) %2)
+         {:interpolate #(interpolate (.transform curve (double %)))
           :relative-duration relative-duration
           :duration duration}))
      (fn [] (str "(curve " (.toString curve) " " ((:to-string motion)) ")")))))
@@ -624,7 +569,7 @@
              {:keys [interpolate duration relative-duration]} ((:prepare-motion motion) value (from-mcs dur-mcs))
              dur-mcs (when (and delay-mcs duration) (+ delay-mcs (in-mcs duration)))
              curve (curves/interval delay 1.0 :linear)]
-         {:interpolate #(interpolate (.transform curve (double %1)) %2)
+         {:interpolate #(interpolate (.transform curve (double %)))
           :relative-duration (when relative-duration (+ delay relative-duration))
           :duration (from-mcs dur-mcs)}))
      (fn [] (str "(relative-delay " delay " " ((:to-string motion)) ")")))))
@@ -654,7 +599,7 @@
                    1.0)
              curve (when start (curves/interval start end :linear))]
          {:interpolate (if curve
-                         #(interpolate (.transform curve (double %1)) %2)
+                         #(interpolate (.transform curve (double %)))
                          interpolate)
           :relative-duration relative-duration
           :duration (from-mcs full-dur-mcs)}))
@@ -687,6 +632,29 @@
        relative-duration (flutter-cljd.animations/relative-duration relative-duration)
        delay (flutter-cljd.animations/delay delay)
        relative-delay (flutter-cljd.animations/relative-delay relative-delay)))))
+
+(defn const
+  
+  [value & values]
+  (let [values (cons value values)
+        {:keys [options items]} (separate-last-options values)
+        motion (into-motion
+                (fn [value exp-dur]
+                  (let [cnt (count items)
+                        last-i (- cnt 1)]
+                    (case cnt
+                      0 (const-anim value exp-dur)
+                      1 (const-anim (last items) exp-dur)
+                      {:duration exp-dur
+                       :interpolate (fn [T]
+                                      (let [i (min last-i (int (* T cnt)))]
+                                        (nth items i)))}))))]
+    (assoc
+     (if (empty? options)
+       motion 
+       (with options motion))
+     :to-string
+     (fn [] (str "(const " (str/join " " values) ")")))))
 
 (defn to
   "Animate to a value.\\
@@ -823,12 +791,9 @@
                 prepare-motion (:prepare-motion motion)
                 {:keys [duration interpolate]} (prepare-motion value loop-dur)]
             {:interpolate
-             (fn [T cache]
-               (let [transform-t #(if (= % 1.0) 1.0 (mod (* % cnt) 1.0))
-                     t (transform-t T)
-                     prev-t (:prev-t cache)
-                     prev-t (when prev-t (transform-t prev-t))]
-                 (interpolate t (assoc cache :prev-t prev-t))))
+             (fn [T]
+               (let [t (if (= T 1.0) 1.0 (mod (* T cnt) 1.0))]
+                 (interpolate t)))
              :duration (some-> (or (when duration {:microseconds (* (in-mcs duration) cnt)}) exp-dur) t/duration)})))
       (fn [] (str "(repeat " cnt " " ((:to-string motion)) ")"))))))
 
@@ -847,11 +812,8 @@
         (let [loop-dur (when exp-dur {:microseconds (/ (in-mcs exp-dur) 2)})
               {:keys [duration interpolate]} ((:prepare-motion motion) value loop-dur)]
           {:interpolate
-           (fn [T cache]
-             (let [transform-t #(* (if (<= % 0.5) % (- 1.0 %)) 2)
-                   t (transform-t T)
-                   prev-t (:prev-t cache)
-                   prev-t (when prev-t (transform-t prev-t))]
-               (interpolate t (assoc cache :prev-t prev-t))))
+           (fn [T]
+             (let [t (* (if (<= T 0.5) T (- 1.0 T)) 2)]
+               (interpolate t)))
            :duration (some-> (or (when duration {:microseconds (* (in-mcs duration) 2)}) exp-dur) t/duration)}))
       (fn [] (str "(autoreverse " ((:to-string motion)) ")"))))))
