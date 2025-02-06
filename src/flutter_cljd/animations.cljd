@@ -379,6 +379,7 @@
                          (/ (- (/ (- res-dur min-dur) res-dur) sum-rel) cnt-any)
                          (/ (- 1.0 sum-rel) cnt-any))
                        0.0)
+             cnt (count items)
              final-items (reduce
                           (fn [res item]
                             (let [{:keys [duration relative-duration]} item
@@ -388,13 +389,12 @@
                                               (when res-dur
                                                 (if (< 0 res-dur)
                                                   (if duration (/ duration res-dur) any-dur)
-                                                  1.0))
+                                                  (/ cnt)))
                                               any-dur)
                                   end (+ t rel-dur)]
                               (conj res (assoc item :start t :end end :rel-dur rel-dur))))
                           []
-                          items)
-             cnt (count final-items)]
+                          items)]
          {:duration (from-mcs res-dur)
           :interpolate (case cnt
                          0 (const-anim value)
@@ -479,11 +479,11 @@
           :side-effects (when (< 0 side-effects-cnt)
                           (let [effects
                                 (map
-                                 (fn [{:keys [rel-dur side-effects]}]
+                                 (fn [[_ {:keys [rel-dur side-effects]}]]
                                    (if side-effects
                                      (let [curve (when (< rel-dur 1.0) (curves/interval nil rel-dur :linear))
-                                           transform (if curve #(.transform curve (double %)) #(double %))] 
-                                       (if curve
+                                           transform (when curve #(.transform curve (double %)))]
+                                       (if transform
                                          #(side-effects (map transform %))
                                          side-effects))
                                      (constantly [])))
@@ -507,7 +507,7 @@
      {:duration 0
       :interpolate (constantly value)
       :side-effects (fn [[start end]]
-                      (if (<= start 1.0 end) [#(action value)] []))})
+                      (if (and (< start 1.0) (<= 1.0 end)) [#(action value)] []))})
    (constantly "(action-with! fn)")))
 
 (defn action!
