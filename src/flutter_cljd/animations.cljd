@@ -345,12 +345,12 @@
         clamp #(min 1.0 (max 0.0 %))]
     (into-motion
      (fn [value exp-dur]
-       (let [{:keys [sum-abs sum-rel cnt-any items intr-dur]}
+       (let [{:keys [sum-abs sum-rel cnt-any items intr-dur effects-cnt]}
              (reduce
               (fn [res motion]
                 (if (some? motion)
-                  (let [{:keys [value sum-abs sum-rel]} res
-                        {:keys [duration relative-duration interpolate]} ((:prepare-motion motion) value nil)
+                  (let [{:keys [value sum-abs sum-rel effects-cnt]} res
+                        {:keys [duration relative-duration interpolate side-effects]} ((:prepare-motion motion) value nil)
                         next-value (interpolate 1.0)
                         duration (in-mcs duration)
                         relative (when (and (nil? duration) relative-duration) (clamp relative-duration))]
@@ -360,9 +360,10 @@
                      :cnt-any (+ (:cnt-any res) (if (or duration relative) 0 1))
                      :cnt-abs (+ (:cnt-abs res) (if duration 1 0))
                      :intr-dur (when (and duration relative-duration (< 0 relative-duration)) (/ duration relative-duration))
-                     :items (conj (:items res) {:duration duration :relative-duration relative :interpolate interpolate})})
+                     :items (conj (:items res) {:duration duration :relative-duration relative :interpolate interpolate :side-effects side-effects})
+                     :effects-cnt (+ effects-cnt (if side-effects 1 0))})
                   res))
-              {:value value :sum-abs nil :sum-rel 0.0 :cnt-any 0 :cnt-abs 0 :items []}
+              {:value value :sum-abs nil :sum-rel 0.0 :cnt-any 0 :cnt-abs 0 :items [] :effects-cnt 0}
               motions)
              rel-k (if (< 1 sum-rel) (/ sum-rel) 1.0)
              sum-rel (clamp sum-rel)
@@ -410,7 +411,21 @@
                                           (zero? i) (min 1.0 t)
                                           (= i (- cnt 1)) (max 0.0 t)
                                           :else (clamp t))]
-                             (interpolate anim-t))))}))
+                             (interpolate anim-t))))
+          :side-effects (when (< 0 effects-cnt)
+                          (let [effects
+                                (map
+                                 (fn [{:keys [start end side-effects]}]
+                                   (if side-effects
+                                     (let [curve (curves/interval (when-not (zero? start) start) (when-not (= 1.0 end) end) :linear)
+                                           transform #(.transform curve (double %))]
+                                       (if curve
+                                         #(side-effects (map transform %))
+                                         side-effects))
+                                     (constantly [])))
+                                 final-items)]
+                            (fn [range]
+                              (apply concat (map #(% range) effects)))))}))
      (fn [] (str "(seq " (str/join " " (map #((:to-string %)) motions)) ")")))))
 
 (defn- -parallel [motions]
@@ -420,11 +435,11 @@
        (let [value (or value {})
              exp-dur-in-mcs (in-mcs exp-dur)
 
-             {:keys [max-dur items]}
+             {:keys [max-dur items side-effects-cnt]}
              (reduce
               (fn [res [k v]]
-                (let [{:keys [duration relative-duration interpolate]} ((:prepare-motion v) (get value k) exp-dur)
-                      {:keys [max-dur items]} res
+                (let [{:keys [duration relative-duration interpolate side-effects]} ((:prepare-motion v) (get value k) exp-dur)
+                      {:keys [max-dur items side-effects-cnt]} res
                       dur-abs (or
                                (in-mcs duration)
                                (when (and relative-duration exp-dur-in-mcs) (* exp-dur-in-mcs relative-duration)))
@@ -434,8 +449,9 @@
                                (when (and dur-abs exp-dur-in-mcs (< 0 exp-dur-in-mcs)) (/ dur-abs exp-dur-in-mcs))
                                1.0)]
                   {:max-dur max-dur
-                   :items (assoc items k {:duration dur-abs :interpolate interpolate :rel-dur rel-dur})}))
-              {:max-dur nil :items {}}
+                   :side-effects-cnt (+ side-effects-cnt (if side-effects 1 0))
+                   :items (assoc items k {:duration dur-abs :interpolate interpolate :rel-dur rel-dur :side-effects side-effects})}))
+              {:max-dur nil :items {} :side-effects-cnt 0}
               motions)
              full-dur (if (and exp-dur-in-mcs max-dur)
                         (max exp-dur-in-mcs max-dur)
@@ -443,9 +459,10 @@
              items (if (and full-dur (not= full-dur exp-dur-in-mcs) (< 0 full-dur))
                      (update-vals
                       items
-                      (fn [{:keys [duration interpolate]}]
+                      (fn [{:keys [duration interpolate side-effects]}]
                         {:interpolate interpolate
-                         :rel-dur (if duration (/ duration full-dur) 1.0)}))
+                         :rel-dur (if duration (/ duration full-dur) 1.0)
+                         :side-effects side-effects}))
                      items)]
          {:duration (some-> (or (from-mcs full-dur) exp-dur) t/duration)
           :interpolate (fn [T]
@@ -458,7 +475,21 @@
                                                 t (transform-t T)]
                                             [k (interpolate t)]))
                                         items)]
-                           (into value results)))}))
+                           (into value results)))
+          :side-effects (when (< 0 side-effects-cnt)
+                          (let [effects
+                                (map
+                                 (fn [{:keys [rel-dur side-effects]}]
+                                   (if side-effects
+                                     (let [curve (when (< rel-dur 1.0) (curves/interval nil rel-dur :linear))
+                                           transform (if curve #(.transform curve (double %)) #(double %))] 
+                                       (if curve
+                                         #(side-effects (map transform %))
+                                         side-effects))
+                                     (constantly [])))
+                                 items)]
+                            (fn [range]
+                              (apply concat (map #(% range) effects)))))}))
      (fn [] (str "(par " (str/join " " (map (fn [[k v]] (str k " " ((:to-string v)))) motions)) ")")))))
 
 (defn action-with!
@@ -475,7 +506,8 @@
    (fn [value _]
      {:duration 0
       :interpolate (constantly value)
-      :side-effects [{:at 1.0 :action #(action value)}]})
+      :side-effects (fn [[start end]]
+                      (if (<= start 1.0 end) [#(action value)] []))})
    (constantly "(action-with! fn)")))
 
 (defn action!
@@ -504,17 +536,22 @@
   (let [motion (into-motion motion)]
     (into-motion
      (fn [value _]
-       (let [{:keys [interpolate duration relative-duration]} ((:prepare-motion motion) value duration)
+       (let [{:keys [interpolate duration relative-duration side-effects]} ((:prepare-motion motion) value duration)
              duration-mcs (in-mcs duration)
              dur-mcs (in-mcs duration)
              max-duration (if (and duration-mcs dur-mcs) (max duration-mcs dur-mcs) (or duration-mcs dur-mcs))
              end (when (and dur-mcs (not= dur-mcs max-duration) (< 0 max-duration)) (/ dur-mcs max-duration))
-             curve (when end (curves/interval 0.0 end :linear))]
+             curve (when end (curves/interval nil end :linear))]
          {:interpolate (if curve
                          #(interpolate (.transform curve (double %)))
                          interpolate)
           :relative-duration relative-duration
-          :duration (from-mcs max-duration)}))
+          :duration (from-mcs max-duration)
+          :side-effects (when side-effects
+                          (if curve
+                            (fn [interval]
+                              (side-effects (map #(.transform curve (double %)) interval)))
+                            side-effects))}))
      (fn [] (str "(duration " duration " " ((:to-string motion)) ")")))))
 
 (defn curve
@@ -529,10 +566,13 @@
         curve (t/curve curve)]
     (into-motion
      (fn [value exp-dur]
-       (let [{:keys [interpolate duration relative-duration]} ((:prepare-motion motion) value exp-dur)]
+       (let [{:keys [interpolate duration relative-duration side-effects]} ((:prepare-motion motion) value exp-dur)]
          {:interpolate #(interpolate (.transform curve (double %)))
           :relative-duration relative-duration
-          :duration duration}))
+          :duration duration
+          :side-effects (when side-effects
+                           (fn [range]
+                             (side-effects (map #(.transform curve (double %)) range))))}))
      (fn [] (str "(curve " (.toString curve) " " ((:to-string motion)) ")")))))
 
 (defn relative-duration
@@ -546,10 +586,11 @@
   (let [motion (into-motion motion)]
     (into-motion
      (fn [value exp-dur]
-       (let [{:keys [interpolate duration relative-duration]} ((:prepare-motion motion) value exp-dur)]
+       (let [{:keys [interpolate duration relative-duration side-effects]} ((:prepare-motion motion) value exp-dur)]
          {:interpolate interpolate
           :duration duration
-          :relative-duration (if relative-duration (* ratio relative-duration) ratio)}))
+          :relative-duration (if relative-duration (* ratio relative-duration) ratio)
+          :side-effects side-effects}))
      (fn [] (str "(relative-duration " ratio " " ((:to-string motion)) ")")))))
 
 (defn relative-delay
@@ -566,12 +607,15 @@
        (let [exp-dur-mcs (in-mcs exp-dur)
              delay-mcs (when exp-dur-mcs (* delay exp-dur-mcs))
              dur-mcs (when exp-dur-mcs (* exp-dur-mcs (- 1.0 delay)))
-             {:keys [interpolate duration relative-duration]} ((:prepare-motion motion) value (from-mcs dur-mcs))
+             {:keys [interpolate duration relative-duration side-effects]} ((:prepare-motion motion) value (from-mcs dur-mcs))
              dur-mcs (when (and delay-mcs duration) (+ delay-mcs (in-mcs duration)))
-             curve (curves/interval delay 1.0 :linear)]
+             curve (curves/interval delay nil :linear)]
          {:interpolate #(interpolate (.transform curve (double %)))
           :relative-duration (when relative-duration (+ delay relative-duration))
-          :duration (from-mcs dur-mcs)}))
+          :duration (from-mcs dur-mcs)
+          :side-effects (when side-effects
+                          (fn [interval]
+                            (side-effects (map #(.transform curve (double %)) interval))))}))
      (fn [] (str "(relative-delay " delay " " ((:to-string motion)) ")")))))
 
 (defn delay
@@ -589,7 +633,7 @@
              delay-mcs (in-mcs delay)
              delay-ratio (when (and exp-dur-mcs (< 0 exp-dur-mcs)) (/ delay-mcs exp-dur-mcs))
              dur-mcs (when exp-dur-mcs (- exp-dur-mcs delay-mcs))
-             {:keys [interpolate duration relative-duration]} ((:prepare-motion motion) value (from-mcs dur-mcs))
+             {:keys [interpolate duration relative-duration side-effects]} ((:prepare-motion motion) value (from-mcs dur-mcs))
              dur-mcs (in-mcs duration)
              relative-duration (when (and delay-ratio relative-duration) (+ delay-ratio relative-duration))
              full-dur-mcs (when dur-mcs (+ delay-mcs dur-mcs))
@@ -602,7 +646,12 @@
                          #(interpolate (.transform curve (double %)))
                          interpolate)
           :relative-duration relative-duration
-          :duration (from-mcs full-dur-mcs)}))
+          :duration (from-mcs full-dur-mcs)
+          :side-effects (when side-effects
+                          (if curve
+                            (fn [interval]
+                              (side-effects (map #(.transform curve (double %)) interval)))
+                            side-effects))}))
      (fn [] (str "(delay " delay " " ((:to-string motion)) ")")))))
 
 (defn with
@@ -637,12 +686,12 @@
   "Creates a motion that steps through constant values.\\
    Takes one or more values and returns a motion that changes discretely between them.\\
    If only one value is provided, creates a constant motion with that value.\\
-   Can accept animation options as the last argument.\\
+   Can accept animation options map or key-value pairs after values.\\
    The duration is divided evenly between the values.
    ```clojure
    (const 10.0)  ;; Stays at 10.0
    (const 0 50 100)  ;; Steps from 0 to 50 to 100
-   (const 0 100 {:duration 1000})  ;; Steps over 1 second
+   (const 0 100 :dur 2000)  ;; Steps over 1 second
    ```"
   [value & values]
   (let [values (cons value values)
@@ -798,12 +847,23 @@
           (let [relative-duration (/ cnt)
                 loop-dur (when exp-dur {:microseconds (* (in-mcs exp-dur) relative-duration)})
                 prepare-motion (:prepare-motion motion)
-                {:keys [duration interpolate]} (prepare-motion value loop-dur)]
+                {:keys [duration interpolate side-effects]} (prepare-motion value loop-dur)
+                transform #(if (= % 1.0) 1.0 (mod (* % cnt) 1.0))]
             {:interpolate
              (fn [T]
-               (let [t (if (= T 1.0) 1.0 (mod (* T cnt) 1.0))]
+               (let [t (transform T)]
                  (interpolate t)))
-             :duration (some-> (or (when duration {:microseconds (* (in-mcs duration) cnt)}) exp-dur) t/duration)})))
+             :duration (some-> (or (when duration {:microseconds (* (in-mcs duration) cnt)}) exp-dur) t/duration)
+             :side-effects (when side-effects
+                             (fn [[start end]]
+                               (let [dur (- end start)]
+                                 (if (<= relative-duration dur)
+                                   (side-effects [0.0 1.0])
+                                   (let [[x y] (map #(int (/ % cnt)) [start end])
+                                         s (transform start)
+                                         e (transform end)
+                                         ranges (if (= x y) [[s e]] [[s 1.0] [0.0 e]])]
+                                     (apply concat (map side-effects ranges)))))))})))
       (fn [] (str "(repeat " cnt " " ((:to-string motion)) ")"))))))
 
 (defn autoreverse
@@ -819,10 +879,20 @@
      (into-motion
       (fn [value exp-dur]
         (let [loop-dur (when exp-dur {:microseconds (/ (in-mcs exp-dur) 2)})
-              {:keys [duration interpolate]} ((:prepare-motion motion) value loop-dur)]
+              {:keys [duration interpolate side-effects]} ((:prepare-motion motion) value loop-dur)
+              transform #(* (if (<= % 0.5) % (- 1.0 %)) 2)]
           {:interpolate
            (fn [T]
-             (let [t (* (if (<= T 0.5) T (- 1.0 T)) 2)]
+             (let [t (transform T)]
                (interpolate t)))
-           :duration (some-> (or (when duration {:microseconds (* (in-mcs duration) 2)}) exp-dur) t/duration)}))
+           :duration (some-> (or (when duration {:microseconds (* (in-mcs duration) 2)}) exp-dur) t/duration)
+           :side-effects (when side-effects
+                           (fn [[start end]]
+                             (let [s (transform start)
+                                   e (transform end)
+                                   ranges
+                                   (if (or (<= end 0.5) (<= 0.5 start))
+                                     [[(min s e) (max s e)]]
+                                     [[s 1.0] [e 1.0]])]
+                               (apply concat (map #(side-effects %) ranges)))))}))
       (fn [] (str "(autoreverse " ((:to-string motion)) ")"))))))

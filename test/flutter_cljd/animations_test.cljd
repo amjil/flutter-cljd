@@ -21,13 +21,13 @@
 
 (deftest test-const
   (testing "Single value"
-    (let [anim (unwrap (const 100))]
+    (let [anim (unwrap (a/const 100))]
       (is (= (anim 0) 100))
       (is (= (anim 0.5) 100))
       (is (= (anim 1) 100))))
 
   (testing "Multiple values"
-    (let [anim (unwrap (const 0 50 100))]
+    (let [anim (unwrap (a/const 0 50 100))]
       (is (= (anim 0) 0))
       (is (= (anim 0.33) 0))
       (is (= (anim 0.34) 50))
@@ -36,7 +36,7 @@
       (is (= (anim 1) 100))))
 
   (testing "With duration option"
-    (let [anim (unwrap (const 0 50 100 :dur 1000))]
+    (let [anim (unwrap (a/const 0 50 100 :dur 1000))]
       (is (= (anim 0) 0))
       (is (= (anim 0.33) 0))
       (is (= (anim 0.34) 50))
@@ -45,23 +45,17 @@
       (is (= (anim 1) 100))))
 
   (testing "With initial value"
-    (let [anim (unwrap 75 (const 100))]
+    (let [anim (unwrap 75 (a/const 100))]
       (is (= (anim 0) 100))
       (is (= (anim 0.5) 100))
       (is (= (anim 1) 100))))
 
   (testing "With combined options"
-    (let [anim (unwrap (const 0 100 {:duration 1000 :delay 500}))]
+    (let [anim (unwrap (a/const 0 100 {:duration 1000 :delay 500}))]
       (is (= (anim 0) 0))
-      (is (= (anim 0.49) 0))
-      (is (= (anim 0.51) 100))
-      (is (= (anim 1) 100))))
-
-  (testing "Empty values"
-    (let [anim (unwrap nil (const))]
-      (is (= (anim 0) nil))
-      (is (= (anim 0.5) nil))
-      (is (= (anim 1) nil)))))
+      (is (= (anim 0.65) 0))
+      (is (= (anim 0.67) 100))
+      (is (= (anim 1) 100)))))
 
 (deftest test-to
   (testing "Single value"

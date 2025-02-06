@@ -88,25 +88,27 @@
    An Interval can be used to delay an animation. For example, a six second animation that uses an Interval with
    its begin set to 0.5 and its end set to 1.0 will essentially become a three-second animation that starts three seconds later."
   ([begin end curve] 
-   (let [duration (- end begin)
-         from (double (min begin end 1.0))
-         to (double (max begin end 0.0))
+   (let [b (or begin 0.0)
+         e (or end 1.0)
+         duration (- e b)
+         from (double (min b e 1.0))
+         to (double (max b e 0.0))
          curve (t/curve curve)]
      (t/AnyCurve
       (fn [t]
         (.transform curve (cond
                             (zero? duration) (if (<= t from) 0.0 1.0)
-                            (and (<= t from) (< 0.0 from)) 0.0
-                            (and (<= to t) (< to 1.0)) 1.0
+                            (and (<= t from) (some? begin)) 0.0
+                            (and (<= to t) (some? end)) 1.0
                             :else (/ (- t from) duration))))
-      (str "(interval " begin ", " end ", " (.toString curve) ")"))))
+      (str "(interval " begin " " end " " (.toString curve) ")"))))
   ([begin end]
    (if (coll? begin)
      (interval (first begin) (second begin) end)
      (interval begin end nil)))
   ([value]
    (if (number? value)
-     (interval value 1.0)
+     (interval value nil)
      (interval (first value) (second value)))))
 
 (defn segment
