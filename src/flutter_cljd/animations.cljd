@@ -365,24 +365,64 @@
     controller))
 
 (defn motion-controller
-  "Creates a motion controller.\\
-   The motion controller is an animation controller that animates the provided motion.\\
-   The motion controller has the following methods:
-    - `.forward` - Forwards the motion controller to the provided value.
-    - `.stop` - Stops the motion controller.
-    - `.toggle` - Toggles the motion controller.
-    - `.animateBack` - Animates the motion controller back to the provided value.
-    - `.animateTo` - Animates the motion controller to the provided value.
-    - `.repeat` - Repeats the motion controller.
-    - `.reset` - Resets the motion controller.
-    - `.resync` - Resyncs the motion controller.
-    - `.reverse` - Reverses the motion controller.
-    - `.dispose` - Disposes the motion controller.
-   ```clojure
-   (motion-controller 
-     
-   (to 10.0))
-   ```"
+  "Creates a motion controller that manages animations.
+
+  Arguments:
+   - vsync: A TickerProvider that drives the animation (usually obtained from a widget's state)
+   - motion: The motion to animate (created with `to`, `par`, `seq`, etc.)
+   - options (optional):
+     - :progress - Initial progress value (default: 0.0)
+     - :debug-label - Label for debugging (optional)
+     - :animation-behavior - Animation behavior on hot reload (default: :preserve)
+
+  Returns a MotionController instance that:
+   - Implements Animation protocol
+   - Has .-value that returns the current motion value (not a double)
+   - Supports ILookup to create child animations (e.g., (:x controller))
+   - Provides methods for controlling animation:
+     - .forward - Start forward animation
+     - .stop - Stop animation
+     - .toggle - Toggle animation direction
+     - .animateBack - Animate to previous value
+     - .animateTo - Animate to specific value
+     - .repeat - Repeat animation
+     - .reset - Reset to initial state
+     - .resync - Resync with vsync
+     - .reverse - Reverse animation
+     - .dispose - Clean up resources
+
+  Examples:
+  ```clojure
+  ;; Basic usage
+  (motion-controller vsync (to 10.0))
+
+  ;; With initial progress
+  (motion-controller vsync (to 0 100) :progress 0.5)
+
+  ;; Parallel animations with child animations
+  (let [controller (motion-controller 
+                    vsync
+                    (par {:dur 500}
+                         :opacity (to 0 1)
+                         :offset (to 0 100)))]
+    ;; Use child animations in widgets
+    (widget
+      :managed [animation controller]
+      (->> (text \"Hello\")
+           (animated (:opacity animation) opacity)
+           (animated (:offset animation) #(offset %1 0)))))
+
+  ;; Complex animation sequence
+  (widget
+    :managed [animation (motion-controller 
+                         vsync
+                         (par {:dur 500} 
+                              :opacity (to 0.5 1.0)
+                              :padding (to (insets 0) (insets :v 10))))]
+    (->> (text \"Title\")
+         (animated (:opacity animation) opacity)
+         (animated (:padding animation) padding)))
+  ```"
   ([vsync motion & {:keys [progress debug-label animation-behavior]
                     :or {progress 0.0 animation-behavior a/AnimationBehavior.preserve}}]
    (let [{:keys [prepare-motion] :as motion} (into-motion motion)
