@@ -411,16 +411,57 @@
            (animated (:opacity animation) opacity) ;; (:opacity animation) returns the child animation 
            (animated (:offset animation) #(offset %1 0)))))
 
-  ;; Complex animation sequence
+  ;; Complex animation sequence with curves and relative durations
   (widget
     :managed [animation (motion-controller 
                          vsync
-                         (par {:dur 500} 
-                              :opacity (to 0.5 1.0)
-                              :padding (to (insets 0) (insets :v 10))))]
-    (->> (text \"Title\")
+                         (seq
+                           ;; Initial state
+                           {:opacity 0.0
+                            :scale 0.8
+                            :offset 0}
+                           ;; Fade in and scale up with ease-out
+                           (par {:dur 400 :curve :ease-out}
+                                :opacity (to 1.0)
+                                :scale (to 1.0))
+                           ;; Wait a bit
+                           (wait 200)
+                           ;; Slide and bounce
+                           (par
+                             :offset (-> (to 0 20 0)
+                                       (with {:dur 600 :curve :ease-in-out}))
+                             ;; Scale effect happens during middle of slide
+                             :scale (-> (to 1.0 1.1 1.0)
+                                      (with {:dur 300 
+                                            :rel-delay 0.25
+                                            :curve :ease-in-out})))))]
+    (->> (text \"Animated Title\")
          (animated (:opacity animation) opacity)
-         (animated (:padding animation) padding)))
+         (animated (:scale animation) scale)
+         (animated (:offset animation) #(offset 0 %))))
+
+  ;; Sequential animations with relative timing
+  (widget
+    :managed [animation (motion-controller
+                         vsync
+                         (seq {:dur 2000}
+                           ;; Take 40% of total time
+                           (with {:rel-dur 0.4 :curve :ease-out}
+                             (par
+                               :opacity (to 0 1)
+                               :scale (to 0.5 1.0)))
+                           ;; Brief pause (10% of time)
+                           (with {:rel-dur 0.1} (wait))
+                           ;; Rest of animation (50% of time)
+                           (par
+                             :color (to Colors.blue Colors.red)
+                             :rotation (-> (to 0 360)
+                                         (with {:curve :ease-in-out})))))]
+    (->> (container)
+         (animated (:opacity animation) opacity)
+         (animated (:scale animation) scale)
+         (animated (:color animation) background-color)
+         (animated (:rotation animation) rotate)))
   ```"
   ([vsync motion & {:keys [progress debug-label animation-behavior]
                     :or {progress 0.0 animation-behavior a/AnimationBehavior.preserve}}]
