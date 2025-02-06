@@ -634,7 +634,16 @@
        relative-delay (flutter-cljd.animations/relative-delay relative-delay)))))
 
 (defn const
-  
+  "Creates a motion that steps through constant values.\\
+   Takes one or more values and returns a motion that changes discretely between them.\\
+   If only one value is provided, creates a constant motion with that value.\\
+   Can accept animation options as the last argument.\\
+   The duration is divided evenly between the values.
+   ```clojure
+   (const 10.0)  ;; Stays at 10.0
+   (const 0 50 100)  ;; Steps from 0 to 50 to 100
+   (const 0 100 {:duration 1000})  ;; Steps over 1 second
+   ```"
   [value & values]
   (let [values (cons value values)
         {:keys [options items]} (separate-last-options values)
