@@ -373,6 +373,90 @@
           {:keys [duration]} (anim2 nil nil)]
       (is (= (.-inMilliseconds duration) 5000) "Should use parent duration"))))
 
+(deftest test-side-effects
+  (testing "Basic action execution"
+    (let [executed (atom false)
+          {:keys [side-effects]} ((:prepare-motion (a/action! #(reset! executed true))) nil nil)]
+      (is (empty? (side-effects [0.0 0.5])))
+      (is (= (count (side-effects [0.5 1.0])) 1))
+      (is (false? @executed))
+      ((first (side-effects [0.5 1.0])))
+      (is (true? @executed))))
+
+  (testing "Sequential side effects"
+    (let [events (atom [])
+          record-event (fn [x] #(swap! events conj x))
+          {:keys [side-effects]} ((:prepare-motion 
+                                  (a/seq
+                                    (a/action! (record-event :first))
+                                    (a/action! (record-event :second)))) nil nil)]
+      (is (empty? @events))
+      (is (empty? (side-effects [0.0 0.25])))
+      (let [actions (side-effects [0.0 0.5])]
+        (is (= (count actions) 1))
+        ((first actions)))
+      (is (= @events [:first]))
+      (let [actions (side-effects [0.5 1.0])]
+        (is (= (count actions) 1))
+        ((first actions)))
+      (is (= @events [:first :second]))))
+
+  (testing "Parallel side effects"
+    (let [events (atom [])
+          record-event (fn [x] #(swap! events conj x))
+          {:keys [side-effects]} ((:prepare-motion
+                                  (a/par
+                                    :a (a/action! (record-event :a))
+                                    :b (a/action! (record-event :b)))) nil nil)]
+      (is (empty? @events))
+      (let [actions (side-effects [0.0 1.0])]
+        (is (= (count actions) 2))
+        (doseq [action actions] (action)))
+      (is (= (set @events) #{:a :b}))))
+
+  (testing "Side effects with curves"
+    (let [events (atom [])
+          record-event (fn [x] #(swap! events conj x))
+          {:keys [side-effects]} ((:prepare-motion
+                                  (a/with {:curve :ease-in}
+                                         (a/action! (record-event :curved)))) nil nil)]
+      (is (empty? @events))
+      (is (empty? (side-effects [0.0 0.5])))
+      (let [actions (side-effects [0.5 1.0])]
+        (is (= (count actions) 1))
+        ((first actions)))
+      (is (= @events [:curved]))))
+
+  (testing "Repeated side effects"
+    (let [events (atom [])
+          record-event (fn [x] #(swap! events conj x))
+          {:keys [side-effects]} ((:prepare-motion
+                                  (a/repeat 2 (a/action! (record-event :repeat)))) nil nil)]
+      (is (empty? @events))
+      (let [actions (side-effects [0.0 0.5])]
+        (is (= (count actions) 1))
+        ((first actions)))
+      (is (= @events [:repeat]))
+      (let [actions (side-effects [0.5 1.0])]
+        (is (= (count actions) 1))
+        ((first actions)))
+      (is (= @events [:repeat :repeat]))))
+
+  (testing "Autoreversed side effects"
+    (let [events (atom [])
+          record-event (fn [x] #(swap! events conj x))
+          {:keys [side-effects]} ((:prepare-motion
+                                  (a/autoreverse (a/action! (record-event :auto)))) nil nil)]
+      (is (empty? @events))
+      (let [actions (side-effects [0.0 0.5])]
+        (is (= (count actions) 1))
+        ((first actions)))
+      (is (= @events [:auto]))
+      (let [actions (side-effects [0.5 1.0])]
+        (is (= (count actions) 1))
+        ((first actions)))
+      (is (= @events [:auto :auto])))))
+
 (deftest test-curves
   (testing "Constant curve"
     (let [curve (c/constant 0.5)]
