@@ -24,13 +24,31 @@
          [^a/Animation parent transform]
   :extends a/Animation
   (value [this] ((.-transform this) (-> this .-parent .-value)))
+  c/IEquiv
+  (-equiv [o other] (identical? o other))
   ^:mixin a/AnimationWithParentMixin)
+
+(defn transformed-animation
+  "Transforms an animation using a transform function.\\
+     `transformed-animation` takes an animation and a transform function and returns a new animation.\\
+     The transform function takes the value of the parent animation and returns the transformed value.
+     ```clojure
+     (transformed-animation parent #(* % 2))
+     ```
+     `Animation` implements `ILookup` to create a transformed animation that transforms the value of the parent animation.
+     ```clojure
+     (let [animation (AlwaysStoppedAnimation {:x 10.0 :y 20})
+           x-animation (:x animation) ;; an animation that always returns 10.0
+           y-animation (get animation :y)] ;; an animation that always returns 20.0
+     ```"
+  [parent transform]
+  (TransformedAnimation parent transform))
 
 (extend-protocol c/ILookup
   a/Animation
   (-lookup [this key] (c/-lookup this key nil))
   (-lookup [this key not-found]
-    (TransformedAnimation this (fn [value] (c/-lookup value key not-found))))
+    (transformed-animation this (fn [value] (c/-lookup value key not-found))))
   (-contains-key? [this key]
     (c/-contains-key? (.-value this) key)))
 
@@ -74,6 +92,24 @@
   ^:mixin a/AnimationWithParentMixin)
 
 (defn ^AnimatedValue animated-value
+  "Animation that can be used to animate value changes.\\
+   `animated-value` takes an initial value and returns an animated value.\\
+   The `vsync` argument is required and specifies the `TickerProvider` for the animation.\\
+   The `options` argument is optional and specifies the animation options.\\
+   The `options` argument can be a map with the following keys:
+    - `:duration` - Duration of the animation.
+    - `:curve` - Curve of the animation.
+    - `:reverse-curve` - Reverse curve of the animation.
+    - `:lerp` - Lerp function of the animation.
+   
+   ```clojure
+   (animated-value 10.0 vsync)
+   (animated-value 10.0 vsync {:duration 1000})
+   ```
+   To start the animation, change the value using `reset!` or `swap!`.
+   ```clojure
+   (reset! animated-value 20.0)
+   ```"
   ([initial-value vsync] (animated-value initial-value vsync {}))
   ([initial-value vsync options]
    (let [options (t/animation-options options)
@@ -106,23 +142,15 @@
 
 (declare MotionController)
 
-(defn- set-cached-value [^MotionController this]
-  (.-cachedValue! this ((.-interpolate this) (-> this .-parent .-value) (-> this .-cache))))
-
-(defn- reset-cached-value [^MotionController this]
-  (.-cachedValue! this nil))
-
 (deftype MotionController
          [^:mutable motion
           ^:mutable interpolate
-          ^:mutable cache
-          ^:mutable cachedValue
+          ^:mutable effectsListener
+          ^:mutable prevProgress
           ^a/AnimationController parent]
   :extends (a/Animation)
   (value [^MotionController this]
-    (if (or (.-isAnimating this) (nil? (.-cachedValue this)))
-      ((.-interpolate this) (-> this .-parent .-value) (-> this .-cache))
-      (.-cachedValue this)))
+    ((.-interpolate this) (-> this .-parent .-value)))
   dc/Object
   (toString [^MotionController this]
     ((-> this .-motion :to-string)))
@@ -134,19 +162,16 @@
     (.-value! (-> this .-parent) (double new-value))
     nil)
   (dispose [^MotionController this]
-    (.dispose (.-parent this))
-    (reset-cached-value this))
+    (when (.-effectsListener this)
+      (.removeListener this (.-effectsListener this)))
+    (.dispose (.-parent this)))
   (^sc/TickerFuture animateBack [^MotionController this target & {:keys [duration curve] :or {curve a/Curves.linear}}]
-    (reset-cached-value this)
     (.animateBack (.-parent this) (double target) .duration (some-> duration t/duration) .curve (t/curve curve)))
   (^sc/TickerFuture animateTo [^MotionController this target & {:keys [duration curve] :or {curve a/Curves.linear}}]
-    (reset-cached-value this)
     (.animateTo (.-parent this) (double target) .duration (some-> duration t/duration) .curve (t/curve curve)))
   (^sc/TickerFuture forward [^MotionController this & {:keys [from] :or {from nil}}]
-    (reset-cached-value this)
     (.forward (.-parent this) .from (some-> from double)))
   (^sc/TickerFuture repeat [^MotionController this & {:keys [min max reverse period count] :or {reverse false}}]
-    (reset-cached-value this)
     (.repeat (.-parent this)
              .min (some-> min double)
              .max (some-> max double)
@@ -154,19 +179,14 @@
              .period (some-> period t/duration)
              .count (some-> count int)))
   (reset [^MotionController this]
-    (.reset (.-parent this))
-    (set-cached-value this))
+    (.reset (.-parent this)))
   (resync [^MotionController this vsync]
-    (.resync (.-parent this) vsync)
-    (set-cached-value this))
+    (.resync (.-parent this) vsync))
   (^sc/TickerFuture reverse [^MotionController this & {:keys [from] :or {from nil}}]
-    (reset-cached-value this)
     (.reverse (.-parent this) .from (some-> from double)))
   (stop [^MotionController this & {:keys [canceled] :or {canceled true}}]
-    (.stop (.-parent this) .canceled (boolean canceled))
-    (set-cached-value this))
+    (.stop (.-parent this) .canceled (boolean canceled)))
   (^sc/TickerFuture toggle [^MotionController this & {:keys [from] :or {from nil}}]
-    (reset-cached-value this)
     (.toggle (.-parent this) .from (some-> from double)))
   ^:mixin a/AnimationWithParentMixin)
 
@@ -276,6 +296,7 @@
         - `:interpolate` - A function that takes the progress and the cache and returns the value and the cache.
         - `:duration` - Duration of the motion.
     - `:to-string` - A function that returns a string representation of the motion.
+    - `:side-effects` - A function that takes a range and returns a list of side effects.
    
    `into-motion` takes a value and returns an motion that animates to the provided value.\\
    If the value is a function, it's used as the prepare-motion function.\\
@@ -311,19 +332,73 @@
      :else
      (values motion))))
 
-;; (defn motion-controller
-;;   ([motion]
-;;    (let [{:keys [prepare-motion] :as motion} (into-motion motion)
-;;          {:keys [duration interpolate]} (prepare-motion nil nil)
-;;          {:keys [duration]} (t/animation-options {:duration duration})]
-;;      (MotionController
-;;       motion
-;;       interpolate
-;;       {}
-;;       (interpolate 0 {})
-;;       (a/AnimationController
-;;        .duration duration)))))
+(defn set-motion!
+  "Sets the motion of the motion controller.\\
+   `set-motion!` takes a motion controller and a motion and sets the new motion to the controller."
+  [controller motion]
+  (let [motion (into-motion motion)
+        {:keys [prepare-motion] :as motion} (into-motion motion)
+        {:keys [duration interpolate side-effects]} (prepare-motion nil nil)
+        {:keys [duration]} (t/animation-options {:duration duration})]
+    (.-motion! controller motion)
+    (.-interpolate! controller interpolate)
+    (.-duration! (.-parent controller) duration)
+    (if side-effects
+      (if (nil? (.-effectsListener controller))
+        (let [listener
+              (fn []
+                (let [progress (-> controller .-parent .-value)
+                      prevProgress (or (.-prevProgress controller) 0.0)
+                      start (min progress prevProgress)
+                      end (max progress prevProgress)]
+                  (when (not= progress prevProgress)
+                    (.-prevProgress! controller progress)
+                    (for [effect (side-effects [start end])]
+                      (effect)))))]
+          (.-prevProgress! controller (.-value controller))
+          (.-effectsListener! controller listener)
+          (.addListener (.-parent controller) listener))
+        (.-effectsListener! controller side-effects))
+      (if (.-effectsListener controller)
+        (.removeListener (.-parent controller) (.-effectsListener controller))
+        (.-effectsListener! controller nil)))
+    controller))
 
+(defn motion-controller
+  "Creates a motion controller.\\
+   The motion controller is an animation controller that animates the provided motion.\\
+   The motion controller has the following methods:
+    - `.forward` - Forwards the motion controller to the provided value.
+    - `.stop` - Stops the motion controller.
+    - `.toggle` - Toggles the motion controller.
+    - `.animateBack` - Animates the motion controller back to the provided value.
+    - `.animateTo` - Animates the motion controller to the provided value.
+    - `.repeat` - Repeats the motion controller.
+    - `.reset` - Resets the motion controller.
+    - `.resync` - Resyncs the motion controller.
+    - `.reverse` - Reverses the motion controller.
+    - `.dispose` - Disposes the motion controller.
+   ```clojure
+   (motion-controller 
+     
+   (to 10.0))
+   ```"
+  ([vsync motion & {:keys [progress debug-label animation-behavior]
+                    :or {progress 0.0 animation-behavior a/AnimationBehavior.preserve}}]
+   (let [{:keys [prepare-motion] :as motion} (into-motion motion)
+         {:keys [duration interpolate]} (prepare-motion nil nil)
+         {:keys [duration]} (t/animation-options {:duration duration})]
+     (MotionController
+      .motion motion
+      .interpolate interpolate 
+      .effectsListener nil
+      .prevProgress 0.0
+      .parent (a/AnimationController
+               .value (double progress)
+               .duration duration
+               .debugLabel debug-label
+               .vsync vsync
+               .animationBehavior (t/animation-behavior animation-behavior))))))
 
 (defn instant
   "Instant motion with zero duration.
@@ -571,8 +646,8 @@
           :relative-duration relative-duration
           :duration duration
           :side-effects (when side-effects
-                           (fn [range]
-                             (side-effects (map #(.transform curve (double %)) range))))}))
+                          (fn [range]
+                            (side-effects (map #(.transform curve (double %)) range))))}))
      (fn [] (str "(curve " (.toString curve) " " ((:to-string motion)) ")")))))
 
 (defn relative-duration
@@ -709,7 +784,7 @@
                                         (nth items i)))}))))]
     (assoc
      (if (empty? options)
-       motion 
+       motion
        (with options motion))
      :to-string
      (fn [] (str "(const " (str/join " " values) ")")))))
