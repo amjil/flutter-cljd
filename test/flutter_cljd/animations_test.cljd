@@ -2,29 +2,37 @@
   (:require [clojure.test :refer [deftest is testing]]
             [flutter-cljd.curves :as c]
             [flutter-cljd.animations :as a]
+            ["package:flutter/animation.dart" :as fa]
             [cljd.string :as str]))
 
 (deftest test-transformed-animation
   (testing "Numeric transformation"
-    (let [parent (reify a/Animation
-                  (value [_] 5))
+    (let [parent (fa/AlwaysStoppedAnimation 5)
           transform #(* % 3)
           anim (a/transformed-animation parent transform)]
       (is (= (.-value anim) 15))))
 
   (testing "Map transformation"
-    (let [parent (reify a/Animation
-                  (value [_] {:x 10 :y 20}))
+    (let [parent (fa/AlwaysStoppedAnimation {:x 10 :y 20})
           transform #(update % :x inc)
           anim (a/transformed-animation parent transform)]
       (is (= (.-value anim) {:x 11 :y 20}))))
 
   (testing "String transformation"
-    (let [parent (reify a/Animation
-                  (value [_] "hello"))
+    (let [parent (fa/AlwaysStoppedAnimation "hello")
           transform str/upper-case
           anim (a/transformed-animation parent transform)]
-      (is (= (.-value anim) "HELLO")))))
+      (is (= (.-value anim) "HELLO"))))
+  
+  (testing "Lookup transformation"
+    (let [parent (fa/AlwaysStoppedAnimation {:x 10 :y 20})
+          anim (:x parent)]
+      (is (= (.-value anim) 10))))
+  
+  (testing "Listening to parent"
+    (let [parent (fa/AlwaysStoppedAnimation 5)
+          anim (a/transformed-animation parent identity)]
+      (.addListener anim #(println "added")))))
 
 (defn- unwrap
   ([animation] (unwrap nil animation nil))
