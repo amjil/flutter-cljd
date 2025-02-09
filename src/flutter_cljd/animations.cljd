@@ -439,14 +439,14 @@
   "Creates a motion controller that manages animations.
 
   Arguments:
-   - vsync: A TickerProvider that drives the animation (usually obtained from a widget's state)
+   - vsync: A `TickerProvider` that drives the animation (usually obtained from a widget's state)
    - motion: The motion to animate (created with `to`, `par`, `seq`, etc.)
    - options (optional):
      - :progress - Initial progress value (default: 0.0)
      - :debug-label - Label for debugging (optional)
      - :animation-behavior - Animation behavior on hot reload (default: :preserve)
 
-  Returns a MotionController instance that:
+  Returns a `MotionController` instance that:
    - Implements Animation protocol
    - Has .-value that returns the current motion value
    - Provides methods for controlling animation:
@@ -460,6 +460,8 @@
      - .resync - Resync with vsync
      - .reverse - Reverse animation
      - .dispose - Clean up resources
+   
+  - Note: `MotionController` is not an `AnimationController` subclass, but it's a wrapper around it, you can access the underlying `AnimationController` with the `.-parent` field.
 
   Examples:
   ```clojure
