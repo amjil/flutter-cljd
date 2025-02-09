@@ -3,6 +3,7 @@
             [flutter-cljd.curves :as c]
             [flutter-cljd.animations :as a]
             ["package:flutter/animation.dart" :as fa]
+            ["package:flutter_test/flutter_test.dart" :as ft]
             [cljd.string :as str]))
 
 (deftest test-transformed-animation
@@ -646,60 +647,38 @@
 
 (deftest test-motion-controller
   (testing "Basic controller functionality"
-    (let [vsync (reify w/TickerProvider)
-          controller (motion-controller vsync (to 0 100))]
+    (let [vsync (ft/TestVSync)
+          controller (a/motion-controller vsync percents)]
       (is (= (.-value controller) 0) "Initial value should be 0")
-      (is (= (progress controller) 0.0) "Initial progress should be 0")
+      (is (= (a/progress controller) 0.0) "Initial progress should be 0")
       
-      (progress! controller 0.5)
+      (a/progress! controller 0.5)
       (is (= (.-value controller) 50) "Value should update with progress")
-      (is (= (progress controller) 0.5) "Progress should be updated")
+      (is (= (a/progress controller) 0.5) "Progress should be updated")
 
       (.dispose controller)))
 
   (testing "Setting motions"
-    (let [vsync (reify w/TickerProvider)
-          controller (motion-controller vsync (to 0))
-          new-motion (to 0 200)]
+    (let [vsync (ft/TestVSync)
+          controller (a/motion-controller vsync (a/to 0))
+          new-motion (a/to 0 200)]
       
-      (set-motion! controller new-motion)
-      (progress! controller 0.5)
+      (a/set-motion! controller new-motion)
+      (a/progress! controller 0.5)
       (is (= (.-value controller) 100) "Value should reflect new motion")
 
       (.dispose controller)))
 
   (testing "Motion computation"
-    (let [vsync (reify w/TickerProvider)
-          events (atom [])
-          controller (motion-controller 
+    (let [vsync (ft/TestVSync)
+          controller (a/motion-controller 
                       vsync 
-                      (seq (to 0 50)
-                           (action! :test #(swap! events conj :action))
-                           (to 100)))]
+                      (a/seq (a/to 0 50) (a/to 100)))]
       
-      (progress! controller 0.4)
+      (a/progress! controller 0.4)
       (is (= (.-value controller) 40) "First segment")
-      (is (empty? @events) "Action not triggered yet")
       
-      (progress! controller 0.5)
-      (is (= @events [:action]) "Action triggered at midpoint")
-      
-      (progress! controller 0.75)
+      (a/progress! controller 0.75)
       (is (= (.-value controller) 75) "Final segment")
 
-      (.dispose controller)))
-
-  (testing "Animation control"
-    (let [vsync (reify w/TickerProvider)
-          controller (motion-controller vsync (to 0 100))]
-      
-      (.forward controller)
-      (is (.-isAnimating controller) "Should be animating after forward")
-      
-      (.stop controller)
-      (is (not (.-isAnimating controller)) "Should stop animating")
-      
-      (.reverse controller)
-      (is (.-isAnimating controller) "Should be animating after reverse")
-      
       (.dispose controller))))

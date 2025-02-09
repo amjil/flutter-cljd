@@ -127,10 +127,18 @@
 
 (declare MotionController)
 
+(defn- reset-cached-value [^MotionController controller]
+  (.-cachedValue! controller nil)
+  (.-cachedValueProgress! controller nil))
+
+(defn- set-cached-value [^MotionController controller value]
+  (.-cachedValue! controller value)
+  (.-cachedValueProgress! controller (-> controller .-parent .-value)))
+
 (defn- compute-motion [^MotionController controller]
   (when (or (.-needCompute controller) (nil? (.-interpolate controller)))
     (.-needCompute! controller false)
-    (.-cachedValue! controller nil)
+    (reset-cached-value controller)
     (let [{:keys [prepare-motion]} (.-motion controller)
           {:keys [duration interpolate side-effects]} (prepare-motion nil nil)
           {:keys [duration]} (t/animation-options {:duration duration})]
@@ -170,12 +178,12 @@
              .animationBehavior animationBehavior)
 
   (^sc/TickerFuture forward [^MotionAnimationController this ^double? .from]
-    (.-cachedValue! (.-motionController this) nil)
+    (reset-cached-value (.-motionController this))
     (compute-motion (.-motionController this))
     (.forward ^super this .from (some-> from double)))
 
   (^sc/TickerFuture reverse [^MotionAnimationController this ^double? .from]
-    (.-cachedValue! (.-motionController this) nil)
+    (reset-cached-value (.-motionController this))
     (compute-motion (.-motionController this))
     (.reverse ^super this .from (some-> from double)))
 
@@ -183,7 +191,7 @@
                                ^double target
                                ^a/Duration? .duration
                                ^a/Curve? .curve]
-    (.-cachedValue! (.-motionController this) nil)
+    (reset-cached-value (.-motionController this))
     (compute-motion (.-motionController this))
     (.animateTo ^super this (double target) .duration (some-> duration t/duration) .curve (t/curve (or curve :linear))))
 
@@ -191,7 +199,7 @@
                                  ^double target
                                  ^a/Duration? .duration
                                  ^a/Curve? .curve]
-    (.-cachedValue! (.-motionController this) nil)
+    (reset-cached-value (.-motionController this))
     (compute-motion (.-motionController this))
     (.animateBack ^super this (double target) .duration (some-> duration t/duration) .curve (t/curve (or curve :linear))))
 
@@ -201,7 +209,7 @@
                             ^bool? .reverse
                             ^a/Duration? .period
                             ^int? .count]
-    (.-cachedValue! (.-motionController this) nil)
+    (reset-cached-value (.-motionController this))
     (compute-motion (.-motionController this))
     (.repeat ^super this
              .min (some-> min double)
@@ -210,7 +218,7 @@
              .period (some-> period t/duration)
              .count (some-> count int)))
   (^sc/TickerFuture toggle [^MotionAnimationController this ^double? .from]
-    (.-cachedValue! (.-motionController this) nil)
+    (reset-cached-value (.-motionController this))
     (compute-motion (.-motionController this))
     (.toggle ^super this .from (some-> from double))))
 
@@ -221,17 +229,18 @@
           ^:mutable prevProgress
           ^:mutable needCompute
           ^:mutable cachedValue
+          ^:mutable cachedValueProgress
           ^:mutable motionHash
           ^a/AnimationController parent]
   :extends (a/Animation)
   (value [^MotionController this]
-    (if (and (not (.-isAnimating this)) (.-cachedValue this))
+    (if (and (not (.-isAnimating this)) (= (.-cachedValueProgress this) (-> this .-parent .-value)))
       (.-cachedValue this)
       (do
         (compute-motion this)
         (let [result ((.-interpolate this) (-> this .-parent .-value))]
           (when-not (.-isAnimating this)
-            (.-cachedValue! this result))
+            (set-cached-value this result))
           result))))
   dc/Object
   (toString [^MotionController this]
@@ -242,13 +251,13 @@
     (when (.-effectsListener this)
       (.removeListener this (.-effectsListener this)))
     (.dispose (.-parent this)))
-  (^sc/TickerFuture animateBack [^MotionController this target & {:keys [duration curve] :or {curve a/Curves.linear}}]
-    (.animateBack (.-parent this) (double target) .duration (some-> duration t/duration) .curve (t/curve curve)))
-  (^sc/TickerFuture animateTo [^MotionController this target & {:keys [duration curve] :or {curve a/Curves.linear}}]
-    (.animateTo (.-parent this) (double target) .duration (some-> duration t/duration) .curve (t/curve curve)))
-  (^sc/TickerFuture forward [^MotionController this & {:keys [from] :or {from nil}}]
+  (^sc/TickerFuture animateBack [^MotionAnimationController this target .duration .curve]
+    (.animateBack (.-parent this) (double target) .duration (some-> duration t/duration) .curve (t/curve (or curve :linear))))
+  (^sc/TickerFuture animateTo [^MotionAnimationController this target .duration .curve]
+    (.animateTo (.-parent this) (double target) .duration (some-> duration t/duration) .curve (t/curve (or curve :linear))))
+  (^sc/TickerFuture forward [^MotionController this ^double? .from]
     (.forward (.-parent this) .from (some-> from double)))
-  (^sc/TickerFuture repeat [^MotionController this & {:keys [min max reverse period count] :or {reverse false}}]
+  (^sc/TickerFuture repeat [^MotionController this .min .max .reverse .period .count]
     (.repeat (.-parent this)
              .min (some-> min double)
              .max (some-> max double)
@@ -259,11 +268,11 @@
     (.reset (.-parent this)))
   (resync [^MotionController this vsync]
     (.resync (.-parent this) vsync))
-  (^sc/TickerFuture reverse [^MotionController this & {:keys [from] :or {from nil}}]
+  (^sc/TickerFuture reverse [^MotionController this .from]
     (.reverse (.-parent this) .from (some-> from double)))
-  (stop [^MotionController this & {:keys [canceled] :or {canceled true}}]
-    (.stop (.-parent this) .canceled (boolean canceled)))
-  (^sc/TickerFuture toggle [^MotionController this & {:keys [from] :or {from nil}}]
+  (stop [^MotionController this .canceled]
+    (.stop (.-parent this) .canceled (boolean (or (nil? canceled) canceled))))
+  (^sc/TickerFuture toggle [^MotionController this .from]
     (.toggle (.-parent this) .from (some-> from double)))
   ^:mixin a/AnimationWithParentMixin)
 
@@ -546,6 +555,7 @@
                                               nil
                                               0.0
                                               true
+                                              nil
                                               nil
                                               nil
                                               animation-controller)]
