@@ -128,7 +128,7 @@
 (declare MotionController)
 
 (defn- compute-motion [^MotionController controller]
-  (when (.-needCompute controller)
+  (when (or (.-needCompute controller) (nil? (.-interpolate controller)))
     (.-needCompute! controller false)
     (.-cachedValue! controller nil)
     (let [{:keys [prepare-motion]} (.-motion controller)
@@ -158,7 +158,7 @@
 (deftype ^:private MotionAnimationController
          [^:mutable ^MotionController? motionController
           ^:mutable ^double value
-          ^:mutable ^a/Duration duration
+          ^:mutable ^a/Duration? duration
           ^String? debugLabel
           ^a/TickerProvider vsync
           ^a/AnimationBehavior animationBehavior]
@@ -182,23 +182,23 @@
   (^sc/TickerFuture animateTo [^MotionAnimationController this
                                ^double target
                                ^a/Duration? .duration
-                               ^a/Curve .curve]
+                               ^a/Curve? .curve]
     (.-cachedValue! (.-motionController this) nil)
     (compute-motion (.-motionController this))
-    (.animateTo ^super this (double target) .duration (some-> duration t/duration) .curve (t/curve curve)))
+    (.animateTo ^super this (double target) .duration (some-> duration t/duration) .curve (t/curve (or curve :linear))))
 
   (^sc/TickerFuture animateBack [^MotionAnimationController this
                                  ^double target
                                  ^a/Duration? .duration
-                                 ^a/Curve .curve]
+                                 ^a/Curve? .curve]
     (.-cachedValue! (.-motionController this) nil)
     (compute-motion (.-motionController this))
-    (.animateBack ^super this (double target) .duration (some-> duration t/duration) .curve (t/curve curve)))
+    (.animateBack ^super this (double target) .duration (some-> duration t/duration) .curve (t/curve (or curve :linear))))
 
   (^sc/TickerFuture repeat [^MotionAnimationController this
                             ^double? .min
                             ^double? .max
-                            ^bool .reverse
+                            ^bool? .reverse
                             ^a/Duration? .period
                             ^int? .count]
     (.-cachedValue! (.-motionController this) nil)
@@ -275,7 +275,7 @@
 (defn progress!
   "Sets the current progress of the motion controller."
   [^MotionController controller ^double new-value]
-  (.-value! (controller .-parent) new-value))
+  (.-value! (.-parent controller) new-value))
 
 (defn- in-mcs [duration]
   (some-> duration t/duration .-inMicroseconds double))
@@ -303,12 +303,6 @@
    (constantly value))
   ([value duration]
    {:interpolate (const-anim value)
-    :duration duration}))
-
-(defn- no-cache-anim
-  ([transform] transform)
-  ([transform duration]
-   {:interpolate (no-cache-anim transform)
     :duration duration}))
 
 (defn- flat-motions [motions]
@@ -360,18 +354,17 @@
            lerp #(ut/lerp %1 %2)]
        {:interpolate (case int-cnt
                        0 (const-anim (first values))
-                       1 (no-cache-anim (lerp (first values) (second values)))
-                       (no-cache-anim
-                        (fn [T]
-                          (condp = T
-                            0.0 (first values)
-                            1.0 (last values)
-                            (let [k (* T int-cnt)
-                                  i (int k)
-                                  t (- k i)]
-                              (if (< i int-cnt)
-                                ((lerp (nth values i) (nth values (inc i))) t)
-                                (last values)))))))
+                       1 (lerp (first values) (second values))
+                       (fn [T]
+                         (condp = T
+                           0.0 (first values)
+                           1.0 (last values)
+                           (let [k (* T int-cnt)
+                                 i (int k)
+                                 t (- k i)]
+                             (if (< i int-cnt)
+                               ((lerp (nth values i) (nth values (inc i))) t)
+                               (last values))))))
         :duration (if (zero? int-cnt) (t/duration 0) exp-dur)}))
    :to-string
    (fn [] (str "(values " (str/join " " values) ")"))
@@ -384,34 +377,41 @@
     - `:prepare-motion` - A function that takes the current value and the duration and returns a map with the following keys:
         - `:interpolate` - A function that takes the progress and the cache and returns the value and the cache.
         - `:duration` - Duration of the motion.
+        - `:side-effects` - A function that takes a range and returns a list of side effects.
     - `:to-string` - A function that returns a string representation of the motion.
     - `:to-hash` - A function that returns a hash of the motion.
-    - `:side-effects` - A function that takes a range and returns a list of side effects.
    
    `into-motion` takes a value and returns an motion that animates to the provided value.\\
    If the value is an instance of `Animatable`, it's used as the animation.\\
    If the value is nil, returns nil.
    If the value is a map with the keys `:prepare-motion`, `:to-hash` and `:to-string`, returns the value as is.
    Otherwise, returns the value wrapped in a `to` motion."
-  ([motion to-string to-hash]
-   (when motion
-     (assoc (into-motion motion) :to-string to-string :to-hash to-hash)))
   ([motion]
    (cond
      (and (map? motion) (superset? #{:prepare-motion :to-string :to-hash} (set (keys motion))))
      motion
-
+   
      (instance? w/Animatable motion)
      {:prepare-motion (fn [_ duration]
-                        (no-cache-anim #(.transform motion %) duration))
+                        {:interpolate #(.transform motion %) 
+                         :duration duration})
       :to-string #(.toString motion)
       :to-hash #(hash (.toString motion))}
-
+     
      (nil? motion)
      nil
-
+   
      :else
-     (values motion))))
+     (values motion)))
+  ([motion to-string to-hash]
+   (if (fn? motion)
+     {:prepare-motion motion
+      :to-string to-string
+      :to-hash to-hash}
+     (when motion
+       (assoc (into-motion motion)
+              :to-string to-string 
+              :to-hash to-hash)))))
 
 (defn set-motion!
   "Sets the motion of the motion controller.\\
@@ -533,25 +533,22 @@
   ```"
   ([vsync motion & {:keys [progress debug-label animation-behavior]
                     :or {progress 0.0 animation-behavior a/AnimationBehavior.preserve}}]
-   (let [{:keys [prepare-motion] :as motion} (into-motion motion)
-         {:keys [duration interpolate]} (prepare-motion nil nil)
-         {:keys [duration]} (t/animation-options {:duration duration})
-         ^MotionAnimationController animation-controller (MotionAnimationController
-                               nil
-                               (double progress)
-                               duration
-                               debug-label
-                               vsync
-                               (t/animation-behavior animation-behavior))
+   (let [^MotionAnimationController animation-controller (MotionAnimationController
+                                                          nil
+                                                          (double progress)
+                                                          nil
+                                                          debug-label
+                                                          vsync
+                                                          (t/animation-behavior animation-behavior))
          ^MotionController motion-controller (MotionController
-                            motion
-                            interpolate
-                            nil
-                            0.0
-                            true
-                            nil
-                            nil
-                            animation-controller)]
+                                              motion
+                                              (constantly nil)
+                                              nil
+                                              0.0
+                                              true
+                                              nil
+                                              nil
+                                              animation-controller)]
      (.-motionController! animation-controller motion-controller)
      (set-motion! motion-controller motion)
      motion-controller)))
@@ -941,7 +938,7 @@
   [value & values]
   (let [values (cons value values)
         {:keys [options items]} (separate-last-options values)
-        motion (into-motion
+        motion {:prepare-motion
                 (fn [value exp-dur]
                   (let [cnt (count items)
                         last-i (- cnt 1)]
@@ -951,7 +948,7 @@
                       {:duration exp-dur
                        :interpolate (fn [T]
                                       (let [i (min last-i (int (* T cnt)))]
-                                        (nth items i)))}))))]
+                                        (nth items i)))})))}]
     (assoc
      (if (empty? options)
        motion
