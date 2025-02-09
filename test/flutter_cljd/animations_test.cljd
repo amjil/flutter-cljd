@@ -23,12 +23,12 @@
           transform str/upper-case
           anim (a/transformed-animation parent transform)]
       (is (= (.-value anim) "HELLO"))))
-  
+
   (testing "Lookup transformation"
     (let [parent (fa/AlwaysStoppedAnimation {:x 10 :y 20})
           anim (:x parent)]
       (is (= (.-value anim) 10))))
-  
+
   (testing "Listening to parent"
     (let [parent (fa/AlwaysStoppedAnimation 5)
           anim (a/transformed-animation parent identity)]
@@ -42,13 +42,15 @@
          interpolate (:interpolate (animation
                                     value
                                     (or duration (:duration (animation value nil)) 250)))]
-     (fn [t] (interpolate (double t))))))
+     #(interpolate (double %)))))
 
 (def ^:private percents
   (a/into-motion
    (fn [_ duration]
      {:duration duration
-      :interpolate #(int (* 100 %))})))
+      :interpolate #(int (* 100 %))})
+   (constantly "percents")
+   (constantly 0)))
 
 (deftest test-const
   (testing "Single value"
@@ -57,11 +59,11 @@
       (is (= (anim 0.5) 100))
       (is (= (anim 1) 100))
       (is (= ((:to-hash (a/const 100)))
-             ((:to-hash (a/const 100)))
-             "Same motion should have same hash"))
+             ((:to-hash (a/const 100))))
+          "Same motion should have same hash")
       (is (not= ((:to-hash (a/const 100)))
-                ((:to-hash (a/const 200)))
-                "Different values should have different hashes")))))
+                ((:to-hash (a/const 200))))
+          "Different values should have different hashes")))
 
   (testing "Multiple values"
     (let [anim (unwrap (a/const 0 50 100))]
@@ -92,14 +94,14 @@
       (is (= (anim 0) 0))
       (is (= (anim 0.65) 0))
       (is (= (anim 0.67) 100))
-      (is (= (anim 1) 100))))
+      (is (= (anim 1) 100)))))
 
 (deftest test-to
   (testing "Single value"
     (let [anim (unwrap (a/to 100))]
       (is (= (anim 0) 100))
       (is (= (anim 0.5) 100))
-      (is (= (anim 1) 100)))))
+      (is (= (anim 1) 100))))
 
   (testing "Valid between two values"
     (let [anim (unwrap (a/to 0 100))]
@@ -109,11 +111,11 @@
       (is (= (anim 0.75) 75))
       (is (= (anim 1) 100))
       (is (= ((:to-hash (a/to 0 100)))
-             ((:to-hash (a/to 0 100)))
-             "Same motion should have same hash")
+             ((:to-hash (a/to 0 100))))
+          "Same motion should have same hash")
       (is (not= ((:to-hash (a/to 0 100)))
-                ((:to-hash (a/to 0 200)))
-                "Different values should have different hashes")))))
+                ((:to-hash (a/to 0 200))))
+          "Different values should have different hashes")))
 
   (testing "Valid between two non zero values"
     (let [anim (unwrap (a/to 50 100))]
@@ -161,12 +163,12 @@
     (let [anim (unwrap (a/to 0 100 :dur 1000 :curve :ease-in))]
       (is (= (anim 0) 0))
       (is (not= (anim 0.5) 50) "Should be affected by ease-in curve")
-      (is (= (anim 1) 100))))
+      (is (= (anim 1) 100)))))
 
 (deftest test-with
   (testing "Duration option"
     (let [anim ((:prepare-motion (a/with :duration 100 percents)) nil nil)]
-      (is (= (.-inMilliseconds (:duration anim)) 100)))))
+      (is (= (.-inMilliseconds (:duration anim)) 100))))
 
   (testing "Start time option"
     (let [anim (unwrap (a/with {:delay 500 :duration 1000} percents))]
@@ -227,23 +229,24 @@
       (is (= (anim 0.4) 0) "Should not start before relative-delay")
       (is (= (anim 0.5) 0) "Should start at relative-delay")
       (is (= (anim 0.75) 50))
-      (is (= (anim 1) 100))))
+      (is (= (anim 1) 100)))))
 
 (deftest test-repeat
   (testing "Basic repeat functionality"
     (let [base-dur 1000
           repeated (:prepare-motion (a/repeat 2 (a/with {:duration base-dur} percents)))
           {:keys [duration]} (repeated nil nil)]
-      (is (= (.-inMilliseconds duration) (* base-dur 2)) "Duration should be doubled")
+      (is (= (.-inMilliseconds duration) (* base-dur 2)) 
+          "Duration should be doubled")
       (is (= ((:to-hash (a/repeat 2 (a/to 0 100))))
-             ((:to-hash (a/repeat 2 (a/to 0 100))))
-             "Same repeat motion should have same hash"))
+             ((:to-hash (a/repeat 2 (a/to 0 100)))))
+          "Same repeat motion should have same hash")
       (is (not= ((:to-hash (a/repeat 2 (a/to 0 100))))
-                ((:to-hash (a/repeat 3 (a/to 0 100))))
-                "Different repeat counts should have different hashes"))
+                ((:to-hash (a/repeat 3 (a/to 0 100)))))
+          "Different repeat counts should have different hashes")
       (is (not= ((:to-hash (a/repeat 2 (a/to 0 100))))
-                ((:to-hash (a/repeat 2 (a/to 0 200))))
-                "Different values should have different hashes"))
+                ((:to-hash (a/repeat 2 (a/to 0 200)))))
+          "Different values should have different hashes")
 
       (let [repeated (a/repeat 2 (a/with {:duration base-dur} percents))
             anim (unwrap repeated)]
@@ -267,15 +270,16 @@
 (deftest test-autoreverse
   (testing "Basic autoreverse functionality"
     (let [base-dur 1000
-          reversed (:prepare-motion (a/autoreverse (a/with {:duration base-dur} percents)))
+          reversed (:prepare-motion (a/autoreverse (a/with :duration base-dur percents)))
           {:keys [duration]} (reversed nil nil)]
-      (is (= (.-inMilliseconds duration) (* base-dur 2)) "Duration should be doubled")
+      (is (= (.-inMilliseconds duration) (* base-dur 2))
+          "Duration should be doubled")
       (is (= ((:to-hash (a/autoreverse (a/to 0 100))))
-             ((:to-hash (a/autoreverse (a/to 0 100))))
-             "Same autoreverse motion should have same hash"))
+             ((:to-hash (a/autoreverse (a/to 0 100)))))
+          "Same autoreverse motion should have same hash")
       (is (not= ((:to-hash (a/autoreverse (a/to 0 100))))
-                ((:to-hash (a/autoreverse (a/to 0 200))))
-                "Different values should have different hashes"))
+                ((:to-hash (a/autoreverse (a/to 0 200)))))
+          "Different values should have different hashes")
 
       (let [reversed (a/autoreverse (a/with {:duration base-dur} percents))
             anim (unwrap reversed)]
@@ -294,11 +298,11 @@
       (is (= (anim 0.5) {:color 50 :offset 250}))
       (is (= (anim 1) {:color 100 :offset 300}))
       (is (= ((:to-hash (a/par :color (a/to 0 100) :offset (a/to 200 300))))
-             ((:to-hash (a/par :color (a/to 0 100) :offset (a/to 200 300))))
-             "Same parallel motion should have same hash")
+             ((:to-hash (a/par :color (a/to 0 100) :offset (a/to 200 300)))))
+          "Same parallel motion should have same hash")
       (is (not= ((:to-hash (a/par :color (a/to 0 100) :offset (a/to 200 300))))
-                ((:to-hash (a/par :color (a/to 0 200) :offset (a/to 200 300))))
-                "Different values should have different hashes")))))
+                ((:to-hash (a/par :color (a/to 0 200) :offset (a/to 200 300)))))
+          "Different values should have different hashes")))
 
   (testing "With different durations"
     (let [anim (unwrap (a/par
@@ -360,11 +364,11 @@
       (is (= (anim 0.75) 75))
       (is (= (anim 1) 100))
       (is (= ((:to-hash (a/seq (a/to 0 50) (a/to 100))))
-             ((:to-hash (a/seq (a/to 0 50) (a/to 100))))
-             "Same sequential motion should have same hash"))
+             ((:to-hash (a/seq (a/to 0 50) (a/to 100)))))
+          "Same sequential motion should have same hash")
       (is (not= ((:to-hash (a/seq (a/to 0 50) (a/to 100))))
-                ((:to-hash (a/seq (a/to 0 75) (a/to 100))))
-                "Different values should have different hashes")))))
+                ((:to-hash (a/seq (a/to 0 75) (a/to 100)))))
+          "Different values should have different hashes")))
 
   (testing "With different durations"
     (let [anim (unwrap (a/seq
@@ -438,10 +442,10 @@
 
     (let [anim2 (:prepare-motion
                  (a/seq {:duration 5000}
-                        (a/with {:relative-duration 0.2} (a/to 0 50 ))
+                        (a/with {:relative-duration 0.2} (a/to 0 50))
                         (a/with {:relative-duration 0.8} (a/to 50 100))))
           {:keys [duration]} (anim2 nil nil)]
-      (is (= (.-inMilliseconds duration) 5000) "Should use parent duration")))
+      (is (= (.-inMilliseconds duration) 5000) "Should use parent duration"))))
 
 (deftest test-side-effects
   (testing "Basic action execution"
@@ -453,17 +457,17 @@
       ((first (side-effects [0.5 1.0])))
       (is (true? @executed))
       (is (= ((:to-hash (a/action! :test #(println "test"))))
-             ((:to-hash (a/action! :test #(println "test"))))
-             "Same action should have same hash"))
+             ((:to-hash (a/action! :test #(println "test")))))
+          "Same action should have same hash")
       (is (not= ((:to-hash (a/action! :test1 #(println "test"))))
-                ((:to-hash (a/action! :test2 #(println "test"))))
-                "Different action ids should have different hashes"))))
+                ((:to-hash (a/action! :test2 #(println "test")))))
+          "Different action ids should have different hashes")))
 
   (testing "Sequential side effects"
     (let [events (atom [])
           record-event (fn [x] #(swap! events conj x))
-          {:keys [side-effects]} ((:prepare-motion 
-                                  (a/seq
+          {:keys [side-effects]} ((:prepare-motion
+                                   (a/seq
                                     (a/action! 0 (record-event :first))
                                     (a/action! 1 (record-event :second)))) nil nil)]
       (is (empty? @events))
@@ -481,7 +485,7 @@
     (let [events (atom [])
           record-event (fn [x] #(swap! events conj x))
           {:keys [side-effects]} ((:prepare-motion
-                                  (a/par
+                                   (a/par
                                     :a (a/action! :a (record-event :a))
                                     :b (a/action! :b (record-event :b)))) nil nil)]
       (is (empty? @events))
@@ -494,8 +498,8 @@
     (let [events (atom [])
           record-event (fn [x] #(swap! events conj x))
           {:keys [side-effects]} ((:prepare-motion
-                                  (a/with {:curve :ease-in}
-                                         (a/action! 0 (record-event :curved)))) nil nil)]
+                                   (a/with {:curve :ease-in}
+                                           (a/action! 0 (record-event :curved)))) nil nil)]
       (is (empty? @events))
       (is (empty? (side-effects [0.0 0.5])))
       (let [actions (side-effects [0.5 1.0])]
@@ -507,7 +511,7 @@
     (let [events (atom [])
           record-event (fn [x] #(swap! events conj x))
           {:keys [side-effects]} ((:prepare-motion
-                                  (a/repeat 2 (a/action! 0 (record-event :repeat)))) nil nil)]
+                                   (a/repeat 2 (a/action! 0 (record-event :repeat)))) nil nil)]
       (is (empty? @events))
       (let [actions (side-effects [0.0 0.5])]
         (is (= (count actions) 1))
@@ -522,7 +526,7 @@
     (let [events (atom [])
           record-event (fn [x] #(swap! events conj x))
           {:keys [side-effects]} ((:prepare-motion
-                                  (a/autoreverse (a/action! 0 (record-event :auto)))) nil nil)]
+                                   (a/autoreverse (a/action! 0 (record-event :auto)))) nil nil)]
       (is (empty? @events))
       (let [actions (side-effects [0.0 0.5])]
         (is (= (count actions) 1))
