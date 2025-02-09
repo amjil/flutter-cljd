@@ -447,6 +447,51 @@
           {:keys [duration]} (anim2 nil nil)]
       (is (= (.-inMilliseconds duration) 5000) "Should use parent duration"))))
 
+(deftest test-from
+  (testing "Basic from functionality"
+    (let [anim (unwrap (a/from 50 (a/to 100)))]
+      (is (= (anim 0) 50))
+      (is (= (anim 0.5) 75))
+      (is (= (anim 1) 100))
+      (is (= ((:to-hash (a/from 50 (a/to 100))))
+             ((:to-hash (a/from 50 (a/to 100)))))
+          "Same from motion should have same hash")
+      (is (not= ((:to-hash (a/from 50 (a/to 100))))
+                ((:to-hash (a/from 75 (a/to 100)))))
+          "Different initial values should have different hashes")))
+
+  (testing "With constant motion"
+    (let [anim (unwrap (a/from 50 (a/const 100)))]
+      (is (= (anim 0) 100))
+      (is (= (anim 0.5) 100))
+      (is (= (anim 1) 100))))
+
+  (testing "With parallel motion"
+    (let [anim (unwrap (a/from {:x 0 :y 0}
+                              (a/par
+                               :x (a/to 100)
+                               :y (a/to 200))))]
+      (is (= (anim 0) {:x 0 :y 0}))
+      (is (= (anim 0.5) {:x 50 :y 100}))
+      (is (= (anim 1) {:x 100 :y 200}))))
+
+  (testing "With sequential motion"
+    (let [anim (unwrap (a/from 0
+                              (a/seq
+                               (a/to 50)
+                               (a/to 100))))]
+      (is (= (anim 0) 0))
+      (is (= (anim 0.5) 50))
+      (is (= (anim 1) 100))))
+
+  (testing "With options"
+    (let [anim (unwrap (a/from 0
+                              (a/with {:duration 1000 :curve :ease-in}
+                                     (a/to 100))))]
+      (is (= (anim 0) 0))
+      (is (< (anim 0.5) 50) "Should be affected by ease-in")
+      (is (= (anim 1) 100)))))
+
 (deftest test-side-effects
   (testing "Basic action execution"
     (let [executed (atom false)
