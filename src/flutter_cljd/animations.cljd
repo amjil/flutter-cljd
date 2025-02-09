@@ -156,10 +156,10 @@
           (.-effectsListener! controller nil))))))
 
 (deftype ^:private MotionAnimationController
-         [^:mutable ^MotionController motionController
+         [^:mutable ^MotionController? motionController
           ^:mutable ^double value
           ^:mutable ^a/Duration duration
-          ^string? debugLabel
+          ^String? debugLabel
           ^a/TickerProvider vsync
           ^a/AnimationBehavior animationBehavior]
   :extends (a/AnimationController
@@ -169,37 +169,47 @@
              .vsync vsync
              .animationBehavior animationBehavior)
 
-  (^sc/TickerFuture forward [^MotionAnimationController this from]
+  (^sc/TickerFuture forward [^MotionAnimationController this ^double? .from]
     (.-cachedValue! (.-motionController this) nil)
     (compute-motion (.-motionController this))
     (.forward ^super this .from (some-> from double)))
 
-  (^sc/TickerFuture reverse [^MotionAnimationController this from]
+  (^sc/TickerFuture reverse [^MotionAnimationController this ^double? .from]
     (.-cachedValue! (.-motionController this) nil)
     (compute-motion (.-motionController this))
     (.reverse ^super this .from (some-> from double)))
 
-  (^sc/TickerFuture animateTo [^MotionAnimationController this target duration curve]
+  (^sc/TickerFuture animateTo [^MotionAnimationController this
+                               ^double target
+                               ^a/Duration? .duration
+                               ^a/Curve .curve]
     (.-cachedValue! (.-motionController this) nil)
     (compute-motion (.-motionController this))
     (.animateTo ^super this (double target) .duration (some-> duration t/duration) .curve (t/curve curve)))
 
-  (^sc/TickerFuture animateBack [^MotionAnimationController this target duration curve]
+  (^sc/TickerFuture animateBack [^MotionAnimationController this
+                                 ^double target
+                                 ^a/Duration? .duration
+                                 ^a/Curve .curve]
     (.-cachedValue! (.-motionController this) nil)
     (compute-motion (.-motionController this))
     (.animateBack ^super this (double target) .duration (some-> duration t/duration) .curve (t/curve curve)))
 
-  (^sc/TickerFuture repeat [^MotionAnimationController this min max reverse period count]
+  (^sc/TickerFuture repeat [^MotionAnimationController this
+                            ^double? .min
+                            ^double? .max
+                            ^bool .reverse
+                            ^a/Duration? .period
+                            ^int? .count]
     (.-cachedValue! (.-motionController this) nil)
     (compute-motion (.-motionController this))
-    (.repeat ^super
-             this
-     .min (some-> min double)
+    (.repeat ^super this
+             .min (some-> min double)
              .max (some-> max double)
              .reverse (boolean reverse)
              .period (some-> period t/duration)
              .count (some-> count int)))
-  (^sc/TickerFuture toggle [^MotionAnimationController this from]
+  (^sc/TickerFuture toggle [^MotionAnimationController this ^double? .from]
     (.-cachedValue! (.-motionController this) nil)
     (compute-motion (.-motionController this))
     (.toggle ^super this .from (some-> from double))))
@@ -211,7 +221,7 @@
           ^:mutable prevProgress
           ^:mutable needCompute
           ^:mutable cachedValue
-           ^:mutable motionHash
+          ^:mutable motionHash
           ^a/AnimationController parent]
   :extends (a/Animation)
   (value [^MotionController this]
@@ -534,12 +544,12 @@
       true
       nil
       nil
-      (a/MotionAnimationController
+      (MotionAnimationController
        nil
-       (double progress) 
-       duration 
-       debug-label 
-       vsync 
+       (double progress)
+       duration
+       debug-label
+       vsync
        (t/animation-behavior animation-behavior))))))
 
 (defn instant
