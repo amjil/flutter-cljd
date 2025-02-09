@@ -535,22 +535,26 @@
                     :or {progress 0.0 animation-behavior a/AnimationBehavior.preserve}}]
    (let [{:keys [prepare-motion] :as motion} (into-motion motion)
          {:keys [duration interpolate]} (prepare-motion nil nil)
-         {:keys [duration]} (t/animation-options {:duration duration})]
-     (MotionController
-      motion
-      interpolate
-      nil
-      0.0
-      true
-      nil
-      nil
-      (MotionAnimationController
-       nil
-       (double progress)
-       duration
-       debug-label
-       vsync
-       (t/animation-behavior animation-behavior))))))
+         {:keys [duration]} (t/animation-options {:duration duration})
+         ^MotionAnimationController animation-controller (MotionAnimationController
+                               nil
+                               (double progress)
+                               duration
+                               debug-label
+                               vsync
+                               (t/animation-behavior animation-behavior))
+         ^MotionController motion-controller (MotionController
+                            motion
+                            interpolate
+                            nil
+                            0.0
+                            true
+                            nil
+                            nil
+                            animation-controller)]
+     (.-motionController! animation-controller motion-controller)
+     (set-motion! motion-controller motion)
+     motion-controller)))
 
 (defn instant
   "Instant motion with zero duration.
