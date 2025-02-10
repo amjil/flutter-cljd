@@ -186,11 +186,27 @@
    (args-children first-child [child2 child3])
    ; => [{} [first-child child2 child3]]
    ```"
-  [args children]
-  [(if (map? args) args {})
-   (flatten-children (if (map? args) children (cons args children)))])
+  ([args children]
+   [(if (map? args) args {})
+    (flatten-children (if (map? args) children (cons args children)))]))
 
-(defmacro dbg 
+(defn key-values-args-and-children [values]
+  (if (map? (first values))
+    (args-children (first values) (rest values))
+    (let [{:keys [args i]} (reduce
+                                (fn [{:keys [args key i]} v]
+                                  (cond
+                                    (and (even? i) (keyword? v))
+                                    {:args args :key v :i (inc i)}
+                                    (and (odd? i) (some? key))
+                                    {:args (assoc args key v) :i (inc i)}
+                                    :else
+                                    (reduced {:args args :i (inc i)})))
+                                {:args {} :i 0}
+                                values)]
+      (args-children args (vec (drop i values))))))
+
+(defmacro dbg
   "Prints variable names and their values.
     
     ```clojure

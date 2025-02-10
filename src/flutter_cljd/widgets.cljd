@@ -24,7 +24,6 @@
    [flutter-cljd.internal.column-row-flex :as crf]
    [flutter-cljd.internal.action-listener :as aclr]
    [flutter-cljd.internal.text :as txt]
-   [flutter-cljd.animations :as a]
    [flutter-cljd.internal.spacer :as sp]
    [flutter-cljd.internal.opacity :as op]
    [flutter-cljd.internal.stack :as st]
@@ -45,7 +44,8 @@
    [flutter-cljd.internal.keyed :as kyd]
    [flutter-cljd.internal.with-text-style :as wts]
    [flutter-cljd.internal.on-change :as oc]
-   [flutter-cljd.internal.animated :as an]))
+   [flutter-cljd.internal.animated :as an]
+   [flutter-cljd.utils :as ut]))
 
 (defn absorb-pointer 
   "A widget that absorbs pointers during hit testing. 
@@ -55,6 +55,10 @@
    When absorbing is true, this widget prevents its subtree from receiving pointer events by terminating hit testing at itself.
    It still consumes space during layout and paints its child as usual.
    It just prevents its children from being the target of located events, because it returns true from RenderBox.hitTest.
+
+   Args:
+    - absorbing: Whether the widget absorbs pointers. Default is `true`.
+    - child: The child widget to be absorbed.
    
    [Flutter docs](https://api.flutter.dev/flutter/widgets/AbsorbPointer-class.html)"
   ([absorbing child]
@@ -67,6 +71,10 @@
    When ignoring is true, this widget (and its subtree) is invisible to hit testing.
    It still consumes space during layout and paints its child as usual.
    It just cannot be the target of located events, because it returns false from RenderBox.hitTest.
+
+    Args:
+      - ignoring: Whether the widget ignores pointers. Default is `true`.
+      - child: The child widget to be ignored.
   
    [Flutter docs](https://api.flutter.dev/flutter/widgets/IgnorePointer-class.html)"
   ([ignoring child]
@@ -101,8 +109,11 @@
    [Animated flutter docs](https://api.flutter.dev/flutter/widgets/AnimatedAlign-class.html)
    
    [Transition flutter docs](https://api.flutter.dev/flutter/widgets/AlignTransition-class.html)"
-  [args child]
-  (al/align* args child))
+  ([k0 v0 & args]
+   (let [[args children] (ut/key-values-args-and-children (concat [k0 v0] args))]
+     (al/align* args (first children))))
+  ([args child]
+   (al/align* args child)))
 
 (defn aspect-ratio
   "A widget that attempts to size the child to a specific aspect ratio.
@@ -224,8 +235,11 @@
       - `:text-style` (TextStyle, default: TextStyle(color: Colors.white, fontSize: 12.0 * 0.85, fontWeight: FontWeight.w900, height: 1.0)): The text style of the banner.
    
    [Flutter docs](https://api.flutter.dev/flutter/widgets/Banner-class.html)"
-  [args child]
-  (bn/banner* args child))
+  ([k0 v0 & args]
+   (let [[args children] (ut/key-values-args-and-children (concat [k0 v0] args))]
+     (bn/banner* args (first children))))
+  ([args child]
+   (bn/banner* args child)))
 
 (defn baseline
   "A widget that positions its child according to the child's baseline.
@@ -262,8 +276,10 @@
       - `:tooltip` The tooltip of the bottom navigation bar item.
    
    [Flutter docs](https://api.flutter.dev/flutter/material/BottomNavigationBarItem-class.html)"
-  [args]
-  (bnbi/bottom-navigation-bar-item* args))
+  ([& args]
+   (bnbi/bottom-navigation-bar-item* (into {} (partition 2 args))))
+  ([args]
+   (bnbi/bottom-navigation-bar-item* args)))
 
 (defn builder
   "A stateless utility widget whose build method uses its builder callback to create the widget's child.
@@ -393,18 +409,20 @@
    Example:
    ```clojure
    (shortcuts
-     {[:control \\W] :some-intent
-      [:control \\C] [:some-intent some-arg]
-      [:alt \\c] #(print \"ALT-C is pressed\")
-      :f1 #(print \"F1 is pressed\")}
+     [:control \\W] :some-intent
+     [:control \\C] [:some-intent some-arg]
+     [:alt \\c] #(print \"ALT-C is pressed\")
+     :f1 #(print \"F1 is pressed\")
      (text \"Hello, Shortcuts!\"))
    ```
    
-   [Flutter docs](https://api.flutter.dev/flutter/widgets/Shortcuts-class.html)"
-  ([shortcuts args child]
-   (sc/shortcuts* shortcuts args child))
-  ([shortcuts child] 
-   (shortcuts shortcuts {} child)))
+   [Flutter docs](https://api.flutter.dev/flutter/widgets/Shortcuts-class.html)" 
+  ([k0 v0 & args]
+   (let [child (last args)
+         all (into {} (partition 2 (concat [k0 v0] (drop-last args))))
+         shortcuts (dissoc all :debug-label :modal :include-semantics)
+         args (select-keys all [:debug-label :modal :include-semantics])]
+     (sc/shortcuts* shortcuts args child))))
 
 (defn actions
   "A widget that establishes an Actions widget scope in which the given actions are available.
@@ -520,8 +538,12 @@
        (button on-tap)
        (without-button-modifier)))
   ```"
-  ([args child] (bt/button* args child)) 
-  ([on-tap args child] (bt/button* on-tap args child)))
+  ([k0 v0 & args]
+   (if (fn? k0)
+     (bt/button* k0 (into {} (partition 2 (cons v0 (drop-last args)))) (last args))
+     (let [[args [child]] (ut/key-values-args-and-children (concat [k0 v0] args))]
+       (bt/button* args child))))
+  ([args child] (bt/button* args child)))
 
 (defn with-button-modifier
   "A widget that provides a custom button modifier to its descendants.
@@ -571,12 +593,14 @@
    
    ```clojure
    (center (text \"Hello, World!\"))
-   (center {:width-factor 2.0 :height-factor 2.0} (text \"Hello, World!\"))
+   (center :width-factor 2.0 :height-factor 2.0 (text \"Hello, World!\"))
    ```
 
    [Flutter docs](https://api.flutter.dev/flutter/widgets/Center-class.html)"
+  ([& args] (let [[args [child]] (ut/key-values-args-and-children args)]
+              (cntr/center* args child)))
   ([args child] (cntr/center* args child))
-  ([child] (center {} child)))
+  ([child] (cntr/center* {} child)))
 
 (defn checked-mode-banner
   "A banner that shows the current checked mode.
@@ -606,18 +630,36 @@
    
    By default, inscribes an axis-aligned oval into its layout dimensions and prevents its child from painting outside that oval, but the size and location of the clip oval can be customized using a custom clipper.
 
+   Args: 
+    - args: A map of arguments for the clip oval widget.
+      - `:key` An identifier for the clip oval.
+      - `:clip-behavior` (keyword, default: :clip): The behavior of the clip.
+        Possible values: :clip, :anti-alias, :anti-alias-with-save-layer, :hard-edge.
+      - `:clipper` (CustomClipper): The custom clipper to use for clipping.
+    - child: The child widget
+   
    [Flutter docs](https://api.flutter.dev/flutter/widgets/ClipOval-class.html)"
-  ([args child] (co/clip-oval* args child))
-  ([child] (clip-oval {} child)))
+  ([v0 & args] (let [[args [child]] (ut/key-values-args-and-children (cons v0 args))]
+              (co/clip-oval* args child)))
+  ([child] (co/clip-oval* {} child)))
 
 (defn clip-rect 
   "A widget that clips its child using a rectangle.
 
    By default, inscribes an axis-aligned rectangle into its layout dimensions and prevents its child from painting outside that rectangle, but the size and location of the clip rectangle can be customized using a custom clipper.
 
+   Args:
+    - args: A map of arguments for the clip rect widget.
+      - `:key` An identifier for the clip rect.
+      - `:clip-behavior` (keyword, default: :clip): The behavior of the clip.
+        Possible values: :clip, :anti-alias, :anti-alias-with-save-layer, :hard-edge.
+      - `:clipper` (CustomClipper): The custom clipper to use for clipping.
+    - child: The child widget
+
    [Flutter docs](https://api.flutter.dev/flutter/widgets/ClipRect-class.html)"
-  ([args child] (cr/clip-rect* args child))
-  ([child] (clip-rect {} child)))
+  ([v0 & args] (let [[args [child]] (ut/key-values-args-and-children (cons v0 args))]
+                 (cr/clip-rect* args child)))
+  ([child] (cr/clip-rect* {} child)))
 
 (defn clip-corners
   "A widget that clips its child using rounded corners.
@@ -649,7 +691,7 @@
          (center (text \"Hello\")))))
 
    ;; Different corners
-   (clip-corners {:top-left 4 :top-right 8}
+   (clip-corners :top-left 4 :top-right 8
      (container {:color :blue}
        (text \"Hello\")))
 
@@ -675,8 +717,11 @@
    ```
 
    [Flutter docs](https://api.flutter.dev/flutter/widgets/ClipRRect-class.html)"
-  [radius child]
-  (cc/clip-corners* radius child))
+  ([k0 v0 & args]
+   (let [[args [child]] (ut/key-values-args-and-children (concat [k0 v0] args))]
+     (cc/clip-corners* args child)))
+  ([radius child]
+   (cc/clip-corners* radius child)))
 
 (defn colored 
   "A widget that paints its child with a specified color.
@@ -726,7 +771,7 @@
   - children: The child widgets to be placed in the column. Can contain nested lists of children.
    
    ```clojure
-   (column {:main-axis-alignment :center :spacing 10} 
+   (column :main-axis-alignment :center :spacing 10
     (text \"Hello, World!\"))
    ```
 
@@ -734,7 +779,8 @@
   A column widget with the specified arguments and children."
   ([] (column {}))
   ([args & children]
-   (apply crf/column* args children)))
+   (let [[args children] (ut/key-values-args-and-children (cons args children))]
+     (crf/column* args children))))
 
 (defn composited-transform-follower
   "A widget that follows a `composited-transform-target`.
@@ -763,8 +809,9 @@
    ```
 
    [Flutter docs](https://api.flutter.dev/flutter/widgets/CompositedTransformFollower-class.html)"
-  [args child]
-  (ct/composited-transform-follower* args child))
+  [args child & more]
+  (let [[args children] (ut/key-values-args-and-children (cons args (cons child more)))]
+    (ct/composited-transform-follower* args (last children))))
 
 (defn composited-transform-target
   "A widget that can be targeted by a `composited-transform-follower`
@@ -800,7 +847,6 @@
    Args:
     - args: A map of arguments for the constraints transformed box widget or a transform function.
       - `:key` An identifier for the constraints transformed box.
-      - `:child` The child widget to be displayed.
       - `:text-direction` (keyword, default: :ltr): The direction of the text. Possible values: :ltr, :rtl.
       - `:alignment` (Alignment, default: Alignment.center): The alignment of the child within the container.
       - `:transform` (BoxConstraints -> BoxConstraints): The transform to apply to the constraints. 
@@ -810,7 +856,8 @@
 
    [Flutter docs](https://api.flutter.dev/flutter/widgets/ConstraintsTransformBox-class.html)"
   [args child]
-  (ctr/constraints-transformed* args child))
+  (let [[args children] (ut/key-values-args-and-children (cons args [child]))]
+    (ctr/constraints-transformed* args (last children))))
 
 (defn custom-multi-child-layout
   "A widget that uses a delegate to size and position multiple children.
@@ -879,10 +926,29 @@
 
    If you only have one child, then rather than using Flex, Row, or Column, consider using Align or Center to position the child.
    
+   Args:
+    - `:key` An identifier for the flex.
+    - `:spacing` (number, default: 0): The spacing between each child widget.
+    - `:direction` (Axis, default: Axis.horizontal): The axis along which the children are placed.
+    - `:main-axis-alignment` (keyword or MainAxisAlignment, default: `:start`): The alignment of the children along the main axis.
+      Possible values: `:center`, `:start`, `:end`, `:space-between`, `:space-around`.
+    - `:main-axis-size` (keyword or MainAxisSize, default: `:min`): The size of the flex in the main axis.
+      Possible values: `:max`, `:min`.
+    - `:cross-axis-alignment` (keyword or CrossAxisAlignment, default: `:center`): The alignment of the children along the cross axis.
+      Possible values: `:center`, `:start`, `:end`, `:stretch`, `:baseline`.
+    - `:text-direction` (keyword or TextDirection, default: `:ltr`): The direction of the text.
+      Possible values: `:ltr`, `:rtl`.
+    - `:text-baseline` (keyword or TextBaseline, default: `:alphabetic`): The baseline alignment for the text.
+      Possible values: `:alphabetic`, `:ideographic`.
+    - `:vertical-direction` (keyword or VerticalDirection, default: `:down`): The direction in which the children are placed vertically.
+      Possible values: `:top`, `:down`.
+    - `:clip-behavior` (keyword or Clip, default: `:none`): The clip
+   
    [Flutter docs](https://api.flutter.dev/flutter/widgets/Flex-class.html)"
-  ([direction] (flex direction {}))
-  ([direction args & children]
-   (apply crf/flex* direction args children)))
+  ([direction] (crf/flex* direction {} []))
+  ([direction & args-children]
+   (let [[args children] (ut/key-values-args-and-children args-children)]
+   (crf/flex* direction args children))))
 
 (defn flexible 
   "A widget that controls how a child of a `row`, `column`, or `flex` flexes.
@@ -891,11 +957,16 @@
    the flexibility to expand to fill the available space in the main axis (e.g., horizontally for a `row` or vertically for a `column`), but, 
    unlike `expanded`, `flexible` does not require the child to fill the available space.
    
+   Args:
+    - `:flex` (number, default: 1): The flex factor to use for this child.
+    - `:fit` (FlexFit, default: `:loose`): How the child is inscribed into the available space.
+      Possible values: `:tight`, `:loose`.
+    - `child`: The child widget to be flexed.
+
    A `flexible` widget must be a descendant of a `row`, `column`, or `flex`, and the path from the `flexible` widget to its enclosing `row`, `column` or `flex` must contain only `StatelessWidget`s or `StatefulWidget`s (not other kinds of widgets, like `RenderObjectWidget`s)."
-  ([args child]
-   (fx/flexible* args child))
-  ([flex fit child]
-   (flexible {:flex flex :fit fit} child))
+  ([k0 v0 & args]
+   (let [[args children] (ut/key-values-args-and-children (concat [k0 v0] args))]
+     (fx/flexible* args (last children))))
   ([child]
    (flexible {} child)))
 
@@ -953,23 +1024,24 @@
    
    [Flutter docs](https://api.flutter.dev/flutter/widgets/Row-class.html)"
   ([] (row {}))
-  ([args & children]
-   (apply crf/row* args children)))
+  ([& args-children]
+    (let [[args children] (ut/key-values-args-and-children args-children)]
+      (crf/row* args children))))
 
 (defn sized
   "Creates a `ConstrainedBox` widget with the specified constraints and child.\\
-   The size can be specified as a number, a map, Size, BoxConstraints or two values.\\
+   The size can be specified as a number, a map, key-values pairs, Size, BoxConstraints or two values.\\
    Examples:
    ```clojure
    (sized 100)
    (sized {:width 100 :height 200})
    (sized 100 200)
-   (sized {:w 100 :h 200})
+   (sized :w 100 :h 200)
    (sized [100 200])
    (sized {:min-width 100 :max-width 200})
    (sized {:min-height 100 :max-height 200})
-   (sized {:min-width 100 :max-width 200 :min-height 100 :max-height 200})
-   (sized {:width {:min 100 :max 200}})
+   (sized :min-width 100 :max-width 200 :min-height 100 :max-height 200)
+   (sized :width {:min 100 :max 200})
    ```
    If the size argument is a map, the keys `:width`, `:w`, `:height`, `:min-w`, `:max-height`, `:size`, etc are used to specify the width and height.\\
    If the size argument is a vector of two values, the first number is used for the width and the second number is used for the height.\\
@@ -978,12 +1050,11 @@
    Check `box-constraints` function for more information on how to create constraints.
   
    [Flutter docs](https://api.flutter.dev/flutter/widgets/ConstrainedBox-class.html)"
-  ([] (sz/sized*))
-  ([value] (sz/sized* value))
-  ([value child]
-   (sz/sized* value child))
-  ([width height child]
-   (sz/sized* width height child)))
+  ([& args]
+   (if (< 4 (count args))
+     (apply sz/sized* args)
+     (let [[args children] (ut/key-values-args-and-children args)]
+       (sz/sized* args (last children))))))
 
 (defn fractionally-sized
   "Creates a `FractionallySizedBox` widget with the specified width and height factors and child.\\
@@ -991,12 +1062,14 @@
    Examples:
    ```clojure
    (fractionally-sized 0.5 0.5)
-   (fractionally-sized {:width 0.5 :height 0.5})
+   (fractionally-sized :width 0.5 :height 0.5)
    ```
    [Flutter docs](https://api.flutter.dev/flutter/widgets/FractionallySizedBox-class.html)"
-  ([args] (sz/fractionally-sized* args))
-  ([value child] (sz/fractionally-sized* value child))
-  ([width height child] (sz/fractionally-sized* width height child)))
+  ([& args] 
+   (if (< 4 (count args))
+     (apply sz/fractionally-sized* args)
+     (let [[args children] (ut/key-values-args-and-children args)]
+       (sz/fractionally-sized* args (last children))))))
 
 (defn spacer
   "Spacer creates an adjustable, empty spacer that can be used to tune the spacing between widgets in a Flex container, like Row or Column.
@@ -1012,7 +1085,7 @@
    
    [Flutter doc](https://api.flutter.dev/flutter/widgets/Stack-class.html)"
   [& children]
-  (apply st/stack* children))
+  (st/stack* children))
 
 (defn opacity
   "A widget that makes its child partially transparent.
@@ -1028,8 +1101,9 @@
    ```
 
    [Flutter docs](https://api.flutter.dev/flutter/widgets/Opacity-class.html)"
-  ([opacity args child]
-   (op/opacity* opacity args child))
+  ([opacity & args]
+   (let [[args [child]] (ut/key-values-args-and-children args)]
+     (op/opacity* opacity args child)))
   ([opacity child]
    (op/opacity* opacity child)))
 
@@ -1116,7 +1190,7 @@
 
 (defn padding
     "Creates a Padding widget with the specified padding and child.
-     The padding can be specified as a number, a map of insets, or four numbers.
+     The padding can be specified as a number, a map or key-value pairs of insets, or four numbers.
      Examples:
      ```clojure
      (padding 8 child) ;; Padding(padding: EdgeInsets.all(8))
@@ -1124,14 +1198,20 @@
      (padding {:left 8 :right 16} child) ;; Padding(padding: EdgeInsets.only(left: 8, right: 16))
      (padding [8 16 24 32] child) ;; Padding(padding: EdgeInsets.fromLTRB(8, 16, 24, 32))
      (padding (insets 8) child) ;; Padding(padding: EdgeInsets.all(8))
-     (padding 4 {:animation {:duration 100}} child) ;; AnimatedPadding(padding: EdgeInsets.all(4), duration: Duration(milliseconds: 100))
      ```
      If the padding argument is a map, the keys :all, :left, :right, :start, :end, :vertical, :horizontal, :top, and :bottom are used to specify the padding.
      If the padding argument is a vector of four numbers, the numbers are used for the left, top, right, and bottom padding."
-  ([value args child]
-   (pd/padding* value args child))
-  ([value child]
-   (pd/padding* value child)))
+  ([& args]
+   (cond 
+     (keyword? (first args))
+     (let [[args children] (ut/key-values-args-and-children args)]
+       (pd/padding* args (last children)))
+     
+     (= 2 (count args))
+     (pd/padding* (first args) (second args))
+     
+     :else
+     (throw (ex-info "Invalid arguments for padding: " args)))))
 
 (defn text
   "Creates a text widget with the specified text and arguments.
@@ -1171,8 +1251,8 @@
     (text (text-span \"Hello, \" {:color :red} (text-span \"World!\" {:color :blue})))
   ```
    "
-  ([string args]
-   (txt/text* string args))
+  ([string & args]
+    (txt/text* string (into {} (partition 2 args))))
   ([string] (text string {})))
 
 (defn with-text-style
@@ -1226,10 +1306,11 @@
          {:spacing 5}
          (text \"Hello, World!\")
          (text \"This is a column!\"))
-      (with-text-style {:color :red, :font-size 20}))
+      (with-text-style :color :red :font-size 20))
    ```"
-  [args child]
-  (wts/with-text-style* args child))
+  [arg0 & args]
+  (let [[args children] (ut/key-values-args-and-children (cons arg0 args))]
+    (wts/with-text-style* args (last children))))
 
 (defn on-change-of 
   "A widget that calls a function when the given value changes.

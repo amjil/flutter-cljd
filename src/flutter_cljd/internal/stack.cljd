@@ -5,7 +5,7 @@
    [flutter-cljd.utils :as ut]))
 
 (defn stack*
-  [& children]
+  [children]
   (let [params (if (map? (first children)) (first children) {})
         children (ut/flatten-children  
                   (if (map? (first children)) (rest children) children))]

@@ -1,47 +1,43 @@
 (ns flutter-cljd.internal.column-row-flex
   (:require
    ["package:flutter/material.dart" :as m]
-   [flutter-cljd.types :as t]
-   [flutter-cljd.utils :as ut]))
+   [flutter-cljd.types :as t]))
 
-(defn column* [args & children]
-  (let [[args children] (ut/args-children args children)]
-    (m/Column
-     .key (t/widget-key (args :key))
-     .mainAxisAlignment (t/main-axis-alignment (:main-axis-alignment args :start))
-     .mainAxisSize (t/main-axis-size (:main-axis-size args :min))
-     .crossAxisAlignment (t/cross-axis-alignment (:cross-axis-alignment args :center))
-     .textDirection (t/text-direction (:text-direction args :ltr))
-     .verticalDirection (t/vertical-direction (:vertical-direction args :down))
-     .textBaseline (t/text-baseline (:text-baseline args :alphabetic))
-     .spacing (double (or (:spacing args) 0))
-     .children children)))
+(defn column* [args children]
+  (m/Column
+   .key (t/widget-key (args :key))
+   .mainAxisAlignment (t/main-axis-alignment (:main-axis-alignment args :start))
+   .mainAxisSize (t/main-axis-size (:main-axis-size args :min))
+   .crossAxisAlignment (t/cross-axis-alignment (:cross-axis-alignment args :center))
+   .textDirection (t/text-direction (:text-direction args :ltr))
+   .verticalDirection (t/vertical-direction (:vertical-direction args :down))
+   .textBaseline (t/text-baseline (:text-baseline args :alphabetic))
+   .spacing (double (or (:spacing args) 0))
+   .children children))
 
-(defn row* [args & children]
-  (let [[args children] (ut/args-children args children)]
-    (m/Row
-     .key (t/widget-key (args :key))
-     .mainAxisAlignment (t/main-axis-alignment (:main-axis-alignment args :start))
-     .mainAxisSize (t/main-axis-size (:main-axis-size args :min))
-     .crossAxisAlignment (t/cross-axis-alignment (:cross-axis-alignment args :center))
-     .textDirection (t/text-direction (:text-direction args :ltr))
-     .verticalDirection (t/vertical-direction (:vertical-direction args :down))
-     .textBaseline (t/text-baseline (:text-baseline args :alphabetic))
-     .spacing (double (or (:spacing args) 0))
-     .children children)))
+(defn row* [args children]
+  (m/Row
+   .key (t/widget-key (args :key))
+   .mainAxisAlignment (t/main-axis-alignment (:main-axis-alignment args :start))
+   .mainAxisSize (t/main-axis-size (:main-axis-size args :min))
+   .crossAxisAlignment (t/cross-axis-alignment (:cross-axis-alignment args :center))
+   .textDirection (t/text-direction (:text-direction args :ltr))
+   .verticalDirection (t/vertical-direction (:vertical-direction args :down))
+   .textBaseline (t/text-baseline (:text-baseline args :alphabetic))
+   .spacing (double (or (:spacing args) 0))
+   .children children))
 
 (defn flex*
-  [direction args & children]
-  (let [[args children] (ut/args-children args children)]
-    (m/Flex
-     .key (t/widget-key (args :key))
-     .direction (t/axis direction)
-     .mainAxisAlignment (t/main-axis-alignment (:main-axis-alignment args :start))
-     .mainAxisSize (t/main-axis-size (:main-axis-size args :min))
-     .crossAxisAlignment (t/cross-axis-alignment (:cross-axis-alignment args :center))
-     .textDirection (t/text-direction (:text-direction args :ltr))
-     .verticalDirection (t/vertical-direction (:vertical-direction args :down))
-     .textBaseline (t/text-baseline (:text-baseline args :alphabetic))
-     .clipBehavior (t/clip (:clip args :none))
-     .spacing (double (or (:spacing args) 0))
-     .children children)))
+  [direction args children]
+  (m/Flex
+   .key (t/widget-key (args :key))
+   .direction (t/axis direction)
+   .mainAxisAlignment (t/main-axis-alignment (:main-axis-alignment args :start))
+   .mainAxisSize (t/main-axis-size (:main-axis-size args :min))
+   .crossAxisAlignment (t/cross-axis-alignment (:cross-axis-alignment args :center))
+   .textDirection (t/text-direction (:text-direction args :ltr))
+   .verticalDirection (t/vertical-direction (:vertical-direction args :down))
+   .textBaseline (t/text-baseline (:text-baseline args :alphabetic))
+   .clipBehavior (t/clip (:clip args :none))
+   .spacing (double (or (:spacing args) 0))
+   .children children))

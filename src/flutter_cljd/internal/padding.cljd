@@ -195,17 +195,8 @@
      (padding {:left 8 :right 16} child) ;; Padding(padding: EdgeInsets.only(left: 8, right: 16))
      (padding [8 16 24 32] child) ;; Padding(padding: EdgeInsets.fromLTRB(8, 16, 24, 32))
      (padding (insets 8) child) ;; Padding(padding: EdgeInsets.all(8))
-     (padding 4 {:animation 100} child) ;; AnimatedPadding(padding: EdgeInsets.all(4), duration: Duration(milliseconds: 100))
      ```
      If the padding argument is a map, the keys :all, :left, :right, :start, :end, :vertical, :horizontal, :top, and :bottom are used to specify the padding.
      If the padding argument is a vector of four numbers, the numbers are used for the left, top, right, and bottom padding."
-  ([value args child]
-   (AnimatedAnyPadding
-    nil
-    (t/insets value)
-    child
-    (-> args :animation t/animation-options :curve)
-    (-> args :animation t/animation-options :duration)
-    (-> args :animation t/animation-options :on-end)))
   ([value child]
    (AnyPadding (t/insets value) nil child)))
