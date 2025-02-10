@@ -171,7 +171,9 @@
 (deftest test-with
   (testing "Duration option"
     (let [anim ((:prepare-motion (a/with :duration 100 percents)) nil nil)]
-      (is (= (.-inMilliseconds (:duration anim)) 100))))
+      (is (= (.-inMilliseconds (:duration anim)) 100))
+      (is (= ((:to-string (a/with {:duration 100} (a/to 0 100))))
+             "(with {:duration 100} (to 0 100))"))))
 
   (testing "Start time option"
     (let [anim (unwrap (a/with {:delay 500 :duration 1000} percents))]
@@ -241,6 +243,8 @@
           {:keys [duration]} (repeated nil nil)]
       (is (= (.-inMilliseconds duration) (* base-dur 2)) 
           "Duration should be doubled")
+      (is (= ((:to-string (a/repeat 2 (a/to 0 100))))
+             "(repeat 2 (to 0 100))"))
       (is (= ((:to-hash (a/repeat 2 (a/to 0 100))))
              ((:to-hash (a/repeat 2 (a/to 0 100)))))
           "Same repeat motion should have same hash")
@@ -277,6 +281,8 @@
           {:keys [duration]} (reversed nil nil)]
       (is (= (.-inMilliseconds duration) (* base-dur 2))
           "Duration should be doubled")
+      (is (= ((:to-string (a/autoreverse (a/to 0 100))))
+             "(autoreverse (to 0 100))"))
       (is (= ((:to-hash (a/autoreverse (a/to 0 100))))
              ((:to-hash (a/autoreverse (a/to 0 100)))))
           "Same autoreverse motion should have same hash")
