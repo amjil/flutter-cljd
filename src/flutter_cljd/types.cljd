@@ -24,8 +24,7 @@
           enabled (.-$1 (.invokeActionIfEnabled ^super action intent context))]
       (list enabled result)))) ;; TODO create a tuple
 
-
-(defn action-dispatcher 
+(defn action-dispatcher
   "An interface for dispatching actions to a `FocusNode`.
    
    This is used with `FocusNode.onKey` to allow the `FocusNode` to handle key events.
@@ -394,7 +393,7 @@
 ;; {:top 23} {:start 4} {:horizontal 4 :top 4} 34 {:all 4 :top 1}
 (defn insets
   "Creates an EdgeInsetsGeometry object from the specified insets.
-   Insets can be specified as a number or a map of edge names to numbers or a STEB sequence.
+   Insets can be specified as a number or a map or key-value pairs of edge names to numbers or a STEB sequence.
    Examples:
    ```clojure
     (insets 4) ;; EdgeInsetsDirectional.all(4)
@@ -402,7 +401,7 @@
     (insets {:horizontal 4 :top 8}) ;; EdgeInsetsDirectional.only(start: 4, top: 8, end: 4)
     (insets {:left 4}) ;; EdgeInsets.only(left: 4)
     (insets {:end 4}) ;; EdgeInsetsDirectional.only(end: 4)
-    (insets {:top 1 :all 4}) ;; EdgeInsetsDirectional.only(start: 4, top: 1, end: 4, bottom: 4)
+    (insets :top 1 :all 4) ;; EdgeInsetsDirectional.only(start: 4, top: 1, end: 4, bottom: 4)
     (insets 4 8 4 8) ;; EdgeInsetsDirectional.fromSTEB(4, 8, 4, 8)
     (insets {:t 4 :b 2 :h 8}) ;; EdgeInsetsDirectional.only(start: 8, top: 4, end: 8, bottom: 2)
    ```
@@ -412,10 +411,11 @@
 
    If the insets argument is an EdgeInsetsGeometry object, it is returned as is."
   ([] (insets {}))
-  ([s t e b]
-   (if (every? number? [s t e b])
-     (m/EdgeInsetsDirectional.fromSTEB s t e b)
-     (throw (Exception. (str "Invalid edgeInsets: " [s t e b])))))
+  ([& values]
+   (if (and (= (count values) 4) (every? number? values))
+     (let [[s t e b] values]
+       (m/EdgeInsetsDirectional.fromSTEB s t e b))
+     (insets (apply hash-map values))))
   ([value]
    (cond
      (instance? m/EdgeInsetsGeometry value) value
@@ -660,34 +660,35 @@
     - `:font-family-fallback` (list of string, default: nil): The font family fallback of the text.
     - `:package` (string, default: nil): The package of the font family.
     - `:overflow` (TextOverflow, default: nil): How the text should behave when it overflows."
-  [args]
-  (m/TextStyle
-   .inherit (:inherit args true)
-   .color (some-> (args :color) color)
-   .backgroundColor (some-> (args :background-color) color)
-   .fontSize (args :font-size)
-   .fontWeight (some-> (args :font-weight) font-weight)
-   .fontStyle (some-> (args :font-style) font-style)
-   .letterSpacing (args :letter-spacing)
-   .wordSpacing (args :word-spacing)
-   .textBaseline (some-> (args :text-baseline) text-baseline)
-   .height (get args :height (args :h))
-   .leadingDistribution (some-> (args :leading-distribution) text-leading-distribution)
-   .locale (some-> (args :locale) locale)
-   .foreground (args :foreground)
-   .background (args :background)
-   .shadows (args :shadows)
-   .fontFeatures (args :font-features)
-   .fontVariations (args :font-variations)
-   .decoration (args :decoration)
-   .decorationColor (args :decoration-color)
-   .decorationStyle (args :decoration-style)
-   .decorationThickness (args :decoration-thickness)
-   .debugLabel (args :debug-label)
-   .fontFamily (args :font-family)
-   .fontFamilyFallback (args :font-family-fallback)
-   .package (args :package)
-   .overflow (args :overflow)))
+  [arg0 & args]
+  (let [args (if (empty? args) arg0 (apply hash-map (cons arg0 args)))]
+    (m/TextStyle
+     .inherit (:inherit args true)
+     .color (some-> (args :color) color)
+     .backgroundColor (some-> (args :background-color) color)
+     .fontSize (args :font-size)
+     .fontWeight (some-> (args :font-weight) font-weight)
+     .fontStyle (some-> (args :font-style) font-style)
+     .letterSpacing (args :letter-spacing)
+     .wordSpacing (args :word-spacing)
+     .textBaseline (some-> (args :text-baseline) text-baseline)
+     .height (get args :height (args :h))
+     .leadingDistribution (some-> (args :leading-distribution) text-leading-distribution)
+     .locale (some-> (args :locale) locale)
+     .foreground (args :foreground)
+     .background (args :background)
+     .shadows (args :shadows)
+     .fontFeatures (args :font-features)
+     .fontVariations (args :font-variations)
+     .decoration (args :decoration)
+     .decorationColor (args :decoration-color)
+     .decorationStyle (args :decoration-style)
+     .decorationThickness (args :decoration-thickness)
+     .debugLabel (args :debug-label)
+     .fontFamily (args :font-family)
+     .fontFamilyFallback (args :font-family-fallback)
+     .package (args :package)
+     .overflow (args :overflow))))
 
 (defn text-span
   "An immutable span of text.
@@ -735,14 +736,14 @@
           text (if first-is-text a0 (args :text))
           style (get args :style args)
           children (->> (cond
-                         (contains? args :children) (args :children)
-                         (map? a1) (drop 2 value)
-                         (or (map? a0) first-is-text) (rest value)
-                         :else value) 
+                          (contains? args :children) (args :children)
+                          (map? a1) (drop 2 value)
+                          (or (map? a0) first-is-text) (rest value)
+                          :else value)
                         (flatten)
                         (filter some?)
-                        (map #(if (instance? m/InlineSpan %) 
-                                % 
+                        (map #(if (instance? m/InlineSpan %)
+                                %
                                 (m/TextSpan .text (str %)))))]
       (m/TextSpan
        .text (str text)
@@ -801,13 +802,14 @@
    - `:colors` (list of colors, default: [:transparent :transparent]): The colors of the gradient.
    - `:stops` (list of numbers, default: nil): The stops of the gradient.
    - `:tile-mode` (tile-mode, default: :clamp): The tile mode of the gradient."
-  [args]
-  (m/LinearGradient
-   .begin (alignment-geometry (:begin args m/AlignmentDirectional.centerStart))
-   .end (alignment-geometry (:end args m/AlignmentDirectional.centerEnd))
-   .colors (gradient-colors (:colors args))
-   .stops (args :stops)
-   .tileMode (tile-mode (:tile-mode args :clamp))))
+  [arg0 & args]
+  (let [args (if (empty? args) arg0 (apply hash-map (cons arg0 args)))]
+    (m/LinearGradient
+     .begin (alignment-geometry (:begin args m/AlignmentDirectional.centerStart))
+     .end (alignment-geometry (:end args m/AlignmentDirectional.centerEnd))
+     .colors (gradient-colors (:colors args))
+     .stops (args :stops)
+     .tileMode (tile-mode (:tile-mode args :clamp)))))
 
 (defn sweep-gradient
   "Creates a SweepGradient object from the specified arguments.
@@ -818,14 +820,15 @@
    - `:colors` (list of colors, default: [:transparent :transparent]): The colors of the gradient.
    - `:stops` (list of numbers, default: nil): The stops of the gradient.
    - `:tile-mode` (tile-mode, default: :clamp): The tile mode of the gradient."
-  [args]
-  (m/SweepGradient
-   .center (alignment-geometry (:center args m/Alignment.center))
-   .startAngle (:start-angle args 0)
-   .endAngle (:end-angle args (* 2 (.pi double)))
-   .colors (gradient-colors (args :colors))
-   .stops (args :stops)
-   .tileMode (tile-mode (:tile-mode args :clamp))))
+  [arg0 & args]
+  (let [args (if (empty? args) arg0 (apply hash-map (cons arg0 args)))]
+    (m/SweepGradient
+     .center (alignment-geometry (:center args m/Alignment.center))
+     .startAngle (:start-angle args 0)
+     .endAngle (:end-angle args (* 2 (.pi double)))
+     .colors (gradient-colors (args :colors))
+     .stops (args :stops)
+     .tileMode (tile-mode (:tile-mode args :clamp)))))
 
 (defn radial-gradient
   "Creates a RadialGradient object from the specified arguments.
@@ -835,13 +838,14 @@
    - `:colors` (list of colors, default: [:transparent :transparent]): The colors of the gradient.
    - `:stops` (list of numbers, default: nil): The stops of the gradient.
    - `:tile-mode` (tile-mode, default: nil): The tile mode of the gradient."
-  [args]
-  (m/RadialGradient
-   .center (alignment-geometry (:center args m/Alignment.center))
-   .radius (:radius args 0.5)
-   .colors (gradient-colors (:colors args))
-   .stops (args :stops)
-   .tileMode (tile-mode (:tile-mode args :clamp))))
+  [arg0 & args]
+  (let [args (if (empty? args) arg0 (apply hash-map (cons arg0 args)))]
+    (m/RadialGradient
+     .center (alignment-geometry (:center args m/Alignment.center))
+     .radius (:radius args 0.5)
+     .colors (gradient-colors (:colors args))
+     .stops (args :stops)
+     .tileMode (tile-mode (:tile-mode args :clamp)))))
 
 (defn gradient [gradient]
   (cond
@@ -871,13 +875,17 @@
    (radius {:x 4 :y 8}) ;; Radius.elliptical(4, 8)
    (radius [4 8]) ;; Radius.elliptical(4, 8)
    ```"
-  [radius]
-  (cond
-    (instance? m/Radius radius) radius
-    (number? radius) (m/Radius.circular radius)
-    (or (seq? radius) (vector? radius)) (m/Radius.elliptical (get radius 0 0) (get radius 1 0))
-    (map? radius) (m/Radius.elliptical (get radius :x 0) (get radius :y 0))
-    :else (throw (Exception. (str "Invalid radius: " radius)))))
+  [arg0 & args]
+  (let [radius (cond
+                 (empty? args) arg0
+                 (keyword? arg0) (apply hash-map (cons arg0 args))
+                 :else (cons arg0 args))]
+    (cond
+      (instance? m/Radius radius) radius
+      (number? radius) (m/Radius.circular radius)
+      (map? radius) (m/Radius.elliptical (get radius :x 0) (get radius :y 0))
+      (or (seq? radius) (vector? radius)) (m/Radius.elliptical (get radius 0 0) (get radius 1 0))
+      :else (throw (Exception. (str "Invalid radius: " radius))))))
 
 (defn border-radius
   "Creates a BorderRadius object from the specified radius.
@@ -893,34 +901,39 @@
    (border-radius [4 8]) ;; BorderRadius.all(Radius.elliptical(4, 8))
    (border-radius {:top-left 4 :all 8}) ;; BorderRadius.only(topLeft: Radius.circular(4), topRight: Radius.circular(8), bottomLeft: Radius.circular(8), bottomRight: Radius.circular(8))
    ```"
-  [value]
-  (cond
-    (instance? m/BorderRadiusGeometry value) value
-    (or (number? value) (instance? m/Radius value) (seq? value) (vector? value)) (m/BorderRadius.all (radius value))
-
-    (map? value)
+  [arg0 & args]
+  (let [value (cond
+                 (empty? args) arg0
+                 (keyword? arg0) (apply hash-map (cons arg0 args))
+                 :else (vec (cons arg0 args)))]
     (cond
-      (some? (some value [:x :y])) (m/BorderRadius.all (radius value))
+      (instance? m/BorderRadiusGeometry value) value
+      (or (number? value) (instance? m/Radius value) (seq? value) (vector? value)) (m/BorderRadius.all (radius value))
 
-      (some? (some value [:l :r :left :right :top-left :top-right :bottom-left :bottom-right :left-top :right-top :left-bottom :right-bottom]))
-      (m/BorderRadius.only
-       .topLeft (radius (or (some value [:top-left :left-top :top :left :l :t :all]) 0))
-       .topRight (radius (or (some value [:top-right :right-top :top :right :r :t :all]) 0))
-       .bottomLeft (radius (or (some value [:bottom-left :left-bottom :bottom :left :l :b :all]) 0))
-       .bottomRight (radius (or (some value [:bottom-right :right-bottom :bottom :right :r :b :all]) 0)))
+      (map? value)
+      (cond
+        (some? (some value [:x :y])) (m/BorderRadius.all (radius value))
 
-      :else
-      (m/BorderRadiusDirectional.only
-       .topStart (radius (or (some value [:top-start :start-top :top :start :s :t :all]) 0))
-       .topEnd (radius (or (some value [:top-end :end-top :top :end :e :t :all]) 0))
-       .bottomStart (radius (or (some value [:bottom-start :start-bottom :bottom :start :s :b :all]) 0))
-       .bottomEnd (radius (or (some value [:bottom-end :end-bottom :bottom :end :e :b :all]) 0))))
+        (some? (some value [:l :r :left :right :top-left :top-right :bottom-left :bottom-right :left-top :right-top :left-bottom :right-bottom]))
+        (m/BorderRadius.only
+         .topLeft (radius (or (some value [:top-left :left-top :top :left :l :t :all]) 0))
+         .topRight (radius (or (some value [:top-right :right-top :top :right :r :t :all]) 0))
+         .bottomLeft (radius (or (some value [:bottom-left :left-bottom :bottom :left :l :b :all]) 0))
+         .bottomRight (radius (or (some value [:bottom-right :right-bottom :bottom :right :r :b :all]) 0)))
 
-    :else (throw (Exception. (str "Invalid radius: " value)))))
+        :else
+        (m/BorderRadiusDirectional.only
+         .topStart (radius (or (some value [:top-start :start-top :top :start :s :t :all]) 0))
+         .topEnd (radius (or (some value [:top-end :end-top :top :end :e :t :all]) 0))
+         .bottomStart (radius (or (some value [:bottom-start :start-bottom :bottom :start :s :b :all]) 0))
+         .bottomEnd (radius (or (some value [:bottom-end :end-bottom :bottom :end :e :b :all]) 0))))
+
+      :else (throw (Exception. (str "Invalid radius: " value))))))
 
 (defn decoration
-  [args]
-  (let [shape (shape (args :shape))]
+  [arg0 & args] 
+  (let [args (if (empty? args) arg0 (apply hash-map (cons arg0 args)))
+        shape (shape (args :shape))]
     (cond
       (instance? m/Decoration args) args
 
@@ -945,7 +958,7 @@
 
       :else (throw (Exception. (str "Invalid decoration: " args))))))
 
-(defn duration [value]
+(defn duration
   "Creates a Duration object from the specified value.
    The value can be specified as a number, a map of days, hours, minutes, seconds, milliseconds, microseconds, or a Duration object.
    Examples:
@@ -955,22 +968,24 @@
    (duration {:days 1 :hours 2 :minutes 30}) ;; Duration(days: 1, hours: 2, minutes: 30)
    (duration (dc/Duration .seconds 30)) ;; Duration(seconds: 30)
    ```"
-  (cond
-    (instance? dc/Duration value) value
-    (integer? value) (dc/Duration .milliseconds value)
-    (number? value) (dc/Duration .microseconds (int (* value 1000.0)))
-    (map? value) (dc/Duration
-                  .days (int (:d value (:day value 0)))
-                  .hours (int (:h value (:hours value 0)))
-                  .minutes (int (:m value (:minutes value 0)))
-                  .seconds (int (:s value (:seconds value 0)))
-                  .milliseconds (int (:ms value (:milliseconds value 0)))
-                  .microseconds (int (:μs value (:microseconds value 0))))
-    (nil? value) (dc/Duration .milliseconds 250)
-    :else (throw (Exception. (str "Invalid duration: " value)))))
+  [arg0 & args]
+  (let [value (if (empty? args) arg0 (apply hash-map (cons arg0 args)))]
+    (cond
+      (instance? dc/Duration value) value
+      (integer? value) (dc/Duration .milliseconds value)
+      (number? value) (dc/Duration .microseconds (int (* value 1000.0)))
+      (map? value) (dc/Duration
+                    .days (int (:d value (:day value 0)))
+                    .hours (int (:h value (:hours value 0)))
+                    .minutes (int (:m value (:minutes value 0)))
+                    .seconds (int (:s value (:seconds value 0)))
+                    .milliseconds (int (:ms value (:milliseconds value 0)))
+                    .microseconds (int (:μs value (:microseconds value 0))))
+      (nil? value) nil
+      :else (throw (Exception. (str "Invalid duration: " value))))))
 
 (deftype AnyCurve
-  [curve description]
+         [curve description]
   :extends (a/Curve)
   (transform [_ t] (double (curve t)))
   (toString [_] (str (or description "AnyCurve"))))
@@ -1023,8 +1038,8 @@
       :fast-linear-to-slow-ease-in a/Curves.fastLinearToSlowEaseIn
       :fast-out-slow-in a/Curves.fastOutSlowIn
       :slow-middle a/Curves.slowMiddle
-      (throw (Exception. (str "Unknown curve: " curve)))) 
-    
+      (throw (Exception. (str "Unknown curve: " curve))))
+
     (fn? curve) (AnyCurve curve nil)
 
     :else
@@ -1045,13 +1060,14 @@
    - The curve of the animation.
    - The callback function to be called when the animation ends.
    The value can also be specified as a number, in which case it is used as the duration of the animation."
-  [value]
-  (let [def-curve (get-in *anim-ctx* [:animation :curve] a/Curves.linear)]
+  [arg0 & args]
+  (let [value (if (empty? args) arg0 (apply hash-map (cons arg0 args)))
+        def-curve (get-in *anim-ctx* [:animation :curve] a/Curves.linear)]
     (cond
       (map? value)
       (let [duration (duration (:duration value (:dur value (get-in *anim-ctx* [:animation :duration]))))
             curve (curve (:curve value def-curve))
-            on-end (value :on-end)] 
+            on-end (value :on-end)]
         {:duration duration :curve curve :on-end on-end})
 
       (number? value)
@@ -1203,47 +1219,48 @@
      
    double.infinity is a legal value for each constraint.
    [Flutter docs](https://api.flutter.dev/flutter/rendering/BoxConstraints-class.html)"
-  [value]
-  (cond
-    (instance? m/BoxConstraints value) value
-    (instance? ui/ViewConstraints value) (m/BoxConstraints.fromViewConstraints value)
-    (map? value)
-    (let [w (some value [:width :w :size])
-          h (some value [:height :h :size])
-          get-cnstrt (fn [value type] (cond
-                                        (map? value) (get value type)
-                                        (number? value) value
-                                        :else nil))
-          compute (fn [dim type]
-                    (let [type-str (name type)
-                          [val names]
-                          (case dim
-                            :w [w ["width" "w"]]
-                            [h ["height" "h"]])
-                          [fun edge]
-                          (case type
-                            :min [max 0.0]
-                            [min dc/double.infinity])
-                          keys (map #(keyword (str type-str "-" %)) (conj names "size"))]
-                      (double (reduce fun (filter some? [(some value keys) (get-cnstrt val type) edge])))))]
-      (m/BoxConstraints
-       .minWidth (compute :w :min)
-       .maxWidth (compute :w :max)
-       .minHeight (compute :h :min)
-       .maxHeight (compute :h :max)))
-    (number? value) (m/BoxConstraints.tightFor .width (double value) .height (double value))
-    (vector? value) (box-constraints {:w (get value 0) :h (get value 1 (get value 0))})
-    (instance? m/Size value) (m/BoxConstraints.tight value)
-    (nil? value) (m/BoxConstraints.tightFor .width nil .height nil)
+  [arg0 & args]
+  (let [value (if (empty? args) arg0 (apply hash-map (cons arg0 args)))]
+    (cond
+      (instance? m/BoxConstraints value) value
+      (instance? ui/ViewConstraints value) (m/BoxConstraints.fromViewConstraints value)
+      (map? value)
+      (let [w (some value [:width :w :size])
+            h (some value [:height :h :size])
+            get-cnstrt (fn [value type] (cond
+                                          (map? value) (get value type)
+                                          (number? value) value
+                                          :else nil))
+            compute (fn [dim type]
+                      (let [type-str (name type)
+                            [val names]
+                            (case dim
+                              :w [w ["width" "w"]]
+                              [h ["height" "h"]])
+                            [fun edge]
+                            (case type
+                              :min [max 0.0]
+                              [min dc/double.infinity])
+                            keys (map #(keyword (str type-str "-" %)) (conj names "size"))]
+                        (double (reduce fun (filter some? [(some value keys) (get-cnstrt val type) edge])))))]
+        (m/BoxConstraints
+         .minWidth (compute :w :min)
+         .maxWidth (compute :w :max)
+         .minHeight (compute :h :min)
+         .maxHeight (compute :h :max)))
+      (number? value) (m/BoxConstraints.tightFor .width (double value) .height (double value))
+      (vector? value) (box-constraints {:w (get value 0) :h (get value 1 (get value 0))})
+      (instance? m/Size value) (m/BoxConstraints.tight value)
+      (nil? value) (m/BoxConstraints.tightFor .width nil .height nil)
 
-    :else
-    (throw (Exception. (str "Invalid box constraints: " value)))))
+      :else
+      (throw (Exception. (str "Invalid box constraints: " value))))))
 
 (defn some-box-constraints
   "Creates a BoxConstraints object from the specified constraints.
    If the constraints do not have bounded height or width, returns nil."
-  [constraints]
-  (let [constr (box-constraints constraints)]
+  [& constraints]
+  (let [constr (apply box-constraints constraints)]
     (if (or
          (.-hasBoundedHeight constr)
          (.-hasBoundedWidth constr)

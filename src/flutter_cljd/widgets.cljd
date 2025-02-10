@@ -277,7 +277,7 @@
    
    [Flutter docs](https://api.flutter.dev/flutter/material/BottomNavigationBarItem-class.html)"
   ([& args]
-   (bnbi/bottom-navigation-bar-item* (into {} (partition 2 args))))
+   (bnbi/bottom-navigation-bar-item* (apply hash-map args)))
   ([args]
    (bnbi/bottom-navigation-bar-item* args)))
 
@@ -419,7 +419,7 @@
    [Flutter docs](https://api.flutter.dev/flutter/widgets/Shortcuts-class.html)" 
   ([k0 v0 & args]
    (let [child (last args)
-         all (into {} (partition 2 (concat [k0 v0] (drop-last args))))
+         all (apply hash-map (concat [k0 v0] (drop-last args)))
          shortcuts (dissoc all :debug-label :modal :include-semantics)
          args (select-keys all [:debug-label :modal :include-semantics])]
      (sc/shortcuts* shortcuts args child))))
@@ -540,7 +540,7 @@
   ```"
   ([k0 v0 & args]
    (if (fn? k0)
-     (bt/button* k0 (into {} (partition 2 (cons v0 (drop-last args)))) (last args))
+     (bt/button* k0 (apply hash-map (cons v0 (drop-last args))) (last args))
      (let [[args [child]] (ut/key-values-args-and-children (concat [k0 v0] args))]
        (bt/button* args child))))
   ([args child] (bt/button* args child)))
@@ -1252,7 +1252,7 @@
   ```
    "
   ([string & args]
-    (txt/text* string (into {} (partition 2 args))))
+    (txt/text* string (apply hash-map args)))
   ([string] (text string {})))
 
 (defn with-text-style

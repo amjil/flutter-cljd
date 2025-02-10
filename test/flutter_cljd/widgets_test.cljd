@@ -1,6 +1,5 @@
 (ns flutter-cljd.widgets-test
   (:require [clojure.test :refer [deftest is testing]]
-            [flutter-cljd.core :as c]
             [flutter-cljd.types :as t]
             [flutter-cljd.widgets :as f]
             ["package:flutter/material.dart" :as m]
