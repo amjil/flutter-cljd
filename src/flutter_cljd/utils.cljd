@@ -201,7 +201,7 @@
                                     (and (odd? i) (some? key))
                                     {:args (assoc args key v) :i (inc i)}
                                     :else
-                                    (reduced {:args args :i (inc i)})))
+                                    (reduced {:args args :i i})))
                                 {:args {} :i 0}
                                 values)]
       (args-children args (vec (drop i values))))))
