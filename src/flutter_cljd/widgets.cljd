@@ -985,6 +985,19 @@
   ([width height child]
    (sz/sized* width height child)))
 
+(defn fractionally-sized
+  "Creates a `FractionallySizedBox` widget with the specified width and height factors and child.\\
+   The width and height factors are numbers between 0.0 and 1.0.\\
+   Examples:
+   ```clojure
+   (fractionally-sized 0.5 0.5)
+   (fractionally-sized {:width 0.5 :height 0.5})
+   ```
+   [Flutter docs](https://api.flutter.dev/flutter/widgets/FractionallySizedBox-class.html)"
+  ([args] (sz/fractionally-sized* args))
+  ([value child] (sz/fractionally-sized* value child))
+  ([width height child] (sz/fractionally-sized* width height child)))
+
 (defn spacer
   "Spacer creates an adjustable, empty spacer that can be used to tune the spacing between widgets in a Flex container, like Row or Column.
 
@@ -1068,7 +1081,9 @@
   ([position with-decoration child]
    (dec/decorated* position with-decoration child))
   ([with-decoration child]
-   (dec/decorated* with-decoration child)))
+   (dec/decorated* with-decoration child))
+  ([with-decoration]
+   (dec/decorated* with-decoration nil)))
 
 (defn keyed
   "A widget that assigns a key to a child widget.

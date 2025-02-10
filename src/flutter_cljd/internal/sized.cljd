@@ -15,3 +15,18 @@
     .child child))
   ([width height child]
    (sized* {:width width :height height} child)))
+
+(defn fractionally-sized*
+  ([value]
+   (if (instance? m/Widget value)
+     (fractionally-sized* {} value)
+     (fractionally-sized* value nil)))
+  ([value child]
+   (let [args (if (map? value) value {:w value :h value})]
+     (m/FractionallySizedBox
+      .alignment (t/alignment (:alignment args :center))
+      .widthFactor (some-> (some args [:w :width]) double)
+      .heightFactor (some-> (some args [:h :height]) double)
+      .child child)))
+  ([width height child]
+   (fractionally-sized* {:width width :height height} child)))
