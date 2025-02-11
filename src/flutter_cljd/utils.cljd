@@ -144,9 +144,11 @@
        (when-not (= keys-from keys-to)
          (fd/FlutterError.reportError
           (fd/FlutterErrorDetails
-           .exception (str "Warning: Tween '" from "' -> '" to "' maps have different keys and may not interpolate correctly. "
+           .exception (str "Warning: Maps '" from "' -> '" to "' have different keys " 
+                           (set/difference all-keys (set/intersection keys-from keys-to))
+                           " and may not animate correctly. "
                            "Make sure both maps have the same keys. " 
-                           "Convert your values to a supported type before animating if needed, for example: (t/insets :top 10) instead of {:top 10}.")
+                           "Convert your values to a consistent type before animating if needed, for example: (t/insets :top 10) instead of {:top 10}.")
            .library "flutter-cljd"
            .context (fd/ErrorDescription "during animation setup"))))
        (fn [t]
@@ -178,7 +180,7 @@
                          "Only numbers, maps, vectors, colors, and other animatable types are supported. "
                          "Make sure to use same types for 'from' and 'to' values. "
                          "If you're using vectors or maps, ensure that they have the same structure and length. "
-                         "Convert your values to a supported type before animating, for example: (t/color :red) instead of :red.")
+                         "Convert your values to a consistent type before animating, for example: (t/color :red) instead of :red.")
          .library "flutter-cljd"
          .context (fd/ErrorDescription "during animation setup")))
        #(if (> % 0.5) to from)))))
