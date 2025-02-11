@@ -594,16 +594,16 @@
         clamp #(min 1.0 (max 0.0 %))]
     (into-motion
      (fn [value exp-dur]
-       (let [{:keys [sum-abs sum-rel cnt-any items intr-dur effects-cnt]}
+       (let [{:keys [sum-abs sum-rel cnt-any items intr-dur effects-cnt last-value]}
              (reduce
               (fn [res motion]
                 (if (some? motion)
-                  (let [{:keys [value sum-abs sum-rel effects-cnt]} res
-                        {:keys [duration relative-duration interpolate side-effects]} ((:prepare-motion motion) value nil)
+                  (let [{:keys [last-value sum-abs sum-rel effects-cnt]} res
+                        {:keys [duration relative-duration interpolate side-effects]} ((:prepare-motion motion) last-value nil)
                         next-value (interpolate 1.0)
                         duration (in-mcs duration)
                         relative (when (and (nil? duration) relative-duration) (clamp relative-duration))]
-                    {:value next-value
+                    {:last-value next-value
                      :sum-abs (if duration (+ duration (or sum-abs 0.0)) sum-abs)
                      :sum-rel (+ sum-rel (or relative 0.0))
                      :cnt-any (+ (:cnt-any res) (if (or duration relative) 0 1))
@@ -612,7 +612,7 @@
                      :items (conj (:items res) {:duration duration :relative-duration relative :interpolate interpolate :side-effects side-effects})
                      :effects-cnt (+ effects-cnt (if side-effects 1 0))})
                   res))
-              {:value value :sum-abs nil :sum-rel 0.0 :cnt-any 0 :cnt-abs 0 :items [] :effects-cnt 0}
+              {:last-value value :sum-abs nil :sum-rel 0.0 :cnt-any 0 :cnt-abs 0 :items [] :effects-cnt 0}
               motions)
              rel-k (if (< 1 sum-rel) (/ sum-rel) 1.0)
              sum-rel (clamp sum-rel)
@@ -628,8 +628,8 @@
                          (/ (- (/ (- res-dur min-dur) res-dur) sum-rel) cnt-any)
                          (/ (- 1.0 sum-rel) cnt-any))
                        0.0)
-             cnt (count items)
-             final-items (reduce
+             all-cnt (count items)
+             all-items (reduce
                           (fn [res item]
                             (let [{:keys [duration relative-duration]} item
                                   relative-duration (when relative-duration (* rel-k relative-duration))
@@ -638,33 +638,38 @@
                                               (when res-dur
                                                 (if (< 0 res-dur)
                                                   (if duration (/ duration res-dur) any-dur)
-                                                  (/ cnt)))
+                                                  (/ all-cnt)))
                                               any-dur)
                                   end (+ t rel-dur)]
                               (conj res (assoc item :start t :end end :rel-dur rel-dur))))
                           []
                           items)
+             final-items (filter #(< 0 (:rel-dur %)) all-items)
+             cnt (count final-items)
+             last-all-i (dec all-cnt)
              last-i (dec cnt)]
          {:duration (from-mcs res-dur)
           :interpolate (case cnt
-                         0 (const-anim value)
+                         0 (if (< 0 all-cnt) 
+                             (fn [T] (let [i (min last-all-i (int (* T all-cnt)))]
+                                       (->> i (nth all-items) :last-value)))
+                             (const-anim last-value))
                          1 (:interpolate (first final-items))
                          (fn [T]
-                           (let [[i {:keys [rel-dur start interpolate]}]
+                           (let [{:keys [rel-dur start end interpolate]}
                                  (cond
-                                   (<= T 0) [0 (first final-items)]
-                                   (>= T 1) [last-i (last final-items)]
+                                   (<= T 0) (first final-items)
+                                   (>= T 1) (last final-items)
                                    :else
                                    (->> final-items
                                         (map-indexed (fn [i item] [i item]))
                                         (reverse)
                                         (some #(let [[i {:keys [start end] :as item}] %]
-                                                 (when (or (<= start T end) (zero? i)) [i item])))))
+                                                 (when (or (<= start T end) (zero? i)) item)))))
                                  t (if (zero? rel-dur) 1.0 (/ (- T start) rel-dur))
-                                 anim-t (cond
-                                          (zero? i) (min 1.0 t)
-                                          (= i last-i) (max 0.0 t)
-                                          :else (clamp t))]
+                                 anim-t (cond->> t
+                                          (< end 1) (min 1.0)
+                                          (< 0 start) (max 0.0))]
                              (interpolate anim-t))))
           :side-effects (when (< 0 effects-cnt)
                           (let [effects
@@ -675,7 +680,7 @@
                                     (when side-effects
                                       (let [transform #(transform-effect-t % start end rel-dur)]
                                         #(side-effects (map transform %)))))
-                                  final-items))]
+                                  all-items))]
                             (fn [range]
                               (apply concat (map #(% range) effects)))))}))
      (fn [] (str "(seq " (str/join " " (map #((:to-string %)) motions)) ")"))

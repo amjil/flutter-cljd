@@ -43,7 +43,8 @@
          interpolate (:interpolate (animation
                                     value
                                     (or duration (:duration (animation value nil)) 250)))]
-     #(interpolate (double %)))))
+     #(let [result (interpolate (double %))]
+        (if (double? result) (.round result) result)))))
 
 (def ^:private percents
   (a/into-motion
