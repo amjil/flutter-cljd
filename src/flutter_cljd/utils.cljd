@@ -2,6 +2,8 @@
   "Core utilities and helpers for flutter-cljd."
   (:require
    [cljd.flutter :as f]
+   [cljd.set :as set]
+   ["package:flutter/foundation.dart" :as fd]
    ["package:flutter/widgets.dart" :as w]))
 
 (defmacro ??
@@ -136,8 +138,18 @@
      (fn [t] (mapv #((lerp %1 %2) t) from to))
 
      (and (map? from) (map? to))
-     (fn [t]
-       (let [all-keys (set (concat (keys from) (keys to)))]
+     (let [keys-from (set (keys from))
+           keys-to (set (keys to))
+           all-keys (set/union keys-from keys-to)]
+       (when-not (= keys-from keys-to)
+         (fd/FlutterError.reportError
+          (fd/FlutterErrorDetails
+           .exception (str "Warning: Tween '" from "' -> '" to "' maps have different keys and may not interpolate correctly. "
+                           "Make sure both maps have the same keys. " 
+                           "Convert your values to a supported type before animating if needed, for example: (t/insets :top 10) instead of {:top 10}.")
+           .library "flutter-cljd"
+           .context (fd/ErrorDescription "during animation setup"))))
+       (fn [t]
          (reduce (fn [acc k]
                    (cond
                         ;; Key exists in both maps - interpolate
@@ -159,7 +171,17 @@
                  all-keys)))
 
      :else
-     #(if (> % 0.5) to from))))
+     (do 
+       (fd/FlutterError.reportError
+        (fd/FlutterErrorDetails
+         .exception (str "Warning: Tween '" from "' -> '" to "' is not animatable. " 
+                         "Only numbers, maps, vectors, colors, and other animatable types are supported. "
+                         "Make sure to use same types for 'from' and 'to' values. "
+                         "If you're using vectors or maps, ensure that they have the same structure and length. "
+                         "Convert your values to a supported type before animating, for example: (t/color :red) instead of :red.")
+         .library "flutter-cljd"
+         .context (fd/ErrorDescription "during animation setup")))
+       #(if (> % 0.5) to from)))))
 
 (defn flatten-children
   "Flattens a nested collection of children and filters out non-Widget elements.

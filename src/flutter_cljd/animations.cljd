@@ -643,22 +643,27 @@
                                   end (+ t rel-dur)]
                               (conj res (assoc item :start t :end end :rel-dur rel-dur))))
                           []
-                          items)]
+                          items)
+             last-i (dec cnt)]
          {:duration (from-mcs res-dur)
           :interpolate (case cnt
                          0 (const-anim value)
                          1 (:interpolate (first final-items))
                          (fn [T]
                            (let [[i {:keys [rel-dur start interpolate]}]
-                                 (->> final-items
-                                      (map-indexed (fn [i item] [i item]))
-                                      (reverse)
-                                      (some #(let [[i {:keys [start end] :as item}] %]
-                                               (when (or (<= start T end) (zero? i)) [i item]))))
+                                 (cond
+                                   (<= T 0) [0 (first final-items)]
+                                   (>= T 1) [last-i (last final-items)]
+                                   :else
+                                   (->> final-items
+                                        (map-indexed (fn [i item] [i item]))
+                                        (reverse)
+                                        (some #(let [[i {:keys [start end] :as item}] %]
+                                                 (when (or (<= start T end) (zero? i)) [i item])))))
                                  t (if (zero? rel-dur) 1.0 (/ (- T start) rel-dur))
                                  anim-t (cond
                                           (zero? i) (min 1.0 t)
-                                          (= i (- cnt 1)) (max 0.0 t)
+                                          (= i last-i) (max 0.0 t)
                                           :else (clamp t))]
                              (interpolate anim-t))))
           :side-effects (when (< 0 effects-cnt)
