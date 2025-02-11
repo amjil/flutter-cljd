@@ -97,7 +97,7 @@
      (t/AnyCurve
       (fn [t]
         (.transform curve (cond
-                            (zero? duration) (if (<= t from) 0.0 1.0)
+                            (zero? duration) (if (< t from) 0.0 1.0)
                             (and (<= t from) (some? begin)) 0.0
                             (and (<= to t) (some? end)) 1.0
                             :else (/ (- t from) duration))))

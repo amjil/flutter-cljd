@@ -148,14 +148,14 @@
           (let [listener
                 (fn []
                   (let [progress (-> controller .-parent .-value)
-                        prevProgress (or (.-prevProgress controller) 0.0)
-                        start (min progress prevProgress)
-                        end (max progress prevProgress)]
+                        prevProgress (.-prevProgress controller)
+                        start (min progress (or prevProgress 0.0))
+                        end (max progress (or prevProgress 0.0))]
                     (when (not= progress prevProgress)
                       (.-prevProgress! controller progress)
-                      (for [effect (side-effects [start end])]
+                      (doseq [effect (side-effects [start end])]
                         (effect)))))]
-            (.-prevProgress! controller (.-value controller))
+            (.-prevProgress! controller (-> controller .-parent .-value))
             (.-effectsListener! controller listener)
             (.addListener (.-parent controller) listener)))
         (if (.-effectsListener controller)
@@ -352,14 +352,13 @@
    `values` takes values and returns a motion that animates from the current value to the provided values.\\
    If the current value is nil, the first value is used as the initial value.
    ```clojure
-   (values 5.0 10.0)
+   (values ut/int-lerp 5 10)
    ```"
-  [& values]
+  [lerp & values]
   {:prepare-motion
    (fn [from exp-dur]
      (let [values (if (some? from) (concat [from] values) values)
-           int-cnt (dec (count values))
-           lerp #(ut/lerp %1 %2)]
+           int-cnt (dec (count values))]
        {:interpolate (case int-cnt
                        0 (const-anim (first values))
                        1 (lerp (first values) (second values))
@@ -375,9 +374,9 @@
                                (last values))))))
         :duration (if (zero? int-cnt) (t/duration 0) exp-dur)}))
    :to-string
-   (fn [] (str "(values " (str/join " " values) ")"))
+   (fn [] (str "(values lerp " (str/join " " values) ")"))
    :to-hash
-   (fn [] (hash (cons flutter-cljd.animations/values values)))})
+   (fn [] (hash (cons :values values)))})
 
 (defn into-motion
   "Converts a value to a motion.\\
@@ -398,19 +397,19 @@
    (cond
      (and (map? motion) (superset? #{:prepare-motion :to-string :to-hash} (set (keys motion))))
      motion
-   
+
      (instance? w/Animatable motion)
      {:prepare-motion (fn [_ duration]
-                        {:interpolate #(.transform motion %) 
+                        {:interpolate #(.transform motion %)
                          :duration duration})
       :to-string #(.toString motion)
       :to-hash #(hash (.toString motion))}
-     
+
      (nil? motion)
      nil
-   
+
      :else
-     (values motion)))
+     (values ut/lerp motion)))
   ([motion to-string to-hash]
    (if (fn? motion)
      {:prepare-motion motion
@@ -418,7 +417,7 @@
       :to-hash to-hash}
      (when motion
        (assoc (into-motion motion)
-              :to-string to-string 
+              :to-string to-string
               :to-hash to-hash)))))
 
 (defn set-motion!
@@ -465,17 +464,17 @@
   Examples:
   ```clojure
   ;; Basic usage
-  (motion-controller vsync (to 10.0))
+  (motion-controller vsync (to 0.0 10.0))
 
   ;; With initial progress
-  (motion-controller vsync (to 0 100) :progress 0.5)
+  (motion-controller vsync (to 0.0 100.0) :progress 0.5)
 
   ;; Parallel animations with child animations
   (let [controller (motion-controller 
                     vsync
                     (par {:dur 500}
-                         :opacity (to 0 1 :delay 100)
-                         :offset (to 0 100)))]
+                         :opacity (to 0.0 1.0 :delay 100)
+                         :offset (to 0.0 100)))]
     ;; Use child animations in widgets
     (widget
       :managed [animation controller]
@@ -491,7 +490,7 @@
                            ;; Initial state
                            {:opacity 0.0
                             :scale 0.8
-                            :offset 0}
+                            :offset 0.0}
                            ;; Fade in and scale up with ease-out
                            (par {:dur 400 :curve :ease-out}
                                 :opacity (to 1.0 :relative-duration 0.5)
@@ -500,11 +499,11 @@
                            (wait 200)
                            ;; Slide and bounce
                            (par
-                             :offset (-> (to 0 20 0)
+                             :offset (-> (to 0.0 20.0 0.0)
                                        (with {:dur 600 :curve :ease-in-out}))
                              ;; Scale effect happens during middle of slide
                              :scale (-> (to 1.0 1.1 1.0)
-                                      (with {:dur 300 
+                                      (with {:dur 300
                                             :rel-delay 0.25
                                             :curve :ease-in-out}))
                            ;; Trigger taptic feedback
@@ -534,7 +533,7 @@
                            (par
                              :step (const :last)
                              :color Colors.red
-                             :rotation (to 0 360 :curve :ease-in-out)))]
+                             :rotation (to 0.0 360.0 :curve :ease-in-out)))]
     (->> (container)
          (animated (:opacity animation) opacity)
          (animated (:scale animation) scale)
@@ -580,6 +579,15 @@
     (fn [_ _] (const-anim value 0))
     (fn [] (str "(instant " value ")"))
     #(hash [:instant value]))))
+
+(defn- transform-effect-t [t start end rel-dur]
+  (if (zero? rel-dur)
+    (cond
+      (and (= t 0.0) (= start 0.0)) 0.0
+      (= t end) 1.0
+      (< end t) dc/double.infinity
+      :else (- dc/double.infinity))
+    (/ (- t start) rel-dur)))
 
 (defn- -sequential [motions]
   (let [motions (->> motions flat-motions (filter some?) (map into-motion))
@@ -655,16 +663,14 @@
                              (interpolate anim-t))))
           :side-effects (when (< 0 effects-cnt)
                           (let [effects
-                                (map
-                                 (fn [{:keys [start end side-effects]}]
-                                   (if side-effects
-                                     (let [curve (curves/interval (when-not (zero? start) start) (when-not (= 1.0 end) end) :linear)
-                                           transform #(.transform curve (double %))]
-                                       (if curve
-                                         #(side-effects (map transform %))
-                                         side-effects))
-                                     (constantly [])))
-                                 final-items)]
+                                (filter
+                                 some?
+                                 (map
+                                  (fn [{:keys [start end rel-dur side-effects]}]
+                                    (when side-effects
+                                      (let [transform #(transform-effect-t % start end rel-dur)]
+                                        #(side-effects (map transform %)))))
+                                  final-items))]
                             (fn [range]
                               (apply concat (map #(% range) effects)))))}))
      (fn [] (str "(seq " (str/join " " (map #((:to-string %)) motions)) ")"))
@@ -720,16 +726,14 @@
                            (into value results)))
           :side-effects (when (< 0 side-effects-cnt)
                           (let [effects
-                                (map
-                                 (fn [[_ {:keys [rel-dur side-effects]}]]
-                                   (if side-effects
-                                     (let [curve (when (< rel-dur 1.0) (curves/interval nil rel-dur :linear))
-                                           transform (when curve #(.transform curve (double %)))]
-                                       (if transform
-                                         #(side-effects (map transform %))
-                                         side-effects))
-                                     (constantly [])))
-                                 items)]
+                                (filter
+                                 some?
+                                 (map
+                                  (fn [[_ {:keys [rel-dur side-effects]}]]
+                                    (when side-effects
+                                      (let [transform #(transform-effect-t % 0.0 rel-dur rel-dur)]
+                                        #(side-effects (map transform %)))))
+                                  items))]
                             (fn [range]
                               (apply concat (map #(% range) effects)))))}))
      (fn [] (str "(par " (str/join " " (map (fn [[k v]] (str k " " ((:to-string v)))) motions)) ")"))
@@ -982,7 +986,9 @@
    If you want to be sure that provided values will not be interpreted as animation options, you can use `values` instead."
   [value & values]
   (let [values (cons value values)
-        {:keys [options items]} (separate-last-options values)]
+        {:keys [options items]} (separate-last-options values)
+        lerp (:lerp options #(ut/lerp %1 %2))
+        items (cons lerp items)]
     (assoc
      (if (empty? options)
        (apply flutter-cljd.animations/values items)

@@ -73,6 +73,28 @@
        (fn [t] (w/BoxShadow.lerp begin end t)))
      end)))
 
+(defn int-lerp
+  "Linear interpolation between two integers.
+   
+   Takes two integers and returns a function that interpolates between them based on a parameter t between 0 and 1.
+   
+   Args:
+    - from: The starting integer
+    - to: The ending integer 
+    - t: The interpolation parameter between 0 and 1
+   
+   Returns:
+    The interpolated integer
+   
+   Example:
+   ```clojure
+   (int-lerp 0 10 0.5) ; => 5
+   ```"
+  ([from to t]
+   (.round (+ (* (- 1 t) from) (* t to))))
+  ([from to]
+   (fn [t] (int-lerp from to t))))
+
 (defn lerp
   "Linear interpolation between two values.
    
@@ -104,14 +126,11 @@
    ((lerp from to) t))
   ([from to]
    (cond
+     (and (number? from) (number? to))
+     #(+ (* (- 1 %) (double from)) (* % (double to)))
+
      (satisfies? f/ITweenable from)
      (f/lerp from to)
-
-     (and (int? from) (int? to))
-     (fn [t] (.round (+ (* (- 1 t) (double from)) (* t (double to)))))
-
-     (and (number? from) (number? to))
-     #(+ (* (- 1 %) from) (* % to))
 
      (and (vector? from) (vector? to) (= (count from) (count to)))
      (fn [t] (mapv #((lerp %1 %2) t) from to))
