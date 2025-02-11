@@ -9,8 +9,7 @@
    ["package:flutter/scheduler.dart" :as sc]
    ["dart:core" :as dc]
    [flutter-cljd.utils :as ut]
-   [cljd.string :as str]
-   [flutter-cljd.internal.expanded :as ex]))
+   [cljd.string :as str]))
 
 (extend-protocol c/IFn
   a/Curve

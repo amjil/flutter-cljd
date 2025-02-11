@@ -3,57 +3,19 @@
    ["package:flutter/material.dart" :as m]
    [flutter-cljd.types :as t]))
 
-(defn sized*
-  ([] (sized* {} nil))
-  ([value]
-   (if (instance? m/Widget value)
-     (sized* {} value)
-     (sized* value nil)))
-  ([value child]
-   (cond
-     (or (nil? child) (instance? m/Widget child))
-     (m/ConstrainedBox
-      .constraints (t/box-constraints value)
-      .child child)
+(defn sized* [value child]
+  (m/ConstrainedBox
+   .constraints (t/box-constraints value)
+   .child child))
 
-     (keyword? value)
-     (m/ConstrainedBox
-      .constraints (t/box-constraints {value child})
-      .child nil)
-
-     :else
-     (m/ConstrainedBox
-      .constraints (t/box-constraints [value child])
-      .child nil)))
-  ([width height child]
-   (if (keyword? width)
-     (sized* {width height} child)
-     (sized* {:width width :height height} child))))
-
-(defn fractionally-sized*
-  ([value]
-   (if (instance? m/Widget value)
-     (fractionally-sized* {} value)
-     (fractionally-sized* value nil)))
-  ([value child]
-   (cond (or (nil? child) (instance? m/Widget child))
-         (let [args (cond 
-                      (map? value) value
-                      (vector? value) (zipmap [:w :h] value)
-                      (number? value) {:w value :h value}
-                      :else (throw (ex-info "Invalid arguments for fractionally-sized: " value)))]
-           (m/FractionallySizedBox
-            .alignment (t/alignment (:alignment args :center))
-            .widthFactor (some-> (some args [:w :width]) double)
-            .heightFactor (some-> (some args [:h :height]) double)
-            .child child))
-
-         (keyword? value)
-         (fractionally-sized* {value child} nil)
-
-         :else
-         (fractionally-sized* {:w value :h child} nil)))
-  ([width height child]
-   (if (keyword? width)
-     (fractionally-sized* {width height} child)
-     (fractionally-sized* {:width width :height height} child))))
+(defn fractionally-sized* [value child]
+  (let [args (cond
+               (map? value) value
+               (vector? value) (zipmap [:w :h] value)
+               (number? value) {:w value :h value}
+               :else (throw (ex-info "Invalid arguments for fractionally-sized: " value)))]
+    (m/FractionallySizedBox
+     .alignment (t/alignment (:alignment args :center))
+     .widthFactor (some-> (some args [:w :width]) double)
+     .heightFactor (some-> (some args [:h :height]) double)
+     .child child)))

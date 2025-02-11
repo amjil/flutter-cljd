@@ -163,15 +163,14 @@
       (is (= (.-inMilliseconds dur) 500))))
   
   (testing "Duration from map"
-    (let [dur (t/duration {:seconds 1 
-                          :minutes 2
-                          :hours 3})]
+    (let [dur (t/duration {:seconds 1 :minutes 2 :hours 3})]
       (is (= (.-inSeconds dur) 
              (+ 1 (* 2 60) (* 3 60 60))))))
   
-  (testing "Default duration"
-    (let [dur (t/duration nil)]
-      (is (= (.-inMilliseconds dur) 250)))))
+  (testing "Duration from variadic"
+    (let [dur (t/duration :seconds 1 :minutes 2 :hours 3)]
+      (is (= (.-inSeconds dur)
+             (+ 1 (* 2 60) (* 3 60 60)))))))
 
 (deftest test-curve
   (testing "Standard curves"

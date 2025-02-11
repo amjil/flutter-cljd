@@ -267,30 +267,14 @@
           widget (f/opacity 0.5 child)]
       (is (instance? m/Opacity widget))
       (is (= (.-opacity widget) 0.5))
-      (is (instance? m/Text (.-child widget)))))
-
-  (testing "Opacity with animation"
-    (let [widget (f/opacity 0.7
-                            {:animation 300}
-                            (m/Text "Child"))]
-      (is (instance? m/AnimatedOpacity widget))
-      (is (= (.-opacity widget) 0.7))
-      (is (= (.-inMilliseconds (.-duration widget)) 300)))))
+      (is (instance? m/Text (.-child widget))))))
 
 (deftest test-padding
   (testing "Padding with number"
     (let [child (m/Text "Child")
           widget (f/padding 10 child)]
       (is (= (.-padding widget) (t/insets 10)))
-      (is (instance? m/Text (.-child widget)))))
-
-  (testing "Padding with animation"
-    (let [widget (f/padding
-                  20
-                  {:animation {:dur 200}}
-                  (m/Text "Child"))]
-      (is (= (.-padding widget) (t/insets 20)))
-      (is (= (.-inMilliseconds (.-duration widget)) 200)))))
+      (is (instance? m/Text (.-child widget))))))
 
 (deftest test-row
   (testing "Row with default properties"

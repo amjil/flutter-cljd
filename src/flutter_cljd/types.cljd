@@ -289,9 +289,9 @@
       :foreground m/DecorationPosition.foreground
       (throw (Exception. (str "Invalid decoration-position: " position " (expected :background or :foreground)"))))))
 
-;; -------------------------
-;; MARK: Classes
-;; -------------------------
+;; ;; -------------------------
+;; ;; MARK: Classes
+;; ;; -------------------------
 
 (defn alignment [alignment]
   (cond
@@ -390,7 +390,6 @@
       :passthrough m/StackFit.passthrough
       (throw (Exception. (str "Invalid stackFit: " fit))))))
 
-;; {:top 23} {:start 4} {:horizontal 4 :top 4} 34 {:all 4 :top 1}
 (defn insets
   "Creates an EdgeInsetsGeometry object from the specified insets.
    Insets can be specified as a number or a map or key-value pairs of edge names to numbers or a STEB sequence.
@@ -412,33 +411,38 @@
    If the insets argument is an EdgeInsetsGeometry object, it is returned as is."
   ([] (insets {}))
   ([& values]
-   (if (and (= (count values) 4) (every? number? values))
+   (cond
+     (and (= (count values) 4) (every? number? values))
      (let [[s t e b] values]
        (m/EdgeInsetsDirectional.fromSTEB s t e b))
-     (insets (apply hash-map values))))
-  ([value]
-   (cond
-     (instance? m/EdgeInsetsGeometry value) value
 
-     (number? value) (m/EdgeInsetsDirectional.all value)
+     (= (count values) 1)
+     (let [value (last values)]
+       (cond
+         (instance? m/EdgeInsetsGeometry value) value
 
-     (map? value)
-     (if (> (some value [:left :l :right :r]) 0)
-       (m/EdgeInsets.fromLTRB
-        (or (some value [:left :l :horizontal :h :all]) 0)
-        (or (some value [:top :t :vertical :v :all]) 0)
-        (or (some value [:right :r :horizontal :h :all]) 0)
-        (or (some value [:bottom :b :vertical :v :all]) 0))
-       (m/EdgeInsetsDirectional.fromSTEB
-        (or (some value [:start :s :horizontal :h :all]) 0)
-        (or (some value [:top :t :vertical :v :all]) 0)
-        (or (some value [:end :e :horizontal :h :all]) 0)
-        (or (some value [:bottom :b :vertical :v :all]) 0)))
+         (number? value) (m/EdgeInsetsDirectional.all value)
 
-     (and (= (count value) 4) (every? number? value))
-     (m/EdgeInsetsDirectional.fromSTEB (get value 0 0) (get value 1 0) (get value 2 0) (get value 3 0))
+         (map? value)
+         (if (> (some value [:left :l :right :r]) 0)
+           (m/EdgeInsets.fromLTRB
+            (or (some value [:left :l :horizontal :h :all]) 0)
+            (or (some value [:top :t :vertical :v :all]) 0)
+            (or (some value [:right :r :horizontal :h :all]) 0)
+            (or (some value [:bottom :b :vertical :v :all]) 0))
+           (m/EdgeInsetsDirectional.fromSTEB
+            (or (some value [:start :s :horizontal :h :all]) 0)
+            (or (some value [:top :t :vertical :v :all]) 0)
+            (or (some value [:end :e :horizontal :h :all]) 0)
+            (or (some value [:bottom :b :vertical :v :all]) 0)))
 
-     :else (throw (Exception. (str "Invalid edgeInsets: " value))))))
+         (and (= (count value) 4) (every? number? value))
+         (m/EdgeInsetsDirectional.fromSTEB (get value 0 0) (get value 1 0) (get value 2 0) (get value 3 0))
+
+         :else (throw (Exception. (str "Invalid edgeInsets: " value)))))
+     
+     :else
+     (insets (apply hash-map values)))))
 
 (defn merge-insets
   "Merges the specified insets with the default insets.
@@ -523,14 +527,14 @@
 
 (defn color
   "Returns a `Color` object for the specified color.
-   
+
    Possible values:
     - instance of `Color`
     - a vector of length 3 or 4: [r g b] or [r g b o]
     - a number: 0xRRGGBB or 0xAARRGGBB
     - a hex string: \"#RRGGBB\" or \"#AARRGGBB\". Prefer using the number format for better performance.
     - a keyword: :blue, :red, :green, :yellow, :orange, :purple, :pink, :cyan, :teal, :amber, :lime, :light-blue, :light-green, :deep-orange, :deep-purple, :indigo, :blue-grey, :grey, :black, :white, :transparent
-   
+
    [Flutter docs](https://api.flutter.dev/flutter/dart-ui/Color-class.html)"
   ([r g b] (m/Color.fromRGBO r g b 1.0))
   ([r g b o] (m/Color.fromRGBO r g b o))
@@ -574,9 +578,9 @@
   "A description of a color filter to apply when drawing a shape or compositing a layer with a particular Paint.
    A color filter is a function that takes two colors, and outputs one color.
    When applied during compositing, it is independently applied to each pixel of the layer being drawn before the entire layer is merged with the destination.
-   
+
    Instances of this class are used with Paint.colorFilter on Paint objects.
-   
+
    Possible values:
     - instance of `ColorFilter`
     - `:linear-to-srgb-gamma` Linear to sRGB gamma.
@@ -591,9 +595,9 @@
 
    ```clojure
     (color-filter :invert)
-   
+
     (color-filter [:red :multiply])
-   
+
     (color-filter [0.393 0.769 0.189 0 0
                    0.349 0.686 0.168 0 0
                    0.272 0.534 0.131 0 0])
@@ -692,7 +696,7 @@
 
 (defn text-span
   "An immutable span of text.
-   
+
    A TextSpan object can be styled using its style property. The style will be applied to the text and the children.
 
    A TextSpan object can just have plain text, or it can have children TextSpan objects with their own styles that (possibly only partially) override the style of this object.
@@ -700,7 +704,7 @@
    Leaving the TextSpan.text field null results in the TextSpan acting as an empty node in the InlineSpan tree with a list of children.
 
    To paint a TextSpan on a Canvas, use a TextPainter. To display a text span in a widget, use a `text`.
-   
+
    The function accepts:
    - An optional text as the first argument.
    - An optional style map as the first or second argument.
@@ -847,7 +851,15 @@
      .stops (args :stops)
      .tileMode (tile-mode (:tile-mode args :clamp)))))
 
-(defn gradient [gradient]
+(defn gradient 
+"Creates a Gradient object from the specified gradient.
+   The gradient can be specified as a Gradient object, a map with the following keys:
+   - `:begin` (alignment, default: :center-start): The alignment of the linear gradient's start point.
+   - `:end` (alignment, default: :center-end): The alignment of the linear gradient's end point.
+   - `:start-angle` (number, default: 0): The start angle of the sweep gradient.
+   - `:end-angle` (number, default: 2 * Math/PI): The end angle of the sweep gradient.
+   - `:radius` (number, default: 0.5): The radius of the radial gradient."
+  [gradient]
   (cond
     (instance? m/Gradient gradient) gradient
     (some #(contains? gradient %) [:begin :end]) (linear-gradient gradient)
@@ -855,7 +867,12 @@
     (some #(contains? gradient %) [:radius]) (radial-gradient gradient)
     :else (throw (Exception. (str "Unknown gradient: " gradient)))))
 
-(defn shape [shape]
+(defn shape 
+  "Creates a Shape object from the specified shape.
+   The shape can be specified as a Shape object, a map with the following keys:
+   - `:circle` (number, default: nil): The radius of the circle.
+   - `:rectangle` or `:rect` (number, default: nil): The radius of the rectangle."
+  [shape]
   (cond
     (instance? m/BoxShape shape) shape
     (instance? m/ShapeBorder shape) shape
@@ -931,6 +948,23 @@
       :else (throw (Exception. (str "Invalid radius: " value))))))
 
 (defn decoration
+  "Creates a Decoration object from the specified arguments.
+   The arguments can be specified as a Decoration objects or a key-values pairs with the following keys:
+    - `:shape` (ShapeBorder or BoxShape or a keyword default: nil): The shape of the decoration.
+    - `:color` (Color, default: nil): The color of the decoration.
+    - `:image` (ImageProvider, default: nil): The image of the decoration.
+    - `:gradient` (Gradient, default: nil): The gradient of the decoration.
+    - `:border` (Border, default: nil): The border of the decoration.
+    - `:border-radius` (BorderRadius, default: nil): The border radius of the decoration.
+    - `:box-shadow` or `:shadow` or `:shadows` (BoxShadow or list of BoxShadow, default: nil): The box shadow of the decoration.
+    - `:background-blend-mode` (BlendMode, default: nil): The background blend mode of the decoration.
+
+    Examples:
+    ```clojure
+    (decoration :color :red)
+    (decoration {:shape :circle, :color :red})
+    (decoration {:shape :circle, :color :red, :border-radius 4})
+    ```"
   [arg0 & args] 
   (let [args (if (empty? args) arg0 (apply hash-map (cons arg0 args)))
         shape (shape (args :shape))]
@@ -1140,10 +1174,10 @@
    If `args` is a string, keyword, integer, vector, or sequence, processes it 
    to generate appropriate modifier and trigger key sets, then constructs 
    either a `CharacterActivator`, `SingleActivator`, or `LogicalKeySet` based on the input.
-   
+
    Args can contain an additional map with the following keys:
     - `:include-repeats` (boolean, default: true): Whether to include repeated key events.
-   
+
    Throws an exception if `args` is invalid."
   [args]
   (cond
@@ -1186,7 +1220,7 @@
 
 (defn box-constraints
   "Immutable layout constraints for RenderBox layout.
-   
+
    The functions accepts the following arguments:
     - A BoxConstraints object.
     - A ViewConstraints object.
@@ -1208,15 +1242,15 @@
    (box-constraints {:w 100 :h {:max 300}})
    (box-constraints {:min-size 10 :max-size 100})
    ```
-  
+
    A Size respects a BoxConstraints if, and only if, all of the following relations hold:
       - minWidth <= Size.width <= maxWidth
       - minHeight <= Size.height <= maxHeight
-     
+
    The constraints themselves must satisfy these relations:
       - 0.0 <= minWidth <= maxWidth <= double.infinity
       - 0.0 <= minHeight <= maxHeight <= double.infinity
-     
+
    double.infinity is a legal value for each constraint.
    [Flutter docs](https://api.flutter.dev/flutter/rendering/BoxConstraints-class.html)"
   [arg0 & args]

@@ -1,6 +1,7 @@
 (ns flutter-cljd.widgets
   "The Flutter widgets framework. [Docs](https://api.flutter.dev/flutter/widgets/widgets-library.html)"
   (:require
+   ["package:flutter/widgets.dart" :as w]
    [flutter-cljd.inherited-keys :as inh]
    [flutter-cljd.internal.builder :as bd]
    [flutter-cljd.internal.layout-builder :as lbd]
@@ -276,8 +277,9 @@
       - `:tooltip` The tooltip of the bottom navigation bar item.
    
    [Flutter docs](https://api.flutter.dev/flutter/material/BottomNavigationBarItem-class.html)"
-  ([& {:keys [icon label active-icon background-color tooltip] :as args}]
-   (bnbi/bottom-navigation-bar-item* (apply hash-map args))))
+  ([& args]
+   (let [[args _] (ut/key-values-args-and-children args)]
+     (bnbi/bottom-navigation-bar-item* args))))
 
 (defn builder
   "A stateless utility widget whose build method uses its builder callback to create the widget's child.
@@ -417,7 +419,7 @@
    [Flutter docs](https://api.flutter.dev/flutter/widgets/Shortcuts-class.html)"
   ([k0 v0 & args]
    (let [child (last args)
-         all (apply hash-map (concat [k0 v0] (drop-last args)))
+         all (ut/key-values-map (concat [k0 v0] (drop-last args)))
          shortcuts (dissoc all :debug-label :modal :include-semantics)
          args (select-keys all [:debug-label :modal :include-semantics])]
      (sc/shortcuts* shortcuts args child))))
@@ -538,7 +540,7 @@
   ```"
   ([k0 v0 & args]
    (if (fn? k0)
-     (bt/button* k0 (apply hash-map (cons v0 (drop-last args))) (last args))
+     (bt/button* k0 (ut/key-values-map (cons v0 (drop-last args))) (last args))
      (let [[args [child]] (ut/key-values-args-and-children (concat [k0 v0] args))]
        (bt/button* args child))))
   ([args child] (bt/button* args child)))
@@ -595,9 +597,9 @@
    ```
 
    [Flutter docs](https://api.flutter.dev/flutter/widgets/Center-class.html)"
-  [& args]
-  (let [[args [child]] (ut/key-values-args-and-children args)]
-    (cntr/center* args child)))
+  [arg0 & args]
+  (let [[args children] (ut/key-values-args-and-children (cons arg0 args))]
+    (cntr/center* args (last children))))
 
 (defn checked-mode-banner
   "A banner that shows the current checked mode.
@@ -852,8 +854,8 @@
     - child: The child widget to be displayed.
 
    [Flutter docs](https://api.flutter.dev/flutter/widgets/ConstraintsTransformBox-class.html)"
-  [& args]
-  (let [[args children] (ut/key-values-args-and-children args)]
+  [arg0 & args]
+  (let [[args children] (ut/key-values-args-and-children (cons arg0 args))]
     (ctr/constraints-transformed* args (last children))))
 
 (defn custom-multi-child-layout
@@ -1025,6 +1027,18 @@
    (let [[args children] (ut/key-values-args-and-children args-children)]
      (crf/row* args children))))
 
+(defn- any-sized [args fun]
+  (let [[args child] (if (or (nil? (last args)) (instance? w/Widget (last args)))
+                       [(drop-last args) (last args)]
+                       [args nil])]
+    (case (count args)
+      0 (fun {} child)
+      1 (fun (first args) child)
+      2 (if (keyword? (first args))
+          (fun {(first args) (second args)} child)
+          (fun {:w (first args) :h (second args)} child))
+      (fun (apply hash-map args) child))))
+
 (defn sized
   "Creates a `ConstrainedBox` widget with the specified constraints and child.\\
    The size can be specified as a number, a map, key-values pairs, Size, BoxConstraints or two values.\\
@@ -1047,11 +1061,8 @@
    Check `box-constraints` function for more information on how to create constraints.
   
    [Flutter docs](https://api.flutter.dev/flutter/widgets/ConstrainedBox-class.html)"
-  ([& args]
-   (if (< 4 (count args))
-     (apply sz/sized* args)
-     (let [[args children] (ut/key-values-args-and-children args)]
-       (sz/sized* args (last children))))))
+  ([] (sz/sized* {} nil))
+  ([& args] (any-sized args sz/sized*)))
 
 (defn fractionally-sized
   "Creates a `FractionallySizedBox` widget with the specified width and height factors and child.\\
@@ -1062,11 +1073,8 @@
    (fractionally-sized :width 0.5 :height 0.5)
    ```
    [Flutter docs](https://api.flutter.dev/flutter/widgets/FractionallySizedBox-class.html)"
-  ([& args]
-   (if (< 4 (count args))
-     (apply sz/fractionally-sized* args)
-     (let [[args children] (ut/key-values-args-and-children args)]
-       (sz/fractionally-sized* args (last children))))))
+  ([] (sz/fractionally-sized* {} nil))
+  ([& args] (any-sized args sz/fractionally-sized*)))
 
 (defn spacer
   "Spacer creates an adjustable, empty spacer that can be used to tune the spacing between widgets in a Flex container, like Row or Column.
@@ -1081,8 +1089,8 @@
    This class is useful if you want to overlap several children in a simple way, for example having some text and an image, overlaid with a gradient and a button attached to the bottom.
    
    [Flutter doc](https://api.flutter.dev/flutter/widgets/Stack-class.html)"
-  [& children]
-  (st/stack* children))
+  ([] (st/stack* []))
+  ([& children] (st/stack* children)))
 
 (defn opacity
   "A widget that makes its child partially transparent.
@@ -1095,6 +1103,7 @@
    
    ```clojure
    (opacity 0.5 (text \"Hello, World!\"))
+   (opacity 0.5 :always-include-semantics true (text \"Hello, World!\"))
    ```
 
    [Flutter docs](https://api.flutter.dev/flutter/widgets/Opacity-class.html)"
@@ -1127,8 +1136,8 @@
     (text \"Hello\"))
 
   ;; Rounded corners and border
-  (decorated {:border-radius 8
-              :border {:width 2 :color :black}}
+  (decorated :border-radius 8
+             :border {:width 2 :color :black}
     (text \"Hello\"))
     
   ;; Gradient background with shadow
@@ -1141,17 +1150,18 @@
 
   ;; Foreground decoration
   (decorated :position m/DecorationPosition.foreground 
-             {:gradient {:colors [:transparent :black]}}
+             :gradient {:colors [:transparent :black]}
     (image \"background.jpg\"))
   ```
 
   [Flutter docs](https://api.flutter.dev/flutter/widgets/DecoratedBox-class.html)" 
-  [& args]
-  (let [[args children] (ut/key-values-args-and-children args)
-        position (get args :position)]
-    (if position
-      (dec/decorated* position args (last children))
-      (dec/decorated* args (last children)))))
+  ([] (dec/decorated* {} nil))
+  ([& args]
+   (let [[args children] (ut/key-values-args-and-children args)
+         position (get args :position)]
+     (if position
+       (dec/decorated* position args (last children))
+       (dec/decorated* args (last children))))))
 
 (defn keyed
   "A widget that assigns a key to a child widget.
@@ -1195,17 +1205,17 @@
      ```
      If the padding argument is a map, the keys :all, :left, :right, :start, :end, :vertical, :horizontal, :top, and :bottom are used to specify the padding.
      If the padding argument is a vector of four numbers, the numbers are used for the left, top, right, and bottom padding."
-  ([& args]
+  ([arg0 & args]
    (cond
-     (keyword? (first args))
-     (let [[args children] (ut/key-values-args-and-children args)]
+     (keyword? arg0)
+     (let [[args children] (ut/key-values-args-and-children (cons arg0 args))]
        (pd/padding* args (last children)))
 
-     (= 2 (count args))
-     (pd/padding* (first args) (second args))
+     (= 1 (count args))
+     (pd/padding* arg0 (first args))
 
      :else
-     (throw (ex-info "Invalid arguments for padding: " args)))))
+     (throw (ex-info "Invalid arguments for padding: " (cons arg0 args))))))
 
 (defn text
   "Creates a text widget with the specified text and arguments.
@@ -1246,7 +1256,7 @@
   ```
    "
   ([string & args]
-   (txt/text* string (apply hash-map args)))
+   (txt/text* string (ut/key-values-map args)))
   ([string] (text string {})))
 
 (defn with-text-style

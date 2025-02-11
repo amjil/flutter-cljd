@@ -206,6 +206,9 @@
                                 values)]
       (args-children args (vec (drop i values))))))
 
+(defn key-values-map [values]
+  (if (= 1 (count values)) (first values) (apply hash-map values)))
+
 (defmacro dbg
   "Prints variable names and their values.
     
