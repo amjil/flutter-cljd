@@ -28,16 +28,16 @@
   (-equiv [o other] (identical? o other))
   ^:mixin a/AnimationWithParentMixin)
 
-(defn transformed-animation
+(defn map-anim
   "Transforms an animation using a transform function.\\
-     `transformed-animation` takes an animation and a transform function and returns a new animation.\\
+     `map-anim` takes an animation and a transform function and returns a new animation.\\
      The transform function takes the value of the parent animation and returns the transformed value.
      ```clojure
-     (transformed-animation parent #(* % 2))
+     (map-anim parent #(* % 2))
      ```
      `Animation` implements `ILookup` to create a transformed animation that transforms the value of the parent animation.
      ```clojure
-     (let [animation (AlwaysStoppedAnimation {:x 10.0 :y 20})
+     (let [animation (always-stopped-animation {:x 10.0 :y 20})
            x-animation (:x animation) ;; an animation that always returns 10.0
            y-animation (get animation :y)] ;; an animation that always returns 20.0
      ```"
@@ -48,7 +48,7 @@
   a/Animation
   (-lookup [this key] (c/-lookup this key nil))
   (-lookup [this key not-found]
-    (transformed-animation this (fn [value] (c/-lookup value key not-found))))
+    (map-anim this (fn [value] (c/-lookup value key not-found))))
   (-contains-key? [this key]
     (c/-contains-key? (.-value this) key)))
 
@@ -164,17 +164,17 @@
 
 (deftype ^:private MotionAnimationController
          [^:mutable ^MotionController? motionController
-          ^:mutable ^double value
-          ^:mutable ^a/Duration? duration
-          ^String? debugLabel
-          ^a/TickerProvider vsync
-          ^a/AnimationBehavior animationBehavior]
+          ^:mutable ^double val
+          ^:mutable ^a/Duration? dur
+          ^String? dl
+          ^a/TickerProvider vs
+          ^a/AnimationBehavior ab]
   :extends (a/AnimationController
-             .value value
-             .duration duration
-             .debugLabel debugLabel
-             .vsync vsync
-             .animationBehavior animationBehavior)
+             .value val
+             .duration dur
+             .debugLabel dl
+             .vsync vs
+             .animationBehavior ab)
 
   (^sc/TickerFuture forward [^MotionAnimationController this ^double? .from]
     (reset-cached-value (.-motionController this))

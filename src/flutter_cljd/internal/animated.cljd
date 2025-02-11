@@ -1,13 +1,11 @@
 (ns flutter-cljd.internal.animated
   (:require
    [cljd.core :as c]
-   [cljd.flutter :as f]
    [flutter-cljd.types :as t]
    [flutter-cljd.ListenableAtom :as la]
    ["package:flutter/foundation.dart" :as fd]
    ["package:flutter/widgets.dart" :as w]
-   ["package:flutter/animation.dart" :as a]
-   [flutter-cljd.utils :as ut]))
+   ["package:flutter/animation.dart" :as a]))
 
 ;; MARK: Animated
 
@@ -27,8 +25,7 @@
                          [(vec (drop-last args)) (last args)]
                          [(vec args) nil])
         getter #(.-value %)
-        builder (fn [value child]
-                  (apply builder (if has-child? (conj value child) value)))]
+        animation (if (instance? c/Atom animation) (la/AtomListenable animation) animation)]
     (cond
       (map? animation)
       (let [options (t/animation-options animation)
@@ -39,7 +36,7 @@
          .tween (t/tween lerp values values)
          .duration (if condition (options :duration) (t/duration 0))
          .curve (options :curve)
-         .builder (fn [_ value child] (builder value child))
+         .builder (fn [_ value child] (apply builder (if has-child? (conj value child) value)))
          .onEnd (options :on-end)
          .child child))
 
@@ -49,14 +46,9 @@
       (w/AnimatedBuilder
        .animation animation
        .child child
-       .builder (fn [_ child] (builder (getter animation) child)))
-
-      (instance? c/Atom animation)
-      (w/AnimatedBuilder
-       .animation (la/AtomListenable animation)
-       .child child
        .builder (fn [_ child]
-                  (builder (getter animation) child)))
+                  (let [value (getter animation)]
+                    (apply builder (if has-child? (conj values value child) (conj values value))))))
 
       :else
       (throw (ex-info "Invalid animation" {:animation animation})))))
