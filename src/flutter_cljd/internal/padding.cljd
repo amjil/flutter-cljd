@@ -125,8 +125,8 @@
       (.-textDirection! this value)
       (markNeedResolution this)))
 
-(deftype ^:private AnyPadding [^w/EdgeInsetsGeometry padding ^w/Key? key ^w/Widget? child]
-  :extends (w/SingleChildRenderObjectWidget .key key .child child)
+(deftype ^:private AnyPadding [^w/EdgeInsetsGeometry padding ^w/Key? k ^w/Widget? c]
+  :extends (w/SingleChildRenderObjectWidget .key k .child c)
 
   (createRenderObject [_ context]
    (RenderAnyPadding padding context (w/Directionality.maybeOf context) nil))
@@ -134,52 +134,6 @@
   (updateRenderObject [_ context renderObject]
     (setPadding renderObject padding)
     (setTextDirection renderObject (w/Directionality.maybeOf context)))
-
-  (debugFillProperties [this properties]
-    (.debugFillProperties ^super this properties)
-    (.add properties (f/DiagnosticsProperty. "padding" padding))))
-
-(deftype ^:private AnimatedAnyPaddingState []
-  :extends w/AnimatedWidgetBaseState
-
-  (initState [this]
-    (.-_padding! this nil)
-    (.initState ^super this))
-
-  (forEachTween [this visitor]
-                (.-_padding!
-                 this 
-                 (visitor (.-_padding this)
-                          (-> this .-widget .-padding)
-                          (fn [value]
-                            (w/EdgeInsetsGeometryTween.
-                             .begin value)))))
-
-  (build [this _]
-    (let [padding (.evaluate
-                   (.-_padding this)
-                   (.-animation this))]
-      (AnyPadding. 
-       padding 
-       (-> this .-widget .-key)
-       (-> this .-widget .-child))))
-
-  (debugFillProperties [this description]
-    (.debugFillProperties ^super this description)
-    (.add description (f/DiagnosticsProperty.
-                       "padding"
-                       (.-_padding this)
-                       .defaultValue nil))))
-
-(deftype ^:private AnimatedAnyPadding [key padding child curve duration onEnd]
-  :extends (w/ImplicitlyAnimatedWidget
-             .key key
-             .curve curve
-             .duration duration
-             .onEnd onEnd)
-
-  (createState [_]
-    (AnimatedAnyPaddingState.))
 
   (debugFillProperties [this properties]
     (.debugFillProperties ^super this properties)

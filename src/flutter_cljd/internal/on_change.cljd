@@ -9,9 +9,9 @@
          [value
           onChange
           equals
-          ^f/Key? key
+          ^f/Key? k
           ^w/Widget child]
-  :extends (w/StatefulWidget .key key)
+  :extends (w/StatefulWidget .key k)
 
   (^#/(w/State OnChange) createState [_] (OnChangeState)))
 

@@ -46,6 +46,7 @@
    [flutter-cljd.internal.with-text-style :as wts]
    [flutter-cljd.internal.on-change :as oc]
    [flutter-cljd.internal.animated :as an]
+   [flutter-cljd.internal.on-reassembly :as rsm]
    [flutter-cljd.utils :as ut]))
 
 (defn absorb-pointer
@@ -1406,3 +1407,12 @@
   - `(t/alignment :center)`"
   ([animation builder & values]
    (an/animated* animation (cons builder values))))
+
+(defn on-reassemble
+  "A widget that calls whenever the application is reassembled during debugging, for example during hot reload.
+
+   Args:
+    - `on-reassamble`: The function to call.
+    - `child`: The child widget."
+  [on-reassemble child]
+  (rsm/ReassembleListener on-reassemble child))

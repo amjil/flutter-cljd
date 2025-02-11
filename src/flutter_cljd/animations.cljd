@@ -646,8 +646,7 @@
                           items)
              final-items (filter #(< 0 (:rel-dur %)) all-items)
              cnt (count final-items)
-             last-all-i (dec all-cnt)
-             last-i (dec cnt)]
+             last-all-i (dec all-cnt)]
          {:duration (from-mcs res-dur)
           :interpolate (case cnt
                          0 (if (< 0 all-cnt) 
