@@ -1524,7 +1524,7 @@
     (text \"Flipped with origin\"))
   ```"
   [axis & args]
-  (let [is-first-axis (and (seq args) (even? args))
+  (let [is-first-axis (and (seq args) (even? (count args)))
         axis (if is-first-axis [axis (first args)] axis)
         args (if is-first-axis (drop 1 args) args)
         [args children] (ut/key-values-args-and-children args)]
@@ -1635,8 +1635,8 @@
   (rotate 0.5
     (text \"Rotated text\"))
 
-  ;; Rotate around center
-  (rotate 1.5708 {:alignment :center}
+  ;; Rotate around top-left corner
+  (rotate 1.5708 :alignment :top-left
     (text \"90 degree rotation\"))
 
   ;; Custom rotation origin
