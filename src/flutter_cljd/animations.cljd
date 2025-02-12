@@ -1243,6 +1243,34 @@
      (fn [] (hash [:synced ((:to-hash motion))])))))
 
 (defn tile
+  "Creates a motion that tiles/repeats within the parent duration.
+   
+   Takes a motion and returns a new motion that repeats the input animation to fill
+   the parent duration. Unlike `repeat`, which multiplies the duration, `tile` fits
+   the original motion into the parent duration as many times as possible.
+   
+   The total duration will match the parent duration, with the original motion repeating
+   within that timeframe.
+   
+   ```clojure
+   ;; Create a 2-second animation containing a repeating 500ms motion
+   (seq {:duration 2000}
+     (tile (to 0 100 :duration 500)))  ;; Repeats 0->100 four times
+   
+   ;; Useful for continuous animations like rotation or color cycling
+   (widget
+     :managed [controller (motion-controller 
+                           vsync 
+                           (seq {:duration 5000}
+                             (tile (to 0 360 :duration 1000))))]
+     (->> (image \"spinner.png\")
+          (animated controller rotate)
+          (on-appear #(.repeat controller))))
+   ```
+   
+   See also:
+   - `repeat` - Repeats a motion a specific number of times
+   - `synced` - Syncs a motion with the current time"
   [motion]
   (let [motion (into-motion motion)]
     (into-motion
