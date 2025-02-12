@@ -374,6 +374,127 @@
   (testing "Invalid main-axis alignment"
     (is (thrown? Exception (t/main-axis-alignment :invalid)))))
 
+(deftest test-transform
+  (testing "Transform with Matrix4"
+    (let [matrix (m/Matrix4.rotationZ 0.5)
+          child (m/Text "Child widget")
+          widget (f/transform matrix child)]
+      (is (= (.-transform widget) matrix))
+      (is (instance? m/Text (.-child widget)))))
+
+  (testing "Transform with options"
+    (let [matrix (m/Matrix4.rotationZ 0.5)
+          child (m/Text "Child widget")
+          widget (f/transform matrix 
+                            {:alignment :center
+                             :origin (m/Offset 100 100)
+                             :transform-hit-tests false}
+                            child)]
+      (is (= (.-transform widget) matrix))
+      (is (= (.-alignment widget) m/Alignment.center))
+      (is (= (.-origin widget) (m/Offset 100 100)))
+      (is (= (.-transformHitTests widget) false))
+      (is (instance? m/Text (.-child widget))))))
+
+(deftest test-flip
+  (testing "Flip horizontally"
+    (let [child (m/Text "Child widget")
+          widget (f/flip :horizontal child)]
+      (is (= (-> widget .-transform .-storage .elementAt 0) -1.0))
+      (is (= (-> widget .-transform .-storage .elementAt 5) 1.0))
+      (is (instance? m/Text (.-child widget)))))
+  
+  (testing "Flip vertically"
+    (let [child (m/Text "Child widget")
+          widget (f/flip :vertical child)]
+      (is (= (-> widget .-transform .-storage .elementAt 0) 1.0))
+      (is (= (-> widget .-transform .-storage .elementAt 5) -1.0))
+      (is (instance? m/Text (.-child widget)))))
+
+  (testing "Flip both axes"
+    (let [child (m/Text "Child widget")
+          widget (f/flip [:horizontal :vertical] child)]
+      (is (= (-> widget .-transform .-storage .elementAt 0) -1.0))
+      (is (= (-> widget .-transform .-storage .elementAt 5) -1.0))
+      (is (instance? m/Text (.-child widget))))))
+
+(deftest test-scale
+  (testing "Scale uniformly"
+    (let [child (m/Text "Child widget")
+          widget (f/scale 2.0 child)]
+      (is (= (-> widget .-transform .-storage .elementAt 0) 2.0))
+      (is (= (-> widget .-transform .-storage .elementAt 5) 2.0))
+      (is (instance? m/Text (.-child widget)))))
+
+  (testing "Scale with different x/y values"
+    (let [child (m/Text "Child widget")
+          widget (f/scale {:x 2.0 :y 1.5} child)]
+      (is (= (-> widget .-transform .-storage .elementAt 0) 2.0))
+      (is (= (-> widget .-transform .-storage .elementAt 5) 1.5))
+      (is (instance? m/Text (.-child widget)))))
+
+  (testing "Scale with sequence"
+    (let [child (m/Text "Child widget")
+          widget (f/scale [2.0 1.5] child)]
+      (is (= (-> widget .-transform .-storage .elementAt 0) 2.0))
+      (is (= (-> widget .-transform .-storage .elementAt 5) 1.5))
+      (is (instance? m/Text (.-child widget))))))
+
+(deftest test-translate
+  (testing "Translate with offset"
+    (let [child (m/Text "Child widget")
+          widget (f/translate (m/Offset 100 50) child)]
+      (is (= (-> widget .-transform .-storage .elementAt 12) 100.0))
+      (is (= (-> widget .-transform .-storage .elementAt 13) 50.0))
+      (is (instance? m/Text (.-child widget)))))
+
+  (testing "Translate with sequence"
+    (let [child (m/Text "Child widget")
+          widget (f/translate [100 50] child)]
+      (is (= (-> widget .-transform .-storage .elementAt 12) 100.0))
+      (is (= (-> widget .-transform .-storage .elementAt 13) 50.0))
+      (is (instance? m/Text (.-child widget))))))
+
+(deftest test-fractional-translation
+  (testing "Fractional translation with offset"
+    (let [child (m/Text "Child widget")
+          widget (f/fractional-translation (m/Offset 0.5 0.25) child)]
+      (is (= (-> widget .-translation .-dx) 0.5))
+      (is (= (-> widget .-translation .-dy) 0.25))
+      (is (instance? m/Text (.-child widget)))))
+
+  (testing "Fractional translation with sequence"
+    (let [child (m/Text "Child widget")
+          widget (f/fractional-translation [0.5 0.25] child)]
+      (is (= (-> widget .-translation .-dx) 0.5))
+      (is (= (-> widget .-translation .-dy) 0.25))
+      (is (instance? m/Text (.-child widget))))))
+
+(deftest test-rotate
+  (testing "Rotate with angle"
+    (let [child (m/Text "Child widget")
+          widget (f/rotate 0.5 child)]
+      (is (= (.-angle widget) 0.5))
+      (is (instance? m/Text (.-child widget)))))
+
+  (testing "Rotate with options"
+    (let [child (m/Text "Child widget")
+          widget (f/rotate 0.5 
+                          {:alignment :center
+                           :origin (m/Offset 100 100)}
+                          child)]
+      (is (= (.-angle widget) 0.5))
+      (is (= (.-alignment widget) m/Alignment.center))
+      (is (= (.-origin widget) (m/Offset 100 100)))
+      (is (instance? m/Text (.-child widget))))))
+
+(deftest test-rotate-layout
+  (testing "Rotate layout with quarter turns"
+    (let [child (m/Text "Child widget")
+          widget (f/rotate-layout 1 child)]
+      (is (= (.-quarterTurns widget) 1))
+      (is (instance? m/Text (.-child widget))))))
+
 (deftest logical-keyboard-key-test
   (testing "logical-keyboard-key"
     (let [key 0x00000000061]
