@@ -1,0 +1,29 @@
+(ns flutter-cljd.internal.with-managed
+  (:require
+   ["package:flutter/widgets.dart" :as w]))
+
+(declare WithManagedState)
+
+(deftype WithManaged
+         [values
+          ^w/Widget builder]
+  :extends (w/StatefulWidget .key nil)
+  (createState [^WithManaged this]
+    (WithManagedState (map (fn [[state create _]] (create state)) (.-values this)))))
+
+(deftype WithManagedState [manageds]
+  :extends (#/(w/State WithManaged))
+
+  (didUpdateWidget [^WithManagedState this ^WithManaged oldWidget]
+    (.didUpdateWidget ^super this oldWidget)
+    (let [widget (.-widget this)]
+      (doseq [[managed [state _ update]] (map vector (.-manageds this) (.-values widget))]
+        (update managed state))))
+
+  (dispose [^WithManagedState this]
+    (doseq [managed (.-manageds this)]
+          (.dispose managed))
+    (.dispose ^super this))
+
+  (build [^WithManagedState this ^w/BuildContext ctx]
+    (apply (-> this .-widget .-builder) (cons ctx (.-manageds this)))))
