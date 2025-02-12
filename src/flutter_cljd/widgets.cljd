@@ -1466,30 +1466,211 @@
        motions)
       builder))))
 
-(defn transform 
+(defn transform
+  "Applies a transformation matrix to its child.
+
+  The transform matrix is a 4x4 transformation matrix that determines how to map the child's coordinate system.
+  
+  Args:
+   - transform: A Matrix4 transformation matrix
+   - args: Optional map of arguments:
+     - :key - Widget key
+     - :origin - The origin of the coordinate system (Offset)
+     - :alignment - The alignment of the origin (Alignment)
+     - :transform-hit-tests - Whether to transform hit test bounds (default true)
+     - :filter-quality - The filter quality to use when transforming
+   - child: The widget to transform
+
+  Example:
+  ```clojure
+  (transform (Matrix4.rotationZ 0.5)
+    (text \"Rotated text\"))
+  
+  (transform (Matrix4.skewX 0.3)
+            {:alignment :center
+             :origin (offset 100 100)}
+    (container {:width 200 :height 100}
+      (text \"Skewed text\")))
+  ```
+
+  [Flutter docs](https://api.flutter.dev/flutter/widgets/Transform-class.html)"
   [transform & args]
   (let [[args children] (ut/key-values-args-and-children args)]
     (tr/transform* transform args (last children))))
 
-(defn flip [axis & args]
+(defn flip
+  "Flips (mirrors) the child widget along the specified axis.
+
+  Args:
+   - axis: The axis to flip along. Can be:
+     - A single axis keyword (:horizontal or :vertical)
+     - A vector of axes to flip on multiple axes
+     - Multiple axis arguments
+   - args: Optional map of transform arguments (see transform function)
+   - child: The widget to flip
+
+  Example:
+  ```clojure
+  ;; Flip horizontally
+  (flip :horizontal
+    (text \"Flipped text\"))
+
+  ;; Flip both horizontally and vertically  
+  (flip [:horizontal :vertical]
+    (text \"Flipped both ways\"))
+
+  ;; Flip with options
+  (flip :horizontal {:origin (offset 100 0)}
+    (text \"Flipped with origin\"))
+  ```"
+  [axis & args]
   (let [is-first-axis (and (seq args) (even? args))
         axis (if is-first-axis [axis (first args)] axis)
         args (if is-first-axis (drop 1 args) args)
         [args children] (ut/key-values-args-and-children args)]
     (tr/flip* axis args (last children))))
 
-(defn scale [scale & args]
+(defn scale
+  "Scales the child widget by the given scale factor.
+
+  Args:
+   - scale: The scale factor. Can be:
+     - A single number to scale uniformly
+     - A map with :x and :y keys for different scaling
+     - A sequence of [x y] values
+   - args: Optional map of transform arguments (see transform function)
+   - child: The widget to scale
+
+  Example:
+  ```clojure
+  ;; Uniform scaling
+  (scale 2.0
+    (text \"Scaled text\"))
+
+  ;; Different x/y scaling
+  (scale {:x 2.0 :y 1.5}
+    (text \"Non-uniform scaling\"))
+
+  ;; Scale with options
+  (scale 2.0 {:alignment :center}
+    (text \"Centered scaling\"))
+  ```"
+  [scale & args]
   (tr/transform-macro scale tr/scale* args))
 
-(defn translate [offset & args]
+(defn translate
+  "Translates (moves) the child widget by the given offset.
+
+  Args:
+   - offset: The translation offset. Can be:
+     - An Offset object
+     - A sequence of [dx dy] values
+     - A map with :dx and :dy keys
+   - args: Optional map of transform arguments (see transform function)
+   - child: The widget to translate
+
+  Example:
+  ```clojure
+  ;; Using dx/dy values
+  (translate [100 50]
+    (text \"Moved text\"))
+
+  ;; Using Offset
+  (translate (offset 100 50)
+    (text \"Moved text\"))
+
+  ;; With transform options
+  (translate [100 50] {:transform-hit-tests false}
+    (text \"Moved without hit testing\"))
+  ```"
+  [offset & args]
   (tr/transform-macro offset tr/translate* args))
 
-(defn fractional-translation [offset & args]
+(defn fractional-translation
+  "Translates the child widget by a fraction of its size.
+
+  The translation offset is specified as a fraction of the child's size.
+  For example, an offset of [0.5 0.5] moves the child halfway across and down.
+
+  Args:
+   - offset: The fractional offset. Can be:
+     - An Offset object with values between 0.0 and 1.0
+     - A sequence of [dx dy] fractional values
+   - args: Optional map with:
+     - :key - Widget key
+     - :transform-hit-tests - Whether to transform hit test bounds
+   - child: The widget to translate
+
+  Example:
+  ```clojure
+  ;; Move halfway across and down
+  (fractional-translation [0.5 0.5]
+    (text \"Moved by fraction\"))
+
+  ;; Using Offset
+  (fractional-translation (offset 0.25 0.75)
+    (text \"Fractionally moved\"))
+  ```
+
+  [Flutter docs](https://api.flutter.dev/flutter/widgets/FractionalTranslation-class.html)"
+  [offset & args]
   (tr/transform-macro offset tr/fractional-translation* args))
 
-(defn rotate [angle & args]
+(defn rotate
+  "Rotates the child widget by the given angle.
+
+  Args:
+   - angle: The rotation angle in radians
+   - args: Optional map of arguments:
+     - :key - Widget key
+     - :origin - The origin of rotation (Offset)
+     - :alignment - The alignment of the origin (Alignment)
+     - :transform-hit-tests - Whether to transform hit test bounds
+     - :filter-quality - The filter quality for the transform
+   - child: The widget to rotate
+
+  Example:
+  ```clojure
+  ;; Basic rotation
+  (rotate 0.5
+    (text \"Rotated text\"))
+
+  ;; Rotate around center
+  (rotate 1.5708 {:alignment :center}
+    (text \"90 degree rotation\"))
+
+  ;; Custom rotation origin
+  (rotate 0.7854 {:origin (offset 100 100)}
+    (text \"Rotated around point\"))
+  ```
+
+  [Flutter docs](https://api.flutter.dev/flutter/widgets/Transform/Transform.rotate.html)"
+  [angle & args]
   (let [[args children] (ut/key-values-args-and-children args)]
     (tr/rotate* angle args (last children))))
 
-(defn rotate-layout [quarter-turns child]
+(defn rotate-layout
+  "Rotates the child widget's layout by the given number of quarter turns.
+
+  Unlike rotate which applies a visual transform, this actually affects the layout
+  of the child, rotating its layout constraints by increments of 90 degrees.
+
+  Args:
+   - quarter-turns: Number of clockwise quarter turns (each 90 degrees)
+   - child: The widget to rotate
+
+  Example:
+  ```clojure
+  ;; Rotate 90 degrees clockwise
+  (rotate-layout 1
+    (text \"Rotated text\"))
+
+  ;; Rotate 180 degrees
+  (rotate-layout 2
+    (sized {:width 100 :height 50}
+      (text \"Flipped text\")))
+  ```
+
+  [Flutter docs](https://api.flutter.dev/flutter/widgets/RotatedBox-class.html)"
+  [quarter-turns child]
   (tr/rotate-layout* quarter-turns child))
