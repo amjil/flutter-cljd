@@ -1,0 +1,75 @@
+(ns flutter-cljd.internal.transformed
+  (:require
+   ["package:flutter/material.dart" :as m]
+   [flutter-cljd.drawing :as d]
+   [flutter-cljd.utils :as ut :refer [??]]
+   [flutter-cljd.types :as t]))
+
+(defn transform* [transform {:keys [key origin alignment transform-hit-tests filter-quality]} child]
+  (m/Transform
+    .key (t/widget-key key)
+    .transform (d/mat4 transform)
+    .origin (some-> origin d/offset)
+    .alignment (or (some-> alignment t/alignment-geometry) m/Alignment.center)
+    .transformHitTests (?? (some-> transform-hit-tests boolean) true)
+    .filterQuality filter-quality
+    .child child))
+
+(defn flip* [axis args child]
+  (let [axis (if (coll? axis) (map t/axis axis) [(t/axis axis)])
+        axis (set (map #(if (= % m/Axis.vertical) :v :h) axis))]
+       (transform* (d/mat4-diagonal3 
+                    (if (axis :h) -1 1)
+                    (if (axis :v) -1 1)
+                    1) 
+                   args 
+                   child)))
+
+(defn rotate* [angle {:keys [key origin alignment transform-hit-tests filter-quality]} child]
+  (m/Transform.rotate
+   .key (t/widget-key key)
+   .angle (double angle)
+   .origin (some-> origin d/offset)
+   .alignment (or (some-> alignment t/alignment-geometry) m/Alignment.center)
+   .transformHitTests (?? (some-> transform-hit-tests boolean) true)
+   .filterQuality filter-quality
+   .child child))
+
+(defn rotate-layout* [quarter-turns child]
+  (m/RotatedBox
+   .quarterTurns (int quarter-turns)
+   .child child))
+
+(defn scale* [scale args child]
+  (let [scale-x (cond (map? scale) (:x scale 1)
+                      (coll? scale) (or (first scale) 1)
+                      :else scale)
+        scale-y (cond (map? scale) (:y scale 1)
+                      (coll? scale) (or (last scale) 1)
+                      :else scale)]
+    (transform* (d/mat4-diagonal3
+                 (double scale-x)
+                 (double scale-y)
+                 1)
+                args
+                child)))
+
+(defn translate* [offset args child]
+  (let [offset (d/offset offset)]
+    (transform* (d/mat4-translation (.-dx offset) (.-dy offset)) args child)))
+
+(defn fractional-translation* [offset {:keys [key transform-hit-tests]} child]
+  (m/FractionalTranslation
+   .key (t/widget-key key)
+   .translation (d/offset offset)
+   .transformHitTests (?? (some-> transform-hit-tests boolean) true)
+   .child child))
+
+(defn transform-macro [value fun args]
+  (if (keyword? value)
+    (let [[args children] (ut/key-values-args-and-children (cons value args))]
+      (fun args args (last children)))
+    (let [values (take-while number? args)
+          value (if (empty? values) value (vec (cons value values)))
+          [args children] (ut/key-values-args-and-children (drop (count values) args))]
+      (fun value args (last children)))))
