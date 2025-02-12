@@ -10,19 +10,19 @@
   (testing "Numeric transformation"
     (let [parent (fa/AlwaysStoppedAnimation 5)
           transform #(* % 3)
-          anim (a/map-anim parent transform)]
+          anim (a/map-anim transform parent)]
       (is (= (.-value anim) 15))))
 
   (testing "Map transformation"
     (let [parent (fa/AlwaysStoppedAnimation {:x 10 :y 20})
           transform #(update % :x inc)
-          anim (a/map-anim parent transform)]
+          anim (a/map-anim transform parent)]
       (is (= (.-value anim) {:x 11 :y 20}))))
 
   (testing "String transformation"
     (let [parent (fa/AlwaysStoppedAnimation "hello")
           transform str/upper-case
-          anim (a/map-anim parent transform)]
+          anim (a/map-anim transform parent)]
       (is (= (.-value anim) "HELLO"))))
 
   (testing "Lookup transformation"
@@ -32,7 +32,7 @@
 
   (testing "Listening to parent"
     (let [parent (fa/AlwaysStoppedAnimation 5)
-          anim (a/map-anim parent identity)]
+          anim (a/map-anim identity parent)]
       (.addListener anim #(println "added")))))
 
 (defn- unwrap

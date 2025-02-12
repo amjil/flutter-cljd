@@ -47,7 +47,9 @@
    [flutter-cljd.internal.on-change :as oc]
    [flutter-cljd.internal.animated :as an]
    [flutter-cljd.internal.on-reassembly :as rsm]
-   [flutter-cljd.utils :as ut]))
+   [flutter-cljd.internal.with-managed :as wm]
+   [flutter-cljd.utils :as ut]
+   [flutter-cljd.animations :as a]))
 
 (defn absorb-pointer
   "A widget that absorbs pointers during hit testing. 
@@ -1416,3 +1418,49 @@
     - `child`: The child widget."
   [on-reassemble child]
   (rsm/ReassembleListener on-reassemble child))
+
+(defn with-managed 
+  "A widget that keeps, updates and disposes objects.
+   
+   Args:
+   - List of maps with the following keys:
+     - `:state`: Current state of the managed object.
+     - `:create`: The function (fn [state]) to create the object with the current state.
+     - `:update`: The function (fn [object state]) to update the object with a new state.
+   - Builder: The function (fn [context & objects]) to create a child widget with managed objects."
+  [first second & more-and-builder]
+  (let [[values builder] (if (empty? more-and-builder)
+                           [[first] second]
+                           [(concat [first second] (drop-last more-and-builder)) (last more-and-builder)])]
+    (wm/WithManaged (map 
+                     (fn [{:keys [state create update]}]
+                       [state create update]) 
+                     values) 
+                    builder)))
+
+(defn with-motion
+  "Use this function when your motion animation may change.\\
+   For example, when you initial state of animation depends on some values.\\
+   Otherwise, `:managed` key in `widget` or `widget->>` macro is more convenient.
+   ```clojure
+   (with-motion 
+     vsync
+     (to current-opacity 1.0)
+     (fn [ctx controller]
+       (->> (text \"Example\")
+         (animated controller opacity))))
+   ```"
+  [vsync motion0 motion1 & more-and-builder]
+  (let [[motions builder] (if (empty? more-and-builder)
+                            [[motion0] motion1]
+                            [(concat [motion0 motion1] (drop-last more-and-builder)) (last more-and-builder)])]
+    (apply 
+     with-managed
+     (conj
+      (map
+       (fn [motion]
+         {:state motion
+          :create #(a/motion-controller vsync %)
+          :update a/set-motion!})
+       motions)
+      builder))))

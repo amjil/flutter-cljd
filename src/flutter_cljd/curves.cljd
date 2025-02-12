@@ -1,6 +1,7 @@
 (ns flutter-cljd.curves
   (:require
    [cljd.string :as str]
+   ["dart:core" :as dc]
    ["package:flutter/animation.dart" :as a]
    [flutter-cljd.drawing :as dr :refer [offset]]
    [flutter-cljd.types :as t]
@@ -101,7 +102,7 @@
                             (and (<= t from) (some? begin)) 0.0
                             (and (<= to t) (some? end)) 1.0
                             :else (/ (- t from) duration))))
-      (str "(interval " begin " " end " " (.toString curve) ")"))))
+      #(str "(interval " begin " " end " " (.toString curve) ")"))))
   ([begin end]
    (if (coll? begin)
      (interval (first begin) (second begin) end)
@@ -133,7 +134,7 @@
   ([start end curve]
    (let [curve (t/curve curve)
          interval (- end start)
-         description (str "(segment " start ", " end ", " (.toString curve) ")")]
+         description #(str "(segment " start ", " end ", " (.toString curve) ")")]
      (if (<= interval 0)
        (t/AnyCurve
         (fn [t]
@@ -210,7 +211,7 @@
        identity
        (fn [t]
          (apply transform (map #(.transform % t) curves))))
-     (str "(transform transform-fn " (str/join " " (map #(.toString %) curves)) ")"))))
+     #(str "(transform transform-fn " (str/join " " (map #(.toString %) curves)) ")"))))
 
 (defn average
   "Creates a curve that averages the output of multiple curves.\\
@@ -263,7 +264,7 @@
     (t/AnyCurve
      (fn [t]
        (.transform curve (- 1.0 t)))
-     (str "(reversed " (.toString curve) ")"))))
+     #(str "(reversed " (.toString curve) ")"))))
 
 (defn inversed
   "Creates a curve that inverts another curve.\\
@@ -277,7 +278,7 @@
     (t/AnyCurve
      (fn [t]
        (- 1.0 (.transform curve t)))
-     (str "(inversed " (.toString curve) ")"))))
+     #(str "(inversed " (.toString curve) ")"))))
 
 (defn autoreversed
   "Creates a curve that plays forward then reverses.\\
@@ -286,14 +287,15 @@
    ```clojure
    (autoreversed :ease-in)  ;; Goes ease-in then ease-out
    ```"
-  [curve]
-  (let [curve (t/curve curve)]
-    (t/AnyCurve
-     (fn [t]
-       (if (< t 0.5)
-         (.transform curve (* 2.0 t))
-         (.transform curve (* 2.0 (- 1.0 t)))))
-     (str "(autoreversed " (.toString curve) ")"))))
+  ([] (autoreversed :linear))
+  ([curve]
+   (let [curve (t/curve curve)]
+     (t/AnyCurve
+      (fn [t]
+        (if (< t 0.5)
+          (.transform curve (* 2.0 t))
+          (.transform curve (* 2.0 (- 1.0 t)))))
+      #(str "(autoreversed " (.toString curve) ")")))))
 
 (defn repeat
   "Creates a curve that repeats another curve multiple times.\\
@@ -308,7 +310,7 @@
      (fn [T]
        (let [t (if (= T 1.0) 1.0 (mod (* T count) 1.0))]
          (.transform curve t)))
-     (str "(repeat " count " " (.toString curve) ")"))))
+     #(str "(repeat " count " " (.toString curve) ")"))))
 
 (defn constant
   "Creates a curve that always returns the same value.\\
@@ -320,7 +322,7 @@
   [value]
   (t/AnyCurve
    (fn [_] value)
-   (str "(constant " value ")")))
+   #(str "(constant " value ")")))
 
 (defn concat
   "Creates a curve that concatenates multiple curves sequentially.\\
@@ -348,7 +350,7 @@
                curve (nth curves i)
                t (if (= T 1.0) 1.0 (mod mult 1.0))]
            (.transform curve t))))
-     (str "(concat " (str/join " " (map #(.toString %) curves)) ")"))))
+     #(str "(concat " (str/join " " (map #(.toString %) curves)) ")"))))
 
 (defn split
   "A curve that progresses according to beginCurve until split, then according to endCurve.
@@ -381,7 +383,7 @@
          (if (> T 1.0)
            (.transform curve 1.0)
            (.transform curve T))))
-     (str "(clamped " (.toString curve) ")"))))
+     #(str "(clamped " (.toString curve) ")"))))
 
 (defn first-non-zero
   "Creates a curve that returns the first non-zero value from a sequence of curves.\\
@@ -407,7 +409,21 @@
                   (when-not (zero? value) value)))
               curves)
         0.0))
-     (str "(first-non-zero " (str/join " " (map #(.toString %) curves)) ")"))))
+     (fn [] (str "(first-non-zero " (str/join " " (map #(.toString %) curves)) ")")))))
+
+(defn synced 
+  "Creates a curve that is synchronized with the system clock.\\
+   Takes a duration curve and returns a new curve that repeats\\
+   the input curve at regular intervals, synchronized with the system clock.
+   ```clojure
+   (synced 1000 :ease-in)  ;; Repeats ease-in curve every second
+   ```"
+  [duration curve]
+  (t/AnyCurve
+   (let [ms (.-inMilliseconds (t/duration duration))]
+     (fn [_]
+       (/ (mod (.-millisecondsSinceEpoch dc/DateTime.now) ms) ms)))
+   #(str "(synced " duration " " curve ")")))
 
 (def linear a/Curves.linear)
 (def bounce-in a/Curves.bounceIn)

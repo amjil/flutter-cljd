@@ -33,7 +33,7 @@
      `map-anim` takes an animation and a transform function and returns a new animation.\\
      The transform function takes the value of the parent animation and returns the transformed value.
      ```clojure
-     (map-anim parent #(* % 2))
+     (map-anim #(* % 2) parent)
      ```
      `Animation` implements `ILookup` to create a transformed animation that transforms the value of the parent animation.
      ```clojure
@@ -41,14 +41,14 @@
            x-animation (:x animation) ;; an animation that always returns 10.0
            y-animation (get animation :y)] ;; an animation that always returns 20.0
      ```"
-  [parent transform]
+  [transform parent]
   (TransformedAnimation parent transform))
 
 (extend-protocol c/ILookup
   a/Animation
   (-lookup [this key] (c/-lookup this key nil))
   (-lookup [this key not-found]
-    (map-anim this (fn [value] (c/-lookup value key not-found))))
+    (map-anim (fn [value] (c/-lookup value key not-found)) this))
   (-contains-key? [this key]
     (c/-contains-key? (.-value this) key)))
 
@@ -1205,3 +1205,36 @@
                                (apply concat (map #(side-effects %) ranges)))))}))
       (fn [] (str "(autoreverse " ((:to-string motion)) ")"))
       (fn [] (hash [:autoreverse ((:to-hash motion))]))))))
+
+(defn synced 
+  "Creates a motion that syncs with the current time.\\
+  Takes a motion and returns a new motion that syncs the input animation with the current time.\\
+  The total duration will be the original motion's duration.
+  ```clojure
+  ;; Loader widget that is synced with the current time, so all loaders will be in sync.
+  (widget
+   :vsync vsync
+   :managed [rotation-cntr (motion-controller
+                              vsync
+                              (synced (to 0.0 (* 2 π) :dur 1000)))]
+   (->> (image \"loader.png\")
+        (animated rotation-cntr rotated)
+        (center)
+        (on-appear #(.repeat rotation-cntr))))
+  ```"
+  [motion]
+  (let [motion (into-motion motion)]
+    (into-motion
+     (fn [value exp-dur]
+       (let [{:keys [duration interpolate side-effects]} ((:prepare-motion motion) value exp-dur)
+             dur-ms (.-inMilliseconds (t/duration duration))
+             transform (fn [_] (/ (mod (.-millisecondsSinceEpoch dc/DateTime.now) dur-ms) dur-ms))]
+         {:interpolate (if (< 0 dur-ms)
+                         (fn [t] (interpolate (transform t)))
+                         interpolate)
+          :duration duration
+          :side-effects (when side-effects
+                          (fn [range]
+                            (side-effects (map transform range))))}))
+     (fn [] (str "(synced " ((:to-string motion)) ")"))
+     (fn [] (hash [:synced ((:to-hash motion))])))))

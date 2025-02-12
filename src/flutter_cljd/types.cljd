@@ -1022,7 +1022,7 @@
          [curve description]
   :extends (a/Curve)
   (transform [_ t] (double (curve t)))
-  (toString [_] (str (or description "AnyCurve"))))
+  (toString [_] (str (or (when description (description)) "AnyCurve"))))
 
 (defn curve [curve]
   (cond
