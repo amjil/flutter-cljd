@@ -282,12 +282,29 @@
   ^:mixin a/AnimationWithParentMixin)
 
 (defn ^double progress
-  "Returns the current progress of the motion controller."
+  "Returns the current progress of the motion controller.
+   
+   The progress is a value between 0.0 and 1.0 representing how far along
+   the animation has progressed. 0.0 is the start and 1.0 is the end.
+   
+   ```clojure
+   (let [controller (motion-controller vsync (to 0 100))]
+     (progress controller)) ;; Returns current progress, e.g. 0.5
+   ```"
   [^MotionController controller]
   (-> controller .-parent .-value))
 
 (defn progress!
-  "Sets the current progress of the motion controller."
+  "Sets the current progress of the motion controller.
+   
+   Takes a controller and a progress value between 0.0 and 1.0.
+   Immediately updates the animation to that progress point without animating.
+   
+   ```clojure
+   (let [controller (motion-controller vsync (to 0 100))]
+     (progress! controller 0.5) ;; Jumps to 50% progress
+     (.-value controller)) ;; Returns 50
+   ```"
   [^MotionController controller ^double new-value]
   (.-value! (.-parent controller) new-value))
 
@@ -427,8 +444,18 @@
               :to-hash to-hash)))))
 
 (defn set-motion!
-  "Sets the motion of the motion controller.\\
-   `set-motion!` takes a motion controller and a motion and sets the new motion to the controller."
+  "Sets the motion of the motion controller.
+   
+   Takes a motion controller and a new motion to animate.
+   Updates the controller to use the new motion while preserving the current progress.
+   If the controller is currently animating, it will continue with the new motion.
+   
+   ```clojure
+   (let [controller (motion-controller vsync (to 0 100))]
+     (.forward controller) ;; Start animating
+     (set-motion! controller (to 200 300)) ;; Change destination mid-animation
+     (.-value controller)) ;; Returns interpolated value between 200-300
+   ```"
   [^MotionController controller motion]
   (let [motion (into-motion motion)
         hash ((:to-hash motion))]
@@ -450,22 +477,35 @@
      - :debug-label - Label for debugging (optional)
      - :animation-behavior - Animation behavior on hot reload (default: :preserve)
 
-  Returns a `MotionController` instance that:
-   - Implements Animation protocol
-   - Has .-value that returns the current motion value
-   - Provides methods for controlling animation:
-     - .forward - Start forward animation
-     - .stop - Stop animation
-     - .toggle - Toggle animation direction
-     - .animateBack - Animate to previous value
-     - .animateTo - Animate to specific value
-     - .repeat - Repeat animation
-     - .reset - Reset to initial state
-     - .resync - Resync with vsync
-     - .reverse - Reverse animation
-     - .dispose - Clean up resources
-   
-  - Note: `MotionController` is not an `AnimationController` subclass, but it's a wrapper around it, you can access the underlying `AnimationController` with the `.-parent` field.
+  Returns a `MotionController` instance that provides these methods:
+
+  Animation Control:
+   - .forward [from] - Start forward animation from optional progress value
+   - .reverse [from] - Start reverse animation from optional progress value
+   - .stop [canceled] - Stop animation (canceled defaults to true)
+   - .toggle [from] - Toggle between forward/reverse from optional progress
+   - .animateTo [target duration curve] - Animate to target value over duration with curve
+   - .animateBack [target duration curve] - Animate back to target over duration with curve
+   - .repeat [min max reverse period count synced] - Repeat animation with options:
+      - min: Minimum progress value (optional)
+      - max: Maximum progress value (optional) 
+      - reverse: Whether to reverse direction (optional)
+      - period: Duration of each repeat cycle (optional)
+      - count: Number of times to repeat (optional)
+      - synced: Whether to sync with current time (optional)
+   - .reset - Reset to initial state
+   - .resync [vsync] - Resync with new vsync provider
+   - .dispose - Clean up resources
+
+  Properties:
+   - .-value - Current animated value
+   - .-parent - Underlying AnimationController
+   - .-isAnimating - Whether animation is running
+
+  Helper Functions:
+   - progress [controller] - Get current progress (0.0 to 1.0)
+   - progress! [controller value] - Set current progress
+   - set-motion! [controller motion] - Change the motion being animated
 
   Examples:
   ```clojure
