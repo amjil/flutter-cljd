@@ -273,10 +273,18 @@
 
 (defn mat4-translation
   "Creates a new `Matrix4` object with the given translation values."
-  ([vector]
+  ([vector] 
    (vec-math/Matrix4.translation (vec3 vector)))
   ([x y z]
-   (vec-math/Matrix4.translation (vec3 x y z))))
+   (vec-math/Matrix4.translation (vec3 x y z)))
+  ([x y]
+   (mat4-translation x y 0)))
+
+(defn mat4-diagonal3 
+  ([x y z]
+   (vec-math/Matrix4.diagonal3Values (double x) (double y) (double z)))
+  ([scale]
+   (vec-math/Matrix4.diagonal3 (vec3 scale))))
 
 (defn quat-axis-angle
   "Creates a new `Quaternion` object with the given axis and angle."

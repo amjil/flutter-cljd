@@ -49,7 +49,8 @@
    [flutter-cljd.internal.on-reassembly :as rsm]
    [flutter-cljd.internal.with-managed :as wm]
    [flutter-cljd.utils :as ut]
-   [flutter-cljd.animations :as a]))
+   [flutter-cljd.animations :as a]
+   [flutter-cljd.internal.transformed :as tr]))
 
 (defn absorb-pointer
   "A widget that absorbs pointers during hit testing. 
@@ -1464,3 +1465,31 @@
           :update a/set-motion!})
        motions)
       builder))))
+
+(defn transform 
+  [transform & args]
+  (let [[args children] (ut/key-values-args-and-children args)]
+    (tr/transform* transform args (last children))))
+
+(defn flip [axis & args]
+  (let [is-first-axis (and (seq args) (even? args))
+        axis (if is-first-axis [axis (first args)] axis)
+        args (if is-first-axis (drop 1 args) args)
+        [args children] (ut/key-values-args-and-children args)]
+    (tr/flip* axis args (last children))))
+
+(defn scale [scale & args]
+  (tr/transform-macro scale tr/scale* args))
+
+(defn translate [offset & args]
+  (tr/transform-macro offset tr/translate* args))
+
+(defn fractional-translation [offset & args]
+  (tr/transform-macro offset tr/fractional-translation* args))
+
+(defn rotate [angle & args]
+  (let [[args children] (ut/key-values-args-and-children args)]
+    (tr/rotate* angle args (last children))))
+
+(defn rotate-layout [quarter-turns child]
+  (tr/rotate-layout* quarter-turns child))

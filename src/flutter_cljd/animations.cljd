@@ -258,17 +258,19 @@
     (.forward (.-parent this) .from (some-> from double)))
   (^sc/TickerFuture repeat [^MotionController this .min .max .reverse .period .count .synced]
     (when synced
-      (reset-cached-value this)
-      (compute-motion this)
-      (let [duration (-> this .-parent .-duration .-inMilliseconds)]
-        (when (< 0 duration)
-          (.-value! (.-parent this) (/ (mod (.-millisecondsSinceEpoch (dc/DateTime.now)) duration) duration)))))
+      (.sync this))
     (.repeat (.-parent this)
              .min (some-> min double)
              .max (some-> max double)
              .reverse (boolean reverse)
              .period (some-> period t/duration)
              .count (some-> count int)))
+  (sync [^MotionController this]
+    (reset-cached-value this)
+    (compute-motion this)
+    (let [duration (-> this .-parent .-duration .-inMilliseconds)]
+      (when (< 0 duration)
+        (.-value! (.-parent this) (/ (mod (.-millisecondsSinceEpoch (dc/DateTime.now)) duration) duration)))))
   (reset [^MotionController this]
     (.reset (.-parent this)))
   (resync [^MotionController this vsync]
@@ -486,13 +488,14 @@
    - .toggle [from] - Toggle between forward/reverse from optional progress
    - .animateTo [target duration curve] - Animate to target value over duration with curve
    - .animateBack [target duration curve] - Animate back to target over duration with curve
+   - .sync - Sync progress with current time
    - .repeat [min max reverse period count synced] - Repeat animation with options:
       - min: Minimum progress value (optional)
       - max: Maximum progress value (optional) 
       - reverse: Whether to reverse direction (optional)
       - period: Duration of each repeat cycle (optional)
       - count: Number of times to repeat (optional)
-      - synced: Whether to sync with current time (optional)
+      - synced: Whether to sync start progress with current time (optional)
    - .reset - Reset to initial state
    - .resync [vsync] - Resync with new vsync provider
    - .dispose - Clean up resources
@@ -628,7 +631,7 @@
     #(hash [:instant value]))))
 
 (defn- time-mod [num div]
-  (if (zero? num) 
+  (if (zero? num)
     num
     (let [result (mod num div)]
       (if (zero? result) 1.0 result))))

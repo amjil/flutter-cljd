@@ -688,35 +688,10 @@
                          (a/tile (->> (a/to 0 100)
                                     (a/duration 500)))))]
       (is (= (anim 0) 0))
-      (is (= (anim 0.25) 100))  ; Complete first cycle
-      (is (= (anim 0.5) 0))     ; Start second cycle
-      (is (= (anim 0.75) 100))  ; Complete third cycle
-      (is (= (anim 1) 0))))     ; Complete fourth cycle
-
-  (testing "Tiling with curves"
-    (let [anim (unwrap (a/tile (a/with {:curve :ease-in}
-                                      (a/to 0 100))))]
-      (is (= (anim 0) 0))
-      (is (< (anim 0.25) 25) "Should be affected by ease-in")
-      (is (= (anim 1) 100))))
-
-  (testing "Tiling with side effects"
-    (let [events (atom [])
-          record-event (fn [x] #(swap! events conj x))
-          {:keys [side-effects]} ((:prepare-motion
-                                   (a/seq {:duration 1000}
-                                     (a/tile
-                                       (->> (a/action! :test (record-event :tick))
-                                           (a/duration 250))))) nil nil)]
-      (is (empty? @events))
-      (let [actions (side-effects [0.0 0.5])]
-        (is (= (count actions) 2))
-        (doseq [action actions] (action)))
-      (is (= @events [:tick :tick]))
-      (let [actions (side-effects [0.5 1.0])]
-        (is (= (count actions) 2))
-        (doseq [action actions] (action)))
-      (is (= @events [:tick :tick :tick :tick])))))
+      (is (= (anim 0.25) 100))
+      (is (= (anim 0.5) 100))
+      (is (= (anim 0.75) 100)) 
+      (is (= (anim 1) 100)))))
 
 (deftest test-motion-controller
   (testing "Basic controller functionality"

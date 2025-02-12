@@ -14,7 +14,10 @@
   (let [has-child? (instance? w/Widget (last values))
         [animation builder args]
         (cond
-          (fn? builder) [{} builder values]
+          (fn? builder) 
+          (if (and (= 1 (count values)) (instance? fd/Listenable (last values)))
+            [(first values) builder (drop-last values)]
+            [{} builder values])
           (fn? (first values)) [builder (first values) (drop 1 values)]
           (and (fn? (second values))
                (or (and has-child? (= (count values) 3))
@@ -39,10 +42,8 @@
          .builder (fn [_ value child] (apply builder (if has-child? (conj value child) value)))
          .onEnd (options :on-end)
          .child child))
-
-      (or
-       (instance? a/Animation animation)
-       (instance? fd/ValueListenable animation))
+      
+      (instance? fd/Listenable animation)
       (w/AnimatedBuilder
        .animation animation
        .child child
