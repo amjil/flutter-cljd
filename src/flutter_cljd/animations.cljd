@@ -587,6 +587,12 @@
     (fn [] (str "(instant " value ")"))
     #(hash [:instant value]))))
 
+(defn- time-mod [num div]
+  (if (zero? num) 
+    num
+    (let [result (mod num div)]
+      (if (zero? result) 1.0 result))))
+
 (defn- transform-effect-t [t start end rel-dur]
   (if (zero? rel-dur)
     (cond
@@ -1279,7 +1285,7 @@
              dur-mcs (in-mcs duration)
              exp-dur-mcs (in-mcs exp-dur)
              ratio (when (and exp-dur-mcs (< 0 exp-dur-mcs)) (/ dur-mcs exp-dur-mcs))
-             transform (if ratio #(mod % ratio) identity)]
+             transform (if ratio #(time-mod % ratio) identity)]
          {:interpolate (if ratio
                          (fn [value t] (interpolate value (transform t)))
                          interpolate)
