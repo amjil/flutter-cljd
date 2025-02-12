@@ -1228,7 +1228,7 @@
      (fn [value exp-dur]
        (let [{:keys [duration interpolate side-effects]} ((:prepare-motion motion) value exp-dur)
              dur-ms (.-inMilliseconds (t/duration duration))
-             transform (fn [_] (/ (mod (.-millisecondsSinceEpoch dc/DateTime.now) dur-ms) dur-ms))]
+             transform (fn [_] (/ (mod (.-millisecondsSinceEpoch (dc/DateTime.now)) dur-ms) dur-ms))]
          {:interpolate (if (< 0 dur-ms)
                          (fn [t] (interpolate (transform t)))
                          interpolate)

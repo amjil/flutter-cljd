@@ -211,7 +211,7 @@
        identity
        (fn [t]
          (apply transform (map #(.transform % t) curves))))
-     #(str "(transform transform-fn " (str/join " " (map #(.toString %) curves)) ")"))))
+     (fn [] (str "(transform transform-fn " (str/join " " (map #(.toString %) curves)) ")")))))
 
 (defn average
   "Creates a curve that averages the output of multiple curves.\\
@@ -350,7 +350,7 @@
                curve (nth curves i)
                t (if (= T 1.0) 1.0 (mod mult 1.0))]
            (.transform curve t))))
-     #(str "(concat " (str/join " " (map #(.toString %) curves)) ")"))))
+     (fn [] (str "(concat " (str/join " " (map #(.toString %) curves)) ")")))))
 
 (defn split
   "A curve that progresses according to beginCurve until split, then according to endCurve.
@@ -422,7 +422,7 @@
   (t/AnyCurve
    (let [ms (.-inMilliseconds (t/duration duration))]
      (fn [_]
-       (/ (mod (.-millisecondsSinceEpoch dc/DateTime.now) ms) ms)))
+       (/ (mod (.-millisecondsSinceEpoch (dc/DateTime.now)) ms) ms)))
    #(str "(synced " duration " " curve ")")))
 
 (def linear a/Curves.linear)
