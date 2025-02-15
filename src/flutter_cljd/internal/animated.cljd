@@ -4,8 +4,7 @@
    [flutter-cljd.types :as t]
    [flutter-cljd.ListenableAtom :as la]
    ["package:flutter/foundation.dart" :as fd]
-   ["package:flutter/widgets.dart" :as w]
-   ["package:flutter/animation.dart" :as a]))
+   ["package:flutter/widgets.dart" :as w]))
 
 ;; MARK: Animated
 
@@ -14,10 +13,8 @@
   (let [has-child? (instance? w/Widget (last values))
         [animation builder args]
         (cond
-          (fn? builder) 
-          (if (and (= 1 (count values)) (instance? fd/Listenable (last values)))
-            [(first values) builder (drop-last values)]
-            [{} builder values])
+          (fn? builder)
+          [{} builder values]
           (fn? (first values)) [builder (first values) (drop 1 values)]
           (and (fn? (second values))
                (or (and has-child? (= (count values) 3))
@@ -27,7 +24,6 @@
         [values child] (if has-child?
                          [(vec (drop-last args)) (last args)]
                          [(vec args) nil])
-        getter #(.-value %)
         animation (if (instance? c/Atom animation) (la/AtomListenable animation) animation)]
     (cond
       (map? animation)
@@ -48,7 +44,7 @@
        .animation animation
        .child child
        .builder (fn [_ child]
-                  (let [value (getter animation)]
+                  (let [value (.-value animation)]
                     (apply builder (if has-child? (conj values value child) (conj values value))))))
 
       :else

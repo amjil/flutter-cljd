@@ -11,6 +11,8 @@
    [flutter-cljd.utils :as ut]
    [cljd.string :as str]))
 
+(declare motion)
+
 (extend-protocol c/IFn
   a/Curve
   (-invoke [this t]
@@ -18,7 +20,11 @@
 
   a/Animatable
   (-invoke [this t]
-    (.transform this t)))
+    (.transform this t))
+
+  a/AnimationController
+  (-invoke [this animatable]
+    (.drive this animatable)))
 
 (deftype TransformedAnimation
          [^a/Animation parent transform]
@@ -134,6 +140,26 @@
   (.-cachedValue! controller value)
   (.-cachedValueProgress! controller (-> controller .-parent .-value)))
 
+(defn- set-side-effects [side-effects object animation]
+  (if side-effects
+    (when (nil? (.-effectsListener object))
+      (let [listener
+            (fn []
+              (let [progress (-> animation .-value)
+                    prevProgress (.-prevProgress object)
+                    start (min progress (or prevProgress 0.0))
+                    end (max progress (or prevProgress 0.0))]
+                (when (not= progress prevProgress)
+                  (.-prevProgress! object progress)
+                  (doseq [effect (side-effects [start end])]
+                    (effect)))))]
+        (.-prevProgress! object (-> animation .-value))
+        (.-effectsListener! object listener)
+        (.addListener animation listener)))
+    (if (.-effectsListener object)
+      (.removeListener animation (.-effectsListener object))
+      (.-effectsListener! object nil))))
+
 (defn- compute-motion [^MotionController controller]
   (when (or (.-needCompute controller) (nil? (.-interpolate controller)))
     (.-needCompute! controller false)
@@ -143,30 +169,13 @@
           {:keys [duration]} (t/animation-options {:duration duration})]
       (.-interpolate! controller interpolate)
       (.-duration! (.-parent controller) duration)
-      (if side-effects
-        (when (nil? (.-effectsListener controller))
-          (let [listener
-                (fn []
-                  (let [progress (-> controller .-parent .-value)
-                        prevProgress (.-prevProgress controller)
-                        start (min progress (or prevProgress 0.0))
-                        end (max progress (or prevProgress 0.0))]
-                    (when (not= progress prevProgress)
-                      (.-prevProgress! controller progress)
-                      (doseq [effect (side-effects [start end])]
-                        (effect)))))]
-            (.-prevProgress! controller (-> controller .-parent .-value))
-            (.-effectsListener! controller listener)
-            (.addListener (.-parent controller) listener)))
-        (if (.-effectsListener controller)
-          (.removeListener (.-parent controller) (.-effectsListener controller))
-          (.-effectsListener! controller nil))))))
+      (set-side-effects side-effects controller (.-parent controller)))))
 
 (deftype ^:private MotionAnimationController
          [^:mutable ^MotionController? motionController
           ^:mutable ^double val
           ^:mutable ^a/Duration? dur
-          ^String? dl
+          ^dc/String? dl
           ^a/TickerProvider vs
           ^a/AnimationBehavior ab]
   :extends (a/AnimationController
@@ -371,6 +380,10 @@
      {:options {} :items []}
      (reverse args))))
 
+(declare Motion)
+(defn motion [prepare to-string to-hash]
+  (Motion prepare to-string to-hash nil nil nil))
+
 (defn values
   "Animate values. Same as (to) but doesn't accept animation options.\\
    Use it when you want to be sure that provided values will not be interpreted as animation options.\\
@@ -380,7 +393,7 @@
    (values ut/int-lerp 5 10)
    ```"
   [lerp & values]
-  {:prepare-motion
+  (motion
    (fn [from exp-dur]
      {:interpolate
       (fn [initial T]
@@ -398,31 +411,17 @@
       :duration (if (< (+ (if (nil? from) 0 1) (count values)) 2)
                   (t/duration 0)
                   exp-dur)})
-   :to-string
    (fn [] (str "(values lerp " (str/join " " values) ")"))
-   :to-hash
-   (fn [] (hash (cons :values values)))})
+   (fn [] (hash (cons :values values)))))
 
-(defn into-motion
-  "Converts a value to a motion.\\
-   A motion is a map with the following keys:
-    - `:prepare-motion` - A function that takes the current value and the duration and returns a map with the following keys:
-        - `:interpolate` - A function that takes initial value, progress and returns the value and the cache.
-        - `:duration` - Duration of the motion.
-        - `:side-effects` - A function that takes a range and returns a list of side effects.
-    - `:to-string` - A function that returns a string representation of the motion.
-    - `:to-hash` - A function that returns a hash of the motion.
-   
-   `into-motion` takes a value and returns an motion that animates to the provided value.\\
-   If the value is an instance of `Animatable`, it's used as the animation.\\
-   If the value is nil, returns nil.
-   If the value is a map with the keys `:prepare-motion`, `:to-hash` and `:to-string`, returns the value as is.
-   Otherwise, returns the value wrapped in a `to` motion."
+(defn- motion-to-map
   ([motion]
    (cond
-     (and (map? motion) (superset? #{:prepare-motion :to-string :to-hash} (set (keys motion))))
-     motion
-
+     (instance? Motion motion)
+     {:prepare-motion (.-prepare motion)
+      :to-string (.-toStr motion)
+      :to-hash (.-toHash motion)} 
+     
      (instance? w/Animatable motion)
      {:prepare-motion (fn [_ duration]
                         {:interpolate (fn [_ t] (.transform motion t))
@@ -434,16 +433,55 @@
      nil
 
      :else
-     (values ut/lerp motion)))
-  ([motion to-string to-hash]
-   (if (fn? motion)
-     {:prepare-motion motion
-      :to-string to-string
-      :to-hash to-hash}
-     (when motion
-       (assoc (into-motion motion)
-              :to-string to-string
-              :to-hash to-hash)))))
+     (throw (ex-info "Invalid motion" {:motion motion})))))
+
+(deftype ^:private MotionAnimationWrapper
+         [^:mutable effectsListener
+          ^:mutable prevProgress
+          interpolate
+          ^#/(a/Animation double) parent]
+  :extends a/Animation
+  (value [^MotionAnimationWrapper this] (interpolate nil (-> this .-parent .-value)))
+  ^:mixin a/AnimationWithParentMixin)
+
+(defn- compute-motion-if-needed [^Motion this]
+  (when (nil? (.-interpolate this))
+    (let [{:keys [interpolate side-effects duration]} ((.-prepare this) nil nil)]
+      (.-interpolate! this interpolate)
+      (.-effects! this side-effects)
+      (.-dur! this (some-> duration t/duration)))))
+
+(deftype Motion [prepare
+                 toStr
+                 toHash
+                 ^a/Duration? ^:mutable dur
+                 ^:mutable effects
+                 ^:mutable interpolate]
+  :extends (a/Animatable)
+  Motion
+  (^a/Duration? ^:getter duration [^Motion this]
+    (compute-motion-if-needed this)
+    (.-dur this))
+  a/Animatable
+  (^a/Animation animate [^Motion this ^#/(a/Animation double) parent]
+    (if (instance? a/AnimationController parent)
+      (let [duration (.-duration parent)
+            {:keys [interpolate side-effects]} ((.-prepare this) nil duration)
+            result (MotionAnimationWrapper nil nil interpolate parent)]
+        (set-side-effects side-effects result parent)
+        result)
+      (do
+        (compute-motion-if-needed this)
+        (let [result (MotionAnimationWrapper nil nil (.-interpolate this) parent)]
+          (set-side-effects (.-effects this) result parent)
+          result))))
+  (transform [^Motion this ^double t]
+    (compute-motion-if-needed this)
+    ((.-interpolate this) nil t))
+  (^int ^:getter hashCode [^Motion this] ((.-toHash this)))
+  (^dc/String toString [^Motion this] ((.-toStr this)))
+  (^bool == [^Motion this ^dc/Object other]
+    (= (.-hashCode this) (.-hashCode other))))
 
 (defn set-motion!
   "Sets the motion of the motion controller.
@@ -459,9 +497,9 @@
      (.-value controller)) ;; Returns interpolated value between 200-300
    ```"
   [^MotionController controller motion]
-  (let [motion (into-motion motion)
-        hash ((:to-hash motion))]
-    (.-motion! controller motion)
+  (let [motion-map (motion-to-map motion)
+        hash ((:to-hash motion-map))]
+    (.-motion! controller motion-map)
     (.-needCompute! controller (not= hash (.-motionHash controller)))
     (.-motionHash! controller hash)
     (when (.-isAnimating controller)
@@ -599,7 +637,7 @@
                                                           vsync
                                                           (t/animation-behavior animation-behavior))
          ^MotionController motion-controller (MotionController
-                                              motion
+                                              {}
                                               (constantly nil)
                                               nil
                                               0.0
@@ -619,13 +657,13 @@
    (instant)
    ```"
   ([]
-   (into-motion
+   (motion
     (fn [_ _] {:duration (t/duration 0)
                :interpolate (fn [value _] value)})
     (constantly "(instant)")
     (constantly (hash :instant))))
   ([value]
-   (into-motion
+   (motion
     (fn [_ _] (const-anim value 0))
     (fn [] (str "(instant " value ")"))
     #(hash [:instant value]))))
@@ -646,9 +684,9 @@
     (/ (- t start) rel-dur)))
 
 (defn- -sequential [motions]
-  (let [motions (->> motions flat-motions (filter some?) (map into-motion))
+  (let [motions (->> motions flat-motions (filter some?) (map motion-to-map))
         clamp #(min 1.0 (max 0.0 %))]
-    (into-motion
+    (motion
      (fn [value exp-dur]
        (let [{:keys [sum-abs sum-rel cnt-any items intr-dur effects-cnt]}
              (reduce
@@ -732,8 +770,8 @@
      (fn [] (hash (cons :sequential (map #((:to-hash %)) motions)))))))
 
 (defn- -parallel [motions]
-  (let [motions (map (fn [[k v]] [k (into-motion v)]) motions)]
-    (into-motion
+  (let [motions (map (fn [[k v]] [k (motion-to-map v)]) motions)]
+    (motion
      (fn [value exp-dur]
        (let [value (or value {})
              exp-dur-in-mcs (in-mcs exp-dur)
@@ -805,7 +843,7 @@
    
    If you need to call a function without the value, you can use `action!`"
   [id action]
-  (into-motion
+  (motion
    (fn [value _]
      {:duration 0
       :interpolate (constantly value)
@@ -825,8 +863,8 @@
    
    If you need to call a function with the value, you can use `action-with!`"
   [id action]
-  (into-motion
-   (:prepare-motion (action-with! id (fn [_] (action))))
+  (motion
+   (.-prepare (action-with! id (fn [_] (action))))
    (constantly (str "(action! " id ")"))
    (constantly (hash [:action! id]))))
 
@@ -838,8 +876,8 @@
    (duration 100 (to 10.0))
    ```"
   [duration motion]
-  (let [motion (into-motion motion)]
-    (into-motion
+  (let [motion (motion-to-map motion)]
+    (flutter-cljd.animations/motion
      (fn [value _]
        (let [{:keys [interpolate duration relative-duration side-effects]} ((:prepare-motion motion) value duration)
              duration-mcs (in-mcs duration)
@@ -868,9 +906,9 @@
    (curve :ease-in-out (to 10.0))
    ```"
   [curve motion]
-  (let [motion (into-motion motion)
+  (let [motion (motion-to-map motion)
         curve (t/curve curve)]
-    (into-motion
+    (flutter-cljd.animations/motion
      (fn [value exp-dur]
        (let [{:keys [interpolate duration relative-duration side-effects]} ((:prepare-motion motion) value exp-dur)]
          {:interpolate (fn [value t] (interpolate value (.transform curve (double t))))
@@ -890,8 +928,8 @@
    (relative-duration 0.5 (to 10.0))
    ```"
   [ratio motion]
-  (let [motion (into-motion motion)]
-    (into-motion
+  (let [motion (motion-to-map motion)]
+    (flutter-cljd.animations/motion
      (fn [value exp-dur]
        (let [{:keys [interpolate duration relative-duration side-effects]} ((:prepare-motion motion) value exp-dur)]
          {:interpolate interpolate
@@ -909,8 +947,8 @@
    (relative-delay 0.5 (to 10.0))
    ```"
   [delay motion]
-  (let [motion (into-motion motion)]
-    (into-motion
+  (let [motion (motion-to-map motion)]
+    (flutter-cljd.animations/motion
      (fn [value exp-dur]
        (let [exp-dur-mcs (in-mcs exp-dur)
              delay-mcs (when exp-dur-mcs (* delay exp-dur-mcs))
@@ -935,8 +973,8 @@
    (delay 100 (to 10.0))
    ```"
   [delay motion]
-  (let [motion (into-motion motion)]
-    (into-motion
+  (let [motion (motion-to-map motion)]
+    (flutter-cljd.animations/motion
      (fn [value exp-dur]
        (let [exp-dur-mcs (in-mcs exp-dur)
              delay-mcs (in-mcs delay)
@@ -985,15 +1023,12 @@
      (with options motion)))
   ([options motion]
    (let [{:keys [relative-delay delay relative-duration duration curve]} (motion-options options)]
-     (assoc
-      (cond->> (into-motion motion)
-        curve (flutter-cljd.animations/curve curve)
-        duration (flutter-cljd.animations/duration duration)
-        relative-duration (flutter-cljd.animations/relative-duration relative-duration)
-        delay (flutter-cljd.animations/delay delay)
-        relative-delay (flutter-cljd.animations/relative-delay relative-delay))
-      :to-string
-      (fn [] (str "(with " options " " ((:to-string motion)) ")"))))))
+     (cond->> motion
+       curve (flutter-cljd.animations/curve curve)
+       duration (flutter-cljd.animations/duration duration)
+       relative-duration (flutter-cljd.animations/relative-duration relative-duration)
+       delay (flutter-cljd.animations/delay delay)
+       relative-delay (flutter-cljd.animations/relative-delay relative-delay)))))
 
 (defn const
   "Creates a motion that steps through constant values.\\
@@ -1009,8 +1044,7 @@
   [value & values]
   (let [values (cons value values)
         {:keys [options items]} (separate-last-options values)
-        motion {:prepare-motion
-                (fn [value exp-dur]
+        prepare (fn [value exp-dur]
                   (let [cnt (count items)
                         last-i (- cnt 1)]
                     (case cnt
@@ -1019,15 +1053,12 @@
                       {:duration exp-dur
                        :interpolate (fn [_ T]
                                       (let [i (min last-i (int (* T cnt)))]
-                                        (nth items i)))})))}]
-    (assoc
-     (if (empty? options)
-       motion
-       (with options motion))
-     :to-string
-     (fn [] (str "(const " (str/join " " values) ")"))
-     :to-hash
-     (fn [] (hash (cons :const values))))))
+                                        (nth items i)))})))
+        result  (motion
+                 prepare
+                 (fn [] (str "(const " (str/join " " items) ")"))
+                 (fn [] (hash (cons :const items))))]
+    (if (empty? options) result (with options result))))
 
 (defn to
   "Animate to a value.\\
@@ -1045,13 +1076,11 @@
         {:keys [options items]} (separate-last-options values)
         lerp (:lerp options #(ut/lerp %1 %2))
         items (cons lerp items)]
-    (assoc
+    (motion
      (if (empty? options)
-       (apply flutter-cljd.animations/values items)
-       (with options (apply flutter-cljd.animations/values items)))
-     :to-string
+       (.-prepare (apply flutter-cljd.animations/values items))
+       (.-prepare (with options (apply flutter-cljd.animations/values items))))
      (fn [] (str "(to " (str/join " " values) ")"))
-     :to-hash
      (fn [] (hash (cons :to values))))))
 
 (defn from
@@ -1062,8 +1091,8 @@
    (from 10.0 (to 20.0))
    ```"
   [from motion]
-  (let [motion (into-motion motion)]
-    (into-motion
+  (let [motion (motion-to-map motion)]
+    (flutter-cljd.animations/motion
      (fn [_ exp-dur]
        (let [{:keys [duration interpolate side-effects]} ((:prepare-motion motion) from exp-dur)]
          {:duration duration
@@ -1081,10 +1110,7 @@
    (from-to 0 100 :dur 1000)
    ```"
   [initial & values]
-  (assoc
-   (from initial (apply to values))
-   :to-string (fn [] (str "(from-to " initial " " (str/join " " values) ")"))
-   :to-hash (fn [] (hash [:from-to initial values]))))
+  (from initial (apply to values)))
 
 (defn wait
   "Do nothing for a given duration. Duration is optional.
@@ -1104,7 +1130,7 @@
    ```"
   ([& {:keys [duration dur relative-duration rel-dur delay relative-delay rel-del] :as options}]
    (let [result
-         (into-motion
+         (motion
           (fn [_ exp-dur] {:duration exp-dur
                            :interpolate (fn [value _] value)})
           (constantly "(wait)")
@@ -1112,7 +1138,7 @@
      (if (empty? options) result (with options result))))
   ([duration & {:keys [relative-duration rel-dur delay relative-delay rel-del] :as options}]
    (let [result
-         (into-motion
+         (motion
           (fn [_ _] {:duration (t/duration duration)
                      :interpolate (fn [value _] value)})
           (fn [] (str "(wait " duration ")"))
@@ -1141,15 +1167,6 @@
       w/Colors.red)
    ```
    
-   `seq` can be used to define initial value of the motion:
-   ```clojure
-   (seq
-     {:color w/Colors.blue
-      :dx 0.0}
-     (par
-       :color (with {:duration 50} w/Colors.blue)
-       :dx (with {:duration 100} 10.0)))
-   ```
    If you need to animate evenly spaced values, you can use `to` instead."
   [& motions]
   (let [{:keys [options items]} (separate-options motions)]
@@ -1196,22 +1213,18 @@
    (repeat 3 (to 0 100))  ;; Goes 0 -> 100 three times
    ```"
   ([cnt motion]
-   (let [motion (into-motion motion)]
-     (into-motion
+   (let [motion (motion-to-map motion)]
+     (flutter-cljd.animations/motion
       (cond
-        (<= cnt 0) (instant)
-        (= cnt 1) motion
+        (<= cnt 0) (.-prepare (instant))
+        (= cnt 1) (:prepare-motion motion)
         :else
         (fn [value exp-dur]
           (let [relative-duration (/ cnt)
                 loop-dur (when exp-dur {:microseconds (* (in-mcs exp-dur) relative-duration)})
-                prepare-motion (:prepare-motion motion)
-                {:keys [duration interpolate side-effects]} (prepare-motion value loop-dur)
+                {:keys [duration interpolate side-effects]} ((:prepare-motion motion) value loop-dur)
                 transform #(if (= % 1.0) 1.0 (mod (* % cnt) 1.0))]
-            {:interpolate
-             (fn [value T]
-               (let [t (transform T)]
-                 (interpolate value t)))
+            {:interpolate #(interpolate %1 (transform %2))
              :duration (some-> (or (when duration {:microseconds (* (in-mcs duration) cnt)}) exp-dur) t/duration)
              :side-effects (when side-effects
                              (fn [[start end]]
@@ -1235,8 +1248,8 @@
    (autoreverse (to 0 100))  ;; Goes 0 -> 100 -> 0
    ```"
   ([motion]
-   (let [motion (into-motion motion)]
-     (into-motion
+   (let [motion (motion-to-map motion)]
+     (flutter-cljd.animations/motion
       (fn [value exp-dur]
         (let [loop-dur (when exp-dur {:microseconds (/ (in-mcs exp-dur) 2)})
               {:keys [duration interpolate side-effects]} ((:prepare-motion motion) value loop-dur)
@@ -1275,19 +1288,20 @@
         (on-appear #(.repeat rotation-cntr))))
   ```"
   [motion]
-  (let [motion (into-motion motion)]
-    (into-motion
+  (let [motion (motion-to-map motion)]
+    (flutter-cljd.animations/motion
      (fn [value exp-dur]
        (let [{:keys [duration interpolate side-effects]} ((:prepare-motion motion) value exp-dur)
-             dur-ms (.-inMilliseconds (t/duration duration))
+             dur-ms (when duration (.-inMilliseconds (t/duration duration)))
              transform (fn [_] (/ (mod (.-millisecondsSinceEpoch (dc/DateTime.now)) dur-ms) dur-ms))]
-         {:interpolate (if (< 0 dur-ms)
+         {:interpolate (if (and dur-ms (< 0 dur-ms))
                          (fn [value t] (interpolate value (transform t)))
                          interpolate)
           :duration duration
           :side-effects (when side-effects
-                          (fn [range]
-                            (side-effects (map transform range))))}))
+                          (if dur-ms
+                            (fn [range] (side-effects (map transform range)))
+                            side-effects))}))
      (fn [] (str "(synced " ((:to-string motion)) ")"))
      (fn [] (hash [:synced ((:to-hash motion))])))))
 
@@ -1321,8 +1335,8 @@
    - `repeat` - Repeats a motion a specific number of times
    - `synced` - Syncs a motion with the current time"
   [motion]
-  (let [motion (into-motion motion)]
-    (into-motion
+  (let [motion (motion-to-map motion)]
+    (flutter-cljd.animations/motion
      (fn [value exp-dur]
        (let [{:keys [duration interpolate side-effects]} ((:prepare-motion motion) value exp-dur)
              dur-mcs (in-mcs duration)
