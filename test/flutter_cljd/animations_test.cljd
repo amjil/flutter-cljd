@@ -174,11 +174,11 @@
     (let [anim ((.-prepare (a/with :duration 100 percents)) nil nil)]
       (is (= (.-inMilliseconds (:duration anim)) 100))
       (is (= (.toString (a/with {:duration 100} (a/to 0 100)))
-             "(with {:duration 100} (to 0 100))"))
+             "(duration 100 (to 0 100))"))
       (is (= (.toString (a/with :duration 100 :curve :ease-in (a/to 0 100)))
-             "(with {:duration 100, :curve :ease-in} (to 0 100))"))
+             "(duration 100 (curve :ease-in (to 0 100)))"))
       (is (= (.toString (a/with :relative-delay 0.5 :relative-duration 0.5 (a/to 0 100)))
-             "(with {:relative-duration 0.5, :relative-delay 0.5} (to 0 100))"))))
+             "(relative-delay 0.5 (relative-duration 0.5 (to 0 100)))"))))
 
   (testing "Start time option"
     (let [anim (unwrap (a/with {:delay 500 :duration 1000} percents))]

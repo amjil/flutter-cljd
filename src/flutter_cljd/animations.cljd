@@ -907,17 +907,18 @@
    ```"
   [curve motion]
   (let [motion (motion-to-map motion)
-        curve (t/curve curve)]
+        ]
     (flutter-cljd.animations/motion
      (fn [value exp-dur]
-       (let [{:keys [interpolate duration relative-duration side-effects]} ((:prepare-motion motion) value exp-dur)]
+       (let [{:keys [interpolate duration relative-duration side-effects]} ((:prepare-motion motion) value exp-dur)
+             curve (t/curve curve)]
          {:interpolate (fn [value t] (interpolate value (.transform curve (double t))))
           :relative-duration relative-duration
           :duration duration
           :side-effects (when side-effects
                           (fn [range]
                             (side-effects (map #(.transform curve (double %)) range))))}))
-     (fn [] (str "(curve " (.toString curve) " " ((:to-string motion)) ")"))
+     (fn [] (str "(curve " curve " " ((:to-string motion)) ")"))
      (fn [] (hash [:curve curve ((:to-hash motion))])))))
 
 (defn relative-duration
