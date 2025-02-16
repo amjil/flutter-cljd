@@ -1,4 +1,4 @@
-# Flutter ClojureDart Animations
+# flutter-cljd/animations
 
 A powerful animation system for Flutter that combines declarative motion descriptions with flexible widget animations.
 
@@ -11,17 +11,19 @@ The animation system consists of two main parts:
 ## Motions
 
 Motions describe how values change over time. They are used by motion controllers to drive animations.\
-`Motion` is an `Animatable` subclass, the main difference is that `Motion` can have an intrinsic duration.
+`Motion` is an `Animatable` subclass, the main difference is that `Motion` can have an intrinsic duration and `Motion` is designed to be composed with other `Motion` instances.
 
-### Motion Controllers
+### Motion Controller
 
-Motion controllers manage the lifecycle and playback of animations:
+Motion controllers manage the lifecycle and playback of animations. Unlike `AnimationController`, motion controllers provide an animated value rather just a progress value.
 
 ```clojure
 (widget
-  :managed [controller (motion-controller vsync (to 0 100))]
+  :managed [animation (motion-controller 
+                         vsync 
+                         (duration 200 (to 0 100)))]
   (->> (text "Animated")
-       (animated controller opacity)))
+       (animated animation opacity)))
 ```
 
 ### Simple Animations
@@ -100,6 +102,9 @@ Add natural motion with easing curves:
 (to 100 :curve :ease-in-out)
 (with {:curve :ease-out} (to 0 100))
 ```
+Curve may be a `Curve` instance or a keyword or a function.
+
+`flutter-cljd/curves` namespace provides a set of predefined curves.
 
 ### Repetition
 
