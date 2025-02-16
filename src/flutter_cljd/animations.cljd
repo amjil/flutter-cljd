@@ -1344,3 +1344,20 @@
                           (fn [range]
                             (side-effects (map transform range))))}))
      (fn [] (str "(tile " ((:to-string motion)) ")")))))
+
+(defn map-motion
+  "Creates a motion that maps the value with a function.\\
+   Takes a function and a motion and returns a new motion that applies the function to the value.\\
+   ```clojure
+   (map-motion inc (to 0 10))  ;; Goes 1 -> 11
+   (map-motion int (to 0 10))  ;; Goes 0 -> 10 directly
+   ```"
+  [f motion]
+  (let [motion (motion-to-map motion)]
+    (flutter-cljd.animations/motion
+     (fn [value exp-dur]
+       (let [{:keys [duration interpolate side-effects]} ((:prepare-motion motion) value exp-dur)]
+         {:interpolate (fn [value T] (interpolate (f value) T))
+          :duration duration
+          :side-effects side-effects}))
+     (fn [] (str "(map-motion " ((:to-string motion)) ")")))))
