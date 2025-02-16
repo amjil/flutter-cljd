@@ -8,136 +8,10 @@ The animation system consists of two main parts:
 1. **motions** - Declarative descriptions of how values change over time
 2. **animated** - Components that use motions to animate Flutter widgets
 
-## `animated` Widget
-
-The `animated` widget can be used in two ways to create animations in Flutter:
-
-### 1. Implicit Animations
-
-Implicit animations automatically animate between property changes using a tween animation. This is the simpler way to create animations:
-
-```clojure
-;; Basic implicit animation
-(->> (text "Hello")
-     (animated {:opacity 0.5  ; Target value
-                :duration 300 ; Duration in ms
-                :curve :ease-out} ; Easing curve
-               opacity)) ; Transform function
-
-;; Multiple properties
-(->> (text "Moving & Fading")
-     (animated {:opacity 0.0
-                :offset 100.0
-                :duration 500}
-               (fn [opacity offset]
-                 (-> (opacity opacity)
-                     (offset 0 offset)))))
-
-;; With animation options
-(->> widget
-     (animated {:value 1.0              ; Target value
-                :duration 1000          ; Duration in milliseconds
-                :curve :ease-out        ; Easing curve
-                :delay 200             ; Start delay
-                :on-end #(println "Done!")} ; Completion callback
-               transform-fn))
-```
-
-### 2. Explicit Animations
-
-Explicit animations give you direct control over the animation using an Animation object:
-
-```clojure
-;; Using a motion controller
-(widget
-  :managed [controller (motion-controller vsync (to 0 100))]
-  (->> (text "Controlled")
-       (animated controller offset)))
-
-;; Using an animation value
-(widget
-  :managed [value (atom 0.0)]
-  (->> (text "Reactive")
-       (animated value offset)))
-```
-
-### Efficient Child Widget Usage
-
-Both implicit and explicit animations can accept a child widget, making them more efficient when animating large widget trees:
-
-```clojure
-;; Without child - entire widget tree is rebuilt on each frame
-(animated {:opacity 0.5}
-         (fn [opacity]
-           (opacity
-             (-> (container)
-                 (padding 20)
-                 (child (column
-                         (text "Title")
-                         (text "Subtitle")
-                         (image "large-image.png")))))))
-
-;; With child - only opacity modifier is rebuilt
-(->> (-> (container)
-         (padding 20)
-         (child (column
-                 (text "Title")
-                 (text "Subtitle")
-                 (image "large-image.png"))))
-     (animated {:opacity 0.5} opacity))
-```
-
-### Animation Sources
-
-The `animated` widget accepts different types of animation sources:
-
-1. **Maps with Options** - For implicit animations:
-```clojure
-{:value target-value
- :duration duration-in-ms
- :curve easing-curve
- :delay start-delay
- :on-end callback-fn}
-```
-
-2. **Motion Controllers** - For explicit animations using motions:
-```clojure
-(motion-controller vsync (to 0 100))
-```
-
-3. **Listenable Values** - For reactive animations:
-```clojure
-(atom initial-value)
-```
-
-### Transform Functions
-
-Transform functions define how animated values affect the widget:
-
-```clojure
-;; Single property
-(->> widget
-     (animated controller opacity))
-
-;; Multiple properties
-(->> widget
-     (animated controller 
-              (fn [scale rotation]
-                (-> (scale scale)
-                    (rotate rotation)))))
-
-;; With child widget
-(->> (container)
-     (animated controller
-              (fn [color child]
-                (-> child
-                    (background-color color)))
-              (text "Colored text")))
-```
-
 ## Motions
 
-Motions describe how values change over time. They are used by motion controllers to drive animations.
+Motions describe how values change over time. They are used by motion controllers to drive animations.\
+`Motion` is an `Animatable` subclass, the main difference is that `Motion` can have an intrinsic duration.
 
 ### Motion Controllers
 
@@ -155,11 +29,13 @@ Motion controllers manage the lifecycle and playback of animations:
 The library provides several basic animation primitives:
 
 #### to
-Animate to one or more values:
+Animate the current value to a target:
 ```clojure
 (to 100)  ; Animate to 100
 (to 0 50 100)  ; Animate through multiple values
 (to 0 100 :duration 1000)  ; With duration in milliseconds
+(to {:offset 100 :opacity 0.5} 
+    {:offset 0 :opacity 1.0})  ; Complex values can be animated as well
 ```
 
 #### from-to 
@@ -200,26 +76,22 @@ Run multiple animations simultaneously:
 ### Timing Control
 
 #### Duration
-Set how long an animation runs:
+Motion supports duration definition in absolute or relative terms.
 ```clojure
 (to 100 :duration 1000)  ; 1 second
 (with {:duration 2000} (to 0 100))  ; 2 seconds
+(seq {:duration 1000}  ; Total 1 second
+  (to 50 :relative-duration 0.3)   ; Takes 300ms
+  (to 100 :relative-duration 0.7)) ; Takes 700ms
 ```
-
-#### Delay
 Add a delay before animation starts:
 ```clojure
 (delay 500 (to 100))  ; Wait 500ms then animate
 (with {:delay 1000} (to 100))  ; Alternative syntax
 ```
 
-#### Relative Timing
-Time animations relative to parent duration:
-```clojure
-(seq {:duration 1000}  ; Total 1 second
-  (to 50 :relative-duration 0.3)   ; Takes 300ms
-  (to 100 :relative-duration 0.7)) ; Takes 700ms
-```
+Note when motions are drived by an external `Animation` absolute duration setted in the motion can be ignored, only `motion-controller` respect the duration.\
+So prefer relative duration when the animation is unknown.
 
 ### Easing & Curves
 
@@ -228,16 +100,6 @@ Add natural motion with easing curves:
 (to 100 :curve :ease-in-out)
 (with {:curve :ease-out} (to 0 100))
 ```
-
-Available curves include:
-- :linear
-- :ease-in
-- :ease-out
-- :ease-in-out
-- :bounce-in
-- :bounce-out
-- :elastic-in
-- :elastic-out
 
 ### Repetition
 
@@ -282,7 +144,7 @@ Trigger actions during animation:
 ### Synchronization
 
 #### synced
-Sync animation with system time:
+Sync animation with system time to ensure all widgets instances across the app are in sync:
 ```clojure
 (widget
   :managed [controller (motion-controller 
@@ -293,12 +155,92 @@ Sync animation with system time:
        (on-appear #(.repeat controller))))
 ```
 
+## `animated` Widget
+
+The `animated` widget can be used in two ways to create animations in Flutter:
+
+### 1. Implicit Animations
+
+Implicit animations automatically animate between property changes using a tween animation. This is the simpler way to create animations:
+
+```clojure
+;; Basic implicit animation
+(->> (text "Hello")
+     (animated opacity opacity-value))
+
+;; With options
+(->> (text "Hello")
+     (animated {:duration 300 :curve :ease-in-out} opacity opacity-value))
+
+;; Multiple arguments
+(->> (text "Sizing")
+     (animated sized width height)) ;; animate when width or height changes.
+
+(->> (text "Sizing")
+     (animated (fn [{:keys [width height]} child]
+                   (sized width height child))
+               size-map)) ; target value animate to
+```
+
+### 2. Explicit Animations
+
+Explicit animations give you direct control over the animation using an Animation object:
+
+```clojure
+(widget
+  :vsync vsync
+  :managed [controller (motion-controller vsync (from-to 0 100))]
+  (->> (text "Controlled")
+       (animated controller offset)))
+
+(widget
+  :vsync vsync
+  :managed [controller (motion-controller 
+                         vsync
+                         (from-to {:offset 0 :opacity 0}
+                                  {:offset 100 :opacity 1}))]
+  (->> (text "Reactive")
+       (animated (:offset controller) offset) ;; Animation object can be transformed with a key or `map-anim` function
+       (animated (map-anim #(get :opacity %) controller) opacity)))
+       
+(widget
+  :vsync vsync
+  :managed [controller (motion-controller vsync (from-to 0 100))]
+  (->> (text "Controlled")
+       (animated controller offset :dx 50 :dy))) ;; controller value is appended after all arguments
+```
+
+### Efficient Child Widget Usage
+
+Both implicit and explicit animations can accept a child widget, making them more efficient when animating large widget trees:
+
+```clojure
+;; Without child - entire widget tree is rebuilt on each frame, that's okay for small widgets but it's inefficient for large widget trees
+(animated 
+  {:duration 200} 
+   opacity-value
+  (fn [value]
+      (->>
+        (text "Title")
+        (padding 20)
+        (opacity value)))))
+
+;; With child - only opacity modifier is rebuilt
+(->>
+    (column
+      (text "Title")
+      (text "Subtitle")
+      (image "large-image.png"))
+    (padding 20)
+    (animated {:duration 200} opacity opacity-value))
+```
+
 ## Common Patterns
 
 ### Fade In/Out
 ```clojure
 (seq
-  {:opacity 0.0 :scale 0.8}  ; Initial state
+  (to {:opacity 0.0 :scale 0.8})  ; Initial state
   (par {:duration 300}
     :opacity (to 1.0)
     :scale (to 1.0 :curve :ease-out)))
@@ -382,8 +324,6 @@ Sync animation with system time:
 
 7. Consider performance with many simultaneous animations
 
-## Common Issues
-
 ### Animation Not Running
 - Check that controller is created with proper vsync
 - Verify controller is started (.forward, .repeat, etc.)
@@ -398,11 +338,3 @@ Sync animation with system time:
 - Always use `:managed` for controllers
 - Dispose controllers when no longer needed
 - Stop animations when widget is disposed
-
-## Contributing
-
-Contributions are welcome! Please check the GitHub repository for guidelines.
-
-## License
-
-This library is available under the MIT License.
