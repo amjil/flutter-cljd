@@ -261,7 +261,7 @@
             (set-cached-value this result))
           result))))
   dc/Object
-  (toString [^MotionController this] 
+  (toString [^MotionController this]
     (-> this .-motionString))
   c/IEquiv
   (-equiv [o other] (identical? o other))
@@ -389,38 +389,9 @@
      (reverse args))))
 
 (declare Motion)
-(defn motion 
+(defn motion
   [prepare to-string]
   (Motion prepare to-string nil nil nil))
-
-(defn values
-  "Animate values. Same as (to) but doesn't accept animation options.\\
-   Use it when you want to be sure that provided values will not be interpreted as animation options.\\
-   `values` takes values and returns a motion that animates from the current value to the provided values.\\
-   If the current value is nil, the first value is used as the initial value.
-   ```clojure
-   (values ut/int-lerp 5 10)
-   ```"
-  [lerp & values]
-  (motion
-   (fn [from exp-dur]
-     {:interpolate
-      (fn [initial T]
-        (let [values (if (some? initial) (cons initial values) values)
-              int-cnt (dec (count values))]
-          (condp = T
-            0.0 (first values)
-            1.0 (last values)
-            (let [k (* T int-cnt)
-                  i (int k)
-                  t (- k i)]
-              (if (< i int-cnt)
-                ((lerp (nth values i) (nth values (inc i))) t)
-                (last values))))))
-      :duration (if (< (+ (if (nil? from) 0 1) (count values)) 2)
-                  (t/duration 0)
-                  exp-dur)})
-   (fn [] (str "(values lerp " (str/join " " values) ")")))) ;; Note: comparasion by string ignores lerp function
 
 (defn- motion-to-map
   ([motion]
@@ -487,7 +458,7 @@
     (compute-motion-if-needed this)
     ((.-interpolate this) nil t))
   (^dc/String toString [^Motion this] ((.-toStr this)))
-  (^bool == [^Motion this ^dc/Object other] 
+  (^bool == [^Motion this ^dc/Object other]
     (= (.toString this) (.toString other))))
 
 (defn set-motion!
@@ -1060,23 +1031,54 @@
   "Animate to a value.\\
    `to` takes a value and returns an motion that animates from the current value to the provided values eventually.\\
    If the current value is nil, the first value is used as the initial value.\\
-   Also, `to` can take key-value pairs or a map of options after the values.
+
    ```clojure
-   (to 10.0 :dur 100)
    (to 5.0 10.0)
+   (to 5.0 10.0 5.0 1.0 10.0)
+   (to 10.0 :dur 100)
    (to Colors.blue Colors.red Colors.green {:delay 10})
    ```
-   If you want to be sure that provided values will not be interpreted as animation options, you can use `values` instead."
+
+   `to` can accept a transform function as the first argument to map the values.\\
+   ```clojure
+   (to t/color :red :blue :green) ;; equivalent to (apply to (map t/color [:red :blue :green]))
+   ```
+
+   Also, `to` can take key-value pairs or a map of options after the values:
+    - `:duration` or `:dur` - Duration of the motion in milliseconds, or Duration object or map.
+    - `:delay` - Start time of the motion in milliseconds or Duration object or map.
+    - `:relative-duration` or `:rel-dur` - Duration of the motion relative to the parent animation.
+    - `:relative-delay` or `:rel-delay` - Start time ratio of the motion relative to the duration.
+    - `:curve` - Curve of the animation.
+    - `:lerp` - Interpolation function that takes two values and returns a new value."
   [value & values]
-  (let [values (cons value values)
-        {:keys [options items]} (separate-last-options values)
+  (let [{:keys [options items]} (separate-last-options (cons value values))
+        values (if (fn? (first values)) (map (first items) (rest items)) items)
         lerp (:lerp options #(ut/lerp %1 %2))
-        items (cons lerp items)]
-    (motion
+        options (assoc options :lerp nil)
+        prepare (fn [from exp-dur]
+                  {:interpolate
+                   (fn [initial T]
+                     (let [values (if (some? initial) (cons initial values) values)
+                           int-cnt (dec (count values))]
+                       (condp = T
+                         0.0 (first values)
+                         1.0 (last values)
+                         (let [k (* T int-cnt)
+                               i (int k)
+                               t (- k i)]
+                           (if (< i int-cnt)
+                             ((lerp (nth values i) (nth values (inc i))) t)
+                             (last values))))))
+                   :duration (if (< (+ (if (nil? from) 0 1) (count values)) 2)
+                               (t/duration 0)
+                               exp-dur)})
+        result (motion
+                prepare
+                (fn [] (str "(to " (str/join " " values) ")")))]
      (if (empty? options)
-       (.-prepare (apply flutter-cljd.animations/values items))
-       (.-prepare (with options (apply flutter-cljd.animations/values items))))
-     (fn [] (str "(to " (str/join " " values) ")")))))
+       result
+       (with options result))))
 
 (defn from
   "Set the initial value of the motion.\\
