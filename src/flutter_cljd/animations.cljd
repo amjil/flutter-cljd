@@ -184,6 +184,8 @@
          [^:mutable ^MotionController? motionController
           ^:mutable ^double val
           ^:mutable ^a/Duration? dur
+          ^double lb
+          ^double ub
           ^dc/String? dl
           ^a/TickerProvider vs
           ^a/AnimationBehavior ab]
@@ -192,6 +194,8 @@
              .duration dur
              .debugLabel dl
              .vsync vs
+             .lowerBound lb 
+             .upperBound ub
              .animationBehavior ab)
 
   (^sc/TickerFuture forward [^MotionAnimationController this ^double? .from]
@@ -605,13 +609,15 @@
          (animated (:color animation) background-color)
          (animated (:rotation animation) rotate)))
   ```"
-  ([vsync motion & {:keys [progress debug-label animation-behavior]
-                    :or {progress 0.0 animation-behavior a/AnimationBehavior.preserve}}]
+  ([vsync motion & {:keys [progress debug-label animation-behavior lower-bound upper-bound]
+                    :or {progress 0.0 animation-behavior a/AnimationBehavior.preserve lower-bound 0.0 upper-bound 1.0}}]
    (let [^MotionAnimationController animation-controller (MotionAnimationController
                                                           nil
                                                           (double progress)
-                                                          nil
-                                                          debug-label
+                                                          nil 
+                                                          (or (some-> lower-bound double) dc/double.negativeInfinity) 
+                                                          (or (some-> upper-bound double) dc/double.infinity)
+                                                          (some-> debug-label str)
                                                           vsync
                                                           (t/animation-behavior animation-behavior))
          ^MotionController motion-controller (MotionController
@@ -628,6 +634,28 @@
      (.-motionController! animation-controller motion-controller)
      (set-motion! motion-controller motion)
      motion-controller)))
+
+(defn animation-controller 
+  "Creates an animation controller that manages animations.
+  
+  Arguments:
+    - vsync: A `TickerProvider` that drives the animation (usually obtained from a widget's state)
+    - `:duration` or `:dur`: Duration of the animation
+    - `:value`: Initial value of the animation. Defaults to 0.0
+    - `:debug-label`: Label for debugging (optional)
+    - `:animation-behavior`: Animation behavior on hot reload (default: :preserve)
+    - `:lower-bound`: Lower bound of the animation (default: 0.0)
+    - `:upper-bound`: Upper bound of the animation (default: 1.0)"
+  [vsync & {:keys [duration dur value debug-label animation-behavior lower-bound upper-bound] 
+            :or {value 0.0 animation-behavior a/AnimationBehavior.preserve lower-bound 0.0 upper-bound 1.0}}]
+  (a/AnimationController
+   .value (double value)
+   .duration (some-> (or duration dur) t/duration)
+   .debugLabel (some-> debug-label str)
+   .vsync vsync
+   .lowerBound (or (some-> lower-bound double) dc/double.negativeInfinity)
+   .upperBound (or (some-> upper-bound double) dc/double.infinity)
+   .animationBehavior (t/animation-behavior animation-behavior)))
 
 (defn instant
   "Instant motion with zero duration.
