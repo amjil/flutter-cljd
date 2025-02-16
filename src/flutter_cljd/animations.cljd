@@ -1011,20 +1011,20 @@
    ```"
   [value & values]
   (let [{:keys [options items]} (separate-last-options (cons value values))
-        items (if (fn? (first items)) (map (first items) (rest items)) items)
+        values (if (fn? (first items)) (map (first items) (rest items)) items)
         prepare (fn [value exp-dur]
-                  (let [cnt (count items)
+                  (let [cnt (count values)
                         last-i (- cnt 1)]
                     (case cnt
                       0 (const-anim value exp-dur)
-                      1 (const-anim (last items) exp-dur)
+                      1 (const-anim (last values) exp-dur)
                       {:duration exp-dur
                        :interpolate (fn [_ T]
                                       (let [i (min last-i (int (* T cnt)))]
-                                        (nth items i)))})))
+                                        (nth values i)))})))
         result  (motion
                  prepare
-                 (fn [] (str "(const " (str/join " " items) ")")))]
+                 (fn [] (str "(const " (str/join " " (if (fn? (first items)) (rest items) items)) ")")))]
     (if (empty? options) result (with options result))))
 
 (defn to
