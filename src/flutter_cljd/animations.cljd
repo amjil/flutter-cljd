@@ -359,11 +359,6 @@
    {:interpolate (const-anim value)
     :duration duration}))
 
-(defn- flat-motions [motions]
-  (->> motions
-       (mapcat
-        #(if (sequential? %) (flat-motions %) [%]))))
-
 (defn- separate-options [args]
   (if (is-options? (first args))
     {:options (first args) :items (drop 1 args)}
@@ -691,7 +686,7 @@
     (/ (- t start) rel-dur)))
 
 (defn- -sequential [motions]
-  (let [motions (->> motions flat-motions (filter some?) (map motion-to-map))
+  (let [motions (->> motions flatten (filter some?) (map motion-to-map))
         clamp #(min 1.0 (max 0.0 %))]
     (motion
      (fn [value exp-dur]
@@ -776,10 +771,14 @@
      (fn [] (str "(seq " (str/join " " (map #((:to-string %)) motions)) ")")))))
 
 (defn- -parallel [motions]
-  (let [motions (map (fn [[k v]] [k (motion-to-map v)]) motions)]
+  (let [is-map? (seq? (first motions))
+        default (if is-map? {} (vec (c/repeat (count motions) nil)))
+        motions (if is-map?
+                 (map (fn [[k v]] [k (motion-to-map v)]) motions)
+                 (map-indexed (fn [i v] [i (motion-to-map v)]) motions))]
     (motion
      (fn [value exp-dur]
-       (let [value (or value {})
+       (let [value (or value default)
              exp-dur-in-mcs (in-mcs exp-dur)
 
              {:keys [max-dur items side-effects-cnt]}
@@ -813,7 +812,7 @@
                      items)]
          {:duration (some-> (or (from-mcs full-dur) exp-dur) t/duration)
           :interpolate (fn [initial T]
-                         (let [from (or initial {})
+                         (let [from (or initial default)
                                results (map
                                         (fn [[k {:keys [interpolate rel-dur]}]]
                                           (let [transform-t #(cond
@@ -823,7 +822,9 @@
                                                 t (transform-t T)]
                                             [k (interpolate (get from k) t)]))
                                         items)]
-                           (into value results)))
+                           (if is-map?
+                             (into from results)
+                             (->> from count range (map #(last (get results %))) vec))))
           :side-effects (when (< 0 side-effects-cnt)
                           (let [effects
                                 (filter
@@ -836,7 +837,7 @@
                                   items))]
                             (fn [range]
                               (apply concat (map #(% range) effects)))))}))
-     (fn [] (str "(par " (str/join " " (map (fn [[k v]] (str k " " ((:to-string v)))) motions)) ")")))))
+     (fn [] (str "(par " (str/join " " (map (fn [[k v]] (if is-map? (str k " " ((:to-string v))) ((:to-string v)))) motions)) ")")))))
 
 (defn action-with!
   "Action motion that calls a function with the value.
@@ -1117,15 +1118,15 @@
    ```clojure
    (from 10.0 (to 20.0))
    ```"
-  [from motion]
-  (let [motion (motion-to-map motion)]
-    (flutter-cljd.animations/motion
-     (fn [_ exp-dur]
-       (let [{:keys [duration interpolate side-effects]} ((:prepare-motion motion) from exp-dur)]
-         {:duration duration
-          :interpolate (fn [_ T] (interpolate from T))
-          :side-effects side-effects}))
-     (fn [] (str "(from " from " " ((:to-string motion)) ")")))))
+  ([from motion]
+   (let [motion (motion-to-map motion)]
+     (flutter-cljd.animations/motion
+      (fn [_ exp-dur]
+        (let [{:keys [duration interpolate side-effects]} ((:prepare-motion motion) from exp-dur)]
+          {:duration duration
+           :interpolate (fn [_ T] (interpolate from T))
+           :side-effects side-effects}))
+      (fn [] (str "(from " from " " ((:to-string motion)) ")"))))))
 
 (defn from-to
   "Animate from an initial value to final values. It's a shorthand for `(from value (to values))`.\\
@@ -1202,10 +1203,7 @@
 
 (defn par
   "Parallel motions of multiple properties of the value.\\
-   `par` takes a list of key-value pairs, where the key is the property to animate and the value is the animation.\\
-   It's useful when you want to animate multiple properties with different motions at the same time.\\
-   If `par` has a duration, the duration is applied to all animations.\\
-   If `par` has a curve, the curve is applied to all animations.
+   `par` takes either a list of key-value pairs or a fixed length sequence of motions.
    ```clojure
    (par
       :color (to w/Colors.blue :duration 50)
@@ -1223,11 +1221,14 @@
      :offset (to 10.0 :duration 100))
    ```"
   [& kvs]
-  (if (odd? (count kvs))
-    (if (is-options? (first kvs))
-      (with (first kvs) (-parallel (partition 2 (drop 1 kvs))))
-      (throw (ex-info "Invalid arguments in par" {:args kvs})))
-    (-parallel (partition 2 kvs))))
+  (let [{:keys [options items]} (separate-options kvs)
+        values (->> items flatten (filter some?))
+        result  (if (instance? w/Animatable (first values))
+                  (-parallel values) 
+                  (-parallel (partition 2 values)))]
+    (if-not (empty? options)
+      (with options result)
+      result)))
 
 (defn repeat
   "Repeats a motion a specified number of times.\\

@@ -68,22 +68,24 @@ A powerful animation system for Flutter that combines declarative motion descrip
   :managed [controller (motion-controller 
                         vsync
                         (par
-                          ;; Background blur and dim
-                          :overlay (to 0.5 :curve :ease-in)
+                          ;; Background  dim
+                          :overlay (to 1.0 0.5 :curve :ease-in)
                           ;; Menu slides in with items
                           :menu (seq
                                  ;; Slide in from left
-                                 (from-to -300 0
+                                 (par :offset
+                                      (to -300 0
                                          :duration 500 
-                                         :curve :ease-out)
+                                         :curve :ease-out))
                                  ;; Items fade in sequentially
-                                 (par
-                                   :item1 (delay 100 
-                                           (to 1.0 :curve :ease-out))
-                                   :item2 (delay 200 
-                                           (to 1.0 :curve :ease-out))
-                                   :item3 (delay 300 
-                                           (to 1.0 :curve :ease-out))))))]
+                                 (par :fade
+                                      (par
+                                        (map
+                                          #(to 0.0 1.0 
+                                               :curve :ease-out
+                                               :duration 100
+                                               :delay (+ 100 (* % 100)))
+                                          (range 3)))))))]
   (stack
     ;; Dimming overlay
     (->> (container :color Colors.black)
@@ -92,9 +94,8 @@ A powerful animation system for Flutter that combines declarative motion descrip
     (->> (column
            (for [i (range 3)]
              (->> (menu-item)
-                  (animated (get-in controller [:menu (keyword (str "item" (inc i)))])
-                           opacity))))
-         (animated (:menu controller) #(offset % 0)))))
+                  (animated (get-in controller [:menu :fade i] 0) opacity))))
+         (animated (get-in controller [:menu :offset] 0) offset dx))))
 ```
 
 ### Success Checkmark
@@ -103,6 +104,8 @@ A powerful animation system for Flutter that combines declarative motion descrip
   :managed [controller (motion-controller
                         vsync
                         (seq
+                          ;; Initial value
+                          (to {:circle 0.0 :check 0.0 :scale 1.0})
                           ;; Circle expands
                           (par {:duration 400}
                             :circle (to 1.0 :curve :ease-out)
@@ -110,11 +113,11 @@ A powerful animation system for Flutter that combines declarative motion descrip
                             :check (seq
                                     (wait 200)
                                     (to 1.0 :curve :ease-in-out)))
+                          ;; Trigger feedback
+                          (action! :m HapticFeedback.mediumImpact)
                           ;; Success bounce
                           (par {:duration 200}
-                            :scale (to 1.0 1.2 1.0 :curve :spring)
-                            ;; Trigger haptic feedback
-                            (action! HapticFeedback.mediumImpact))))]
+                            :scale (to 1.2 1.0 :curve :spring))))]
   (->> (stack
          ;; Background circle
          (->> (circle :color Colors.green)

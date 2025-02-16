@@ -320,7 +320,19 @@
       (is (= (anim 0) {:fast 0 :slow 0}))
       (is (= (anim 0.5) {:fast 100 :slow 50}))
       (is (= (anim 1) {:fast 100 :slow 100}))))
-
+  
+  (testing "With non keyed animations"
+    (let [anim (unwrap (a/par percents percents))]
+      (is (= (anim 0) [0 0]))
+      (is (= (anim 0.5) [50 50]))
+      (is (= (anim 1) [100 100]))))
+    
+  (testing "With animations vector"
+    (let [anim (unwrap (a/par [percents percents]))]
+      (is (= (anim 0) [0 0]))
+      (is (= (anim 0.5) [50 50]))
+      (is (= (anim 1) [100 100]))))
+  
   (testing "Nested parallel animations"
     (let [anim (unwrap (a/par
                         :outer (a/to 0 100)
