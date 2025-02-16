@@ -1,6 +1,4 @@
-# Flutter ClojureDart Animations
-
-A powerful animation library for Flutter that provides a declarative way to create complex animations with minimal code.
+# Animations
 
 ## Key Features
 
