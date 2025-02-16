@@ -1415,7 +1415,7 @@
   "A widget that calls whenever the application is reassembled during debugging, for example during hot reload.
 
    Args:
-    - `on-reassamble`: The function to call.
+    - `on-reassamble`: The function to call. Note that anonymous functions are not updated during hot reload, use a named function instead.
     - `child`: The child widget."
   [on-reassemble child]
   (rsm/ReassembleListener on-reassemble child))

@@ -51,8 +51,7 @@
    (fn [_ duration]
      {:duration duration
       :interpolate (fn [_ t] (int (* 100 t)))})
-   (constantly "percents")
-   (constantly 0)))
+   (constantly "percents")))
 
 (deftest test-const
   (testing "Single value"
@@ -61,12 +60,10 @@
       (is (= (anim 0.5) 100))
       (is (= (anim 1) 100))
       (is (= (.toString (a/const 100)) "(const 100)"))
-      (is (= (.-hashCode (a/const 100))
-             (.-hashCode (a/const 100)))
-          "Same motion should have same hash")
-      (is (not= (.-hashCode (a/const 100))
-                (.-hashCode (a/const 200)))
-          "Different values should have different hashes")))
+      (is (= (a/const 100) (a/const 100))
+          "Same motion should be equal")
+      (is (not= (a/const 100) (a/const 200))
+          "Different values should be not equal")))
 
   (testing "Multiple values"
     (let [anim (unwrap (a/const 0 50 100))]
@@ -113,13 +110,11 @@
       (is (= (anim 0.5) 50))
       (is (= (anim 0.75) 75))
       (is (= (anim 1) 100))
-      (is (= (.toString (a/to 0 100))) "(to 0 100)")
-      (is (= (.-hashCode (a/to 0 100))
-             (.-hashCode (a/to 0 100)))
-          "Same motion should have same hash")
-      (is (not= (.-hashCode (a/to 0 100))
-                (.-hashCode (a/to 0 200)))
-          "Different values should have different hashes")))
+      (is (= (.toString (a/to 0 100)) "(to 0 100)"))
+      (is (= (a/to 0 100) (a/to 0 100))
+          "Same motion should be equal")
+      (is (not= (a/to 0 100) (a/to 0 200))
+          "Different values should be not equal")))
 
   (testing "Valid between two non zero values"
     (let [anim (unwrap (a/to 50 100))]
@@ -250,15 +245,15 @@
           "Duration should be doubled")
       (is (= (.toString (a/repeat 2 (a/to 0 100)))
              "(repeat 2 (to 0 100))"))
-      (is (= (.-hashCode (a/repeat 2 (a/to 0 100)))
-             (.-hashCode (a/repeat 2 (a/to 0 100))))
-          "Same repeat motion should have same hash")
-      (is (not= (.-hashCode (a/repeat 2 (a/to 0 100)))
-                (.-hashCode (a/repeat 3 (a/to 0 100))))
-          "Different repeat counts should have different hashes")
-      (is (not= (.-hashCode (a/repeat 2 (a/to 0 100)))
-                (.-hashCode (a/repeat 2 (a/to 0 200))))
-          "Different values should have different hashes")
+      (is (= (a/repeat 2 (a/to 0 100))
+             (a/repeat 2 (a/to 0 100)))
+          "Same repeat motion should be equal")
+      (is (not= (a/repeat 2 (a/to 0 100))
+                (a/repeat 3 (a/to 0 100)))
+          "Different repeat counts should be not equal")
+      (is (not= (a/repeat 2 (a/to 0 100))
+                (a/repeat 2 (a/to 0 200)))
+          "Different values should be not equal")
 
       (let [repeated (a/repeat 2 (a/with {:duration base-dur} percents))
             anim (unwrap repeated)]
@@ -288,12 +283,10 @@
           "Duration should be doubled")
       (is (= (.toString (a/autoreverse (a/to 0 100)))
              "(autoreverse (to 0 100))"))
-      (is (= (.-hashCode (a/autoreverse (a/to 0 100)))
-             (.-hashCode (a/autoreverse (a/to 0 100))))
-          "Same autoreverse motion should have same hash")
-      (is (not= (.-hashCode (a/autoreverse (a/to 0 100)))
-                (.-hashCode (a/autoreverse (a/to 0 200))))
-          "Different values should have different hashes")
+      (is (= (a/autoreverse (a/to 0 100)) (a/autoreverse (a/to 0 100)))
+          "Same autoreverse motion should be equal")
+      (is (not= (a/autoreverse (a/to 0 100)) (a/autoreverse (a/to 0 200)))
+          "Different values should be not equal")
 
       (let [reversed (a/autoreverse (a/with {:duration base-dur} percents))
             anim (unwrap reversed)]
@@ -313,12 +306,12 @@
       (is (= (anim 1) {:color 100 :offset 300}))
       (is (= (.toString (a/par :color (a/to 0 100) :offset (a/to 200 300)))
              "(par :color (to 0 100) :offset (to 200 300))"))
-      (is (= (.-hashCode (a/par :color (a/to 0 100) :offset (a/to 200 300)))
-             (.-hashCode (a/par :color (a/to 0 100) :offset (a/to 200 300))))
-          "Same parallel motion should have same hash")
-      (is (not= (.-hashCode (a/par :color (a/to 0 100) :offset (a/to 200 300)))
-                (.-hashCode (a/par :color (a/to 0 200) :offset (a/to 200 300))))
-          "Different values should have different hashes")))
+      (is (= (a/par :color (a/to 0 100) :offset (a/to 200 300))
+             (a/par :color (a/to 0 100) :offset (a/to 200 300)))
+          "Same parallel motion should be equal")
+      (is (not= (a/par :color (a/to 0 100) :offset (a/to 200 300))
+                (a/par :color (a/to 0 200) :offset (a/to 200 300)))
+          "Different values should be not equal")))
 
   (testing "With different durations"
     (let [anim (unwrap (a/par
@@ -379,12 +372,10 @@
       (is (= (anim 1) 100))
       (is (= (.toString (a/seq (a/to 0 50) (a/to 100)))
              "(seq (to 0 50) (to 100))"))
-      (is (= (.-hashCode (a/seq (a/to 0 50) (a/to 100)))
-             (.-hashCode (a/seq (a/to 0 50) (a/to 100))))
-          "Same sequential motion should have same hash")
-      (is (not= (.-hashCode (a/seq (a/to 0 50) (a/to 100)))
-                (.-hashCode (a/seq (a/to 0 75) (a/to 100))))
-          "Different values should have different hashes")))
+      (is (= (a/seq (a/to 0 50) (a/to 100)) (a/seq (a/to 0 50) (a/to 100)))
+          "Same sequential motion should be equal")
+      (is (not= (a/seq (a/to 0 50) (a/to 100)) (a/seq (a/to 0 75) (a/to 100)))
+          "Different values should be not equal")))
 
   (testing "With different durations"
     (let [anim (unwrap (a/seq
@@ -471,12 +462,10 @@
       (is (= (anim 1) 100))
       (is (= (.toString (a/from 50 (a/to 100)))
              "(from 50 (to 100))"))
-      (is (= (.-hashCode (a/from 50 (a/to 100)))
-             (.-hashCode (a/from 50 (a/to 100))))
-          "Same from motion should have same hash")
-      (is (not= (.-hashCode (a/from 50 (a/to 100)))
-                (.-hashCode (a/from 75 (a/to 100))))
-          "Different initial values should have different hashes")))
+      (is (= (a/from 50 (a/to 100)) (a/from 50 (a/to 100)))
+          "Same from motion should be equal")
+      (is (not= (a/from 50 (a/to 100)) (a/from 75 (a/to 100)))
+          "Different initial values should be not equal")))
 
   (testing "With constant motion"
     (let [anim (unwrap (a/from 50 (a/const 100)))]
@@ -521,12 +510,10 @@
       (is (true? @executed))
       (is (= (.toString (a/action! :test #(println "test")))
              "(action! :test)"))
-      (is (= (.-hashCode (a/action! :test #(println "test")))
-             (.-hashCode (a/action! :test #(println "test"))))
-          "Same action should have same hash")
-      (is (not= (.-hashCode (a/action! :test1 #(println "test")))
-                (.-hashCode (a/action! :test2 #(println "test"))))
-          "Different action ids should have different hashes")))
+      (is (= (a/action! :test #(println "test")) (a/action! :test #(println "test")))
+          "Same action should be equal")
+      (is (not= (a/action! :test1 #(println "test")) (a/action! :test2 #(println "test")))
+          "Different action ids should be not equal")))
 
   (testing "Sequential side effects"
     (let [events (atom [])
@@ -674,12 +661,10 @@
       (is (= (anim 1) 100))
       (is (= (.toString (a/tile (a/to 0 100)))
              "(tile (to 0 100))"))
-      (is (= (.-hashCode (a/tile (a/to 0 100)))
-             (.-hashCode (a/tile (a/to 0 100))))
-          "Same tile motion should have same hash")
-      (is (not= (.-hashCode (a/tile (a/to 0 100)))
-                (.-hashCode (a/tile (a/to 0 200))))
-          "Different values should have different hashes")))
+      (is (= (a/tile (a/to 0 100)) (a/tile (a/to 0 100)))
+          "Same tile motion should be equal")
+      (is (not= (a/tile (a/to 0 100)) (a/tile (a/to 0 200)))
+          "Different values should be not equal")))
 
   (testing "Tiling with parent duration"
     (let [anim (unwrap (a/seq {:duration 2000}
