@@ -7,13 +7,15 @@ A powerful animation system for Flutter that combines declarative motion descrip
 ### Hero Card Animation
 ```clojure
 (widget
-  :managed [controller (motion-controller vsync 
+  :managed [controller (motion-controller
+                        vsync 
                         (seq
                           ;; Start collapsed
-                          {:scale 0.8
-                           :opacity 0.0
-                           :offset-y 50.0
-                           :rotation 0.0}
+                          (to
+                            {:scale 0.8
+                             :opacity 0.0
+                             :offset-y 50.0
+                             :rotation 0.0})
                           ;; Expand with spring effect
                           (par {:duration 800}
                             :scale (to 1.0 1.05 1.0 :curve :spring)
@@ -34,7 +36,8 @@ A powerful animation system for Flutter that combines declarative motion descrip
 (widget
   :managed [controller (motion-controller 
                         vsync
-                        (seq {:duration 2000}
+                        (seq 
+                          :duration 2000
                           ;; Dots appear one by one
                           (par
                             :dot1 (delay 0 (to 1.0 :curve :ease-out))
@@ -47,17 +50,16 @@ A powerful animation system for Flutter that combines declarative motion descrip
                                           :duration 600 
                                           :curve :ease-in-out))
                             ;; Continuous rotation
-                            :rotation (tile (to 0 360 
-                                            :duration 1500 
-                                            :curve :linear)))))]
+                            :rotation (tile (to 0 (* 2 pi) 
+                                              :duration 1500 
+                                              :curve :linear)))))]
   (stack
     (for [i (range 3)]
       (->> (circle :radius 8 :color Colors.blue)
            (animated (get controller (keyword (str "dot" (inc i)))) 
                     opacity)
            (animated (:scale controller) scale)
-           (animated (:rotation controller) 
-                    #(rotate (+ % (* i 120))))))))
+           (animated (:rotation controller) rotate)))))
 ```
 
 ### Menu Transition
@@ -71,7 +73,7 @@ A powerful animation system for Flutter that combines declarative motion descrip
                           ;; Menu slides in with items
                           :menu (seq
                                  ;; Slide in from left
-                                 (from-to -300 0 
+                                 (from-to -300 0
                                          :duration 500 
                                          :curve :ease-out)
                                  ;; Items fade in sequentially
@@ -120,7 +122,7 @@ A powerful animation system for Flutter that combines declarative motion descrip
          ;; Checkmark path
          (->> (custom-paint :painter (checkmark-painter))
               (animated (:check controller) 
-                       #(paint-progress % :color Colors.white))))
+                       #(paint-progress %1 :color Colors.white %2))))
        (animated (:scale controller) scale)))
 ```
 
