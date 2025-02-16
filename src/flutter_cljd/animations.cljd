@@ -1350,7 +1350,7 @@
    Takes a function and a motion and returns a new motion that applies the function to the value.\\
    ```clojure
    (map-motion inc (to 0 10))  ;; Goes 1 -> 11
-   (map-motion int (to 0 10))  ;; Goes 0 -> 10 directly
+   (map-motion int (to 0 10))  ;; Goes 0 -> 10 discretely
    ```"
   [f motion]
   (let [motion (motion-to-map motion)]
