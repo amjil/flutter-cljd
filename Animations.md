@@ -5,10 +5,10 @@ A powerful animation system for Flutter that combines declarative motion descrip
 ## Overview
 
 The animation system consists of two main parts:
-1. **Motions** - Declarative descriptions of how values change over time
-2. **Animated Widgets** - Components that use motions to animate Flutter widgets
+1. **motions** - Declarative descriptions of how values change over time
+2. **animated** - Components that use motions to animate Flutter widgets
 
-## Animated Widgets
+## `animated` widget
 
 The `animated` widget is the primary way to apply animations to Flutter widgets:
 
