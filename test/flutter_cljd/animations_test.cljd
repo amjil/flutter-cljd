@@ -499,6 +499,66 @@
       (is (< (anim 0.5) 50) "Should be affected by ease-in")
       (is (= (anim 1) 100)))))
 
+(deftest test-from-to
+  (testing "Basic from-to functionality"
+    (let [anim (unwrap (a/from-to 0 100))]
+      (is (= (anim 0) 0))
+      (is (= (anim 0.5) 50))
+      (is (= (anim 1) 100))
+      (is (= (.toString (a/from-to 0 100))
+             "(from 0 (to 100))"))
+      (is (= (a/from-to 0 100) (a/from-to 0 100))
+          "Same from-to motion should be equal")
+      (is (not= (a/from-to 0 100) (a/from-to 0 200))
+          "Different values should be not equal")))
+
+  (testing "With transform function"
+    (let [double-fn #(* 2 %)
+          anim (unwrap (a/from-to double-fn 5 10))]
+      (is (= (anim 0) 10))  ; 5 * 2
+      (is (= (anim 0.5) 15)) ; interpolated between 10 and 20
+      (is (= (anim 1) 20)))) ; 10 * 2
+
+  (testing "With options"
+    (let [anim (unwrap (a/from-to 0 100 :duration 1000 :curve :ease-in))]
+      (is (= (anim 0) 0))
+      (is (< (anim 0.5) 50) "Should be affected by ease-in")
+      (is (= (anim 1) 100)))))
+
+(deftest test-map-motion
+  (testing "Basic map-motion functionality"
+    (let [anim (unwrap (a/map-motion inc (a/to 0 10)))]
+      (is (= (anim 0) 1))
+      (is (= (anim 0.5) 6))
+      (is (= (anim 1) 11))
+      (is (= (.toString (a/map-motion inc (a/to 0 10)))
+             "(map-motion (to 0 10))"))
+      (is (= (a/map-motion inc (a/to 0 10))
+             (a/map-motion inc (a/to 0 10)))
+          "Same map-motion should be equal")
+      (is (not= (a/map-motion inc (a/to 0 10))
+                (a/map-motion dec (a/to 0 10)))
+          "Different functions should be not equal")))
+
+  (testing "With type conversion"
+    (let [anim (unwrap (a/map-motion int (a/to 0.0 10.0)))]
+      (is (= (anim 0) 0))
+      (is (= (anim 0.5) 5))
+      (is (= (anim 1) 10))))
+
+  (testing "With complex transformation"
+    (let [anim (unwrap (a/map-motion #(* % %) (a/to 0 10)))]
+      (is (= (anim 0) 0))
+      (is (= (anim 0.5) 25))  ; (5 * 5)
+      (is (= (anim 1) 100)))) ; (10 * 10)
+
+  (testing "With options in inner motion"
+    (let [anim (unwrap (a/map-motion inc 
+                                    (a/to 0 10 :duration 1000 :curve :ease-in)))]
+      (is (= (anim 0) 1))
+      (is (< (anim 0.5) 6) "Should be affected by ease-in")
+      (is (= (anim 1) 11)))))
+
 (deftest test-side-effects
   (testing "Basic action execution"
     (let [executed (atom false)
