@@ -6,7 +6,7 @@ A powerful animation system for Flutter that combines declarative motion descrip
 
 The animation system consists of two main parts:
 1. **motions** - Declarative descriptions of how values change over time
-2. **animated** - Components that use motions to animate Flutter widgets
+2. **animated** - A general-purpose widget for building animations.
 
 ## Motions
 
@@ -34,8 +34,8 @@ The library provides several basic animation primitives:
 Animate the current value to a target:
 ```clojure
 (to 100)  ; Animate to 100
-(to 0 50 100)  ; Animate through multiple values
-(to 0 100 :duration 1000)  ; With duration in milliseconds
+(to 0 50 100 200)  ; Animate through multiple values
+(to 0 100 :duration 1000 :curve :ease-in-out)  ; With duration 
 (to {:offset 100 :opacity 0.5} 
     {:offset 0 :opacity 1.0})  ; Complex values can be animated as well
 ```
