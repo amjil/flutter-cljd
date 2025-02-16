@@ -2,16 +2,132 @@
 
 A powerful animation system for Flutter that combines declarative motion descriptions with flexible widget animations.
 
-## Overview
+## Showcase Examples
 
-The animation system consists of two main parts:
-1. **motions** - Declarative descriptions of how values change over time
-2. **animated** - A general-purpose widget for building animations.
+### Hero Card Animation
+```clojure
+(widget
+  :managed [controller (motion-controller vsync 
+                        (seq
+                          ;; Start collapsed
+                          {:scale 0.8
+                           :opacity 0.0
+                           :offset-y 50.0
+                           :rotation 0.0}
+                          ;; Expand with spring effect
+                          (par {:duration 800}
+                            :scale (to 1.0 1.05 1.0 :curve :spring)
+                            :opacity (to 1.0 :relative-duration 0.5)
+                            :offset-y (to 0.0 :curve :ease-out)
+                            ;; Subtle rotation for style
+                            :rotation (to -2.0 2.0 0.0 :curve :ease-in-out))))]
+  (->> (card ...)
+       (animated (:scale controller) scale)
+       (animated (:opacity controller) opacity)
+       (animated (:offset-y controller) #(offset 0 %))
+       (animated (:rotation controller) rotate)
+       (on-appear #(.forward controller))))
+```
 
-## Motions
+### Interactive Loading Animation
+```clojure
+(widget
+  :managed [controller (motion-controller 
+                        vsync
+                        (seq {:duration 2000}
+                          ;; Dots appear one by one
+                          (par
+                            :dot1 (delay 0 (to 1.0 :curve :ease-out))
+                            :dot2 (delay 200 (to 1.0 :curve :ease-out))
+                            :dot3 (delay 400 (to 1.0 :curve :ease-out)))
+                          ;; Dots pulse and rotate together
+                          (par
+                            ;; Scale pulses
+                            :scale (tile (to 1.0 1.2 1.0 
+                                          :duration 600 
+                                          :curve :ease-in-out))
+                            ;; Continuous rotation
+                            :rotation (tile (to 0 360 
+                                            :duration 1500 
+                                            :curve :linear)))))]
+  (stack
+    (for [i (range 3)]
+      (->> (circle :radius 8 :color Colors.blue)
+           (animated (get controller (keyword (str "dot" (inc i)))) 
+                    opacity)
+           (animated (:scale controller) scale)
+           (animated (:rotation controller) 
+                    #(rotate (+ % (* i 120))))))))
+```
 
-Motions describe how values change over time. They are used by motion controllers to drive animations.\
-`Motion` is an `Animatable` subclass, the main difference is that `Motion` can have an intrinsic duration and `Motion` is designed to be composed with other `Motion` instances.
+### Menu Transition
+```clojure
+(widget
+  :managed [controller (motion-controller 
+                        vsync
+                        (par
+                          ;; Background blur and dim
+                          :overlay (to 0.5 :curve :ease-in)
+                          ;; Menu slides in with items
+                          :menu (seq
+                                 ;; Slide in from left
+                                 (from-to -300 0 
+                                         :duration 500 
+                                         :curve :ease-out)
+                                 ;; Items fade in sequentially
+                                 (par
+                                   :item1 (delay 100 
+                                           (to 1.0 :curve :ease-out))
+                                   :item2 (delay 200 
+                                           (to 1.0 :curve :ease-out))
+                                   :item3 (delay 300 
+                                           (to 1.0 :curve :ease-out))))))]
+  (stack
+    ;; Dimming overlay
+    (->> (container :color Colors.black)
+         (animated (:overlay controller) opacity))
+    ;; Menu
+    (->> (column
+           (for [i (range 3)]
+             (->> (menu-item)
+                  (animated (get-in controller [:menu (keyword (str "item" (inc i)))])
+                           opacity))))
+         (animated (:menu controller) #(offset % 0)))))
+```
+
+### Success Checkmark
+```clojure
+(widget
+  :managed [controller (motion-controller
+                        vsync
+                        (seq
+                          ;; Circle expands
+                          (par {:duration 400}
+                            :circle (to 1.0 :curve :ease-out)
+                            ;; Checkmark draws
+                            :check (seq
+                                    (wait 200)
+                                    (to 1.0 :curve :ease-in-out)))
+                          ;; Success bounce
+                          (par {:duration 200}
+                            :scale (to 1.0 1.2 1.0 :curve :spring)
+                            ;; Trigger haptic feedback
+                            (action! HapticFeedback.mediumImpact))))]
+  (->> (stack
+         ;; Background circle
+         (->> (circle :color Colors.green)
+              (animated (:circle controller) scale))
+         ;; Checkmark path
+         (->> (custom-paint :painter (checkmark-painter))
+              (animated (:check controller) 
+                       #(paint-progress % :color Colors.white))))
+       (animated (:scale controller) scale)))
+```
+
+## Motion System
+
+Motions describe how values change over time. They are used by motion controllers to drive animations.
+`Motion` is an `Animatable` subclass that supports intrinsic duration and composition.
 
 ### Motion Controller
 
