@@ -1053,13 +1053,13 @@
     - `:lerp` - Interpolation function that takes two values and returns a new value."
   [value & values]
   (let [{:keys [options items]} (separate-last-options (cons value values))
-        items (if (fn? (first items)) (map (first items) (rest items)) items)
+        values (if (fn? (first items)) (map (first items) (rest items)) items)
         lerp (:lerp options #(ut/lerp %1 %2))
         options (assoc options :lerp nil)
         prepare (fn [from exp-dur]
                   {:interpolate
                    (fn [initial T]
-                     (let [values (if (some? initial) (cons initial items) items)
+                     (let [values (if (some? initial) (cons initial values) values)
                            int-cnt (dec (count values))]
                        (condp = T
                          0.0 (first values)
@@ -1070,12 +1070,12 @@
                            (if (< i int-cnt)
                              ((lerp (nth values i) (nth values (inc i))) t)
                              (last values))))))
-                   :duration (if (< (+ (if (nil? from) 0 1) (count items)) 2)
+                   :duration (if (< (+ (if (nil? from) 0 1) (count values)) 2)
                                (t/duration 0)
                                exp-dur)})
         result (motion
                 prepare
-                (fn [] (str "(to " (str/join " " items) ")")))]
+                (fn [] (str "(to " (str/join " " (if (fn? (first items)) (rest items) items)) ")")))]
     (if (empty? options)
       result
       (with options result))))
