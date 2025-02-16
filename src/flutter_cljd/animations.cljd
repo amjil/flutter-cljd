@@ -1024,7 +1024,7 @@
                                         (nth values i)))})))
         result  (motion
                  prepare
-                 (fn [] (str "(const " (str/join " " (if (fn? (first items)) (rest items) items)) ")")))]
+                 (fn [] (str "(const " (str/join " " values) ")")))]
     (if (empty? options) result (with options result))))
 
 (defn to
@@ -1075,7 +1075,7 @@
                                exp-dur)})
         result (motion
                 prepare
-                (fn [] (str "(to " (str/join " " (if (fn? (first items)) (rest items) items)) ")")))]
+                (fn [] (str "(to " (str/join " " values) ")")))]
     (if (empty? options)
       result
       (with options result))))
@@ -1107,7 +1107,7 @@
    ```"
   [value0 value1 & values]
   (if (fn? value0)
-    (from value1 (apply to (cons value0 values)))
+    (from (value0 value1) (apply to (cons value0 values)))
     (from value0 (apply to (cons value1 values)))))
 
 (defn wait
@@ -1357,7 +1357,7 @@
     (flutter-cljd.animations/motion
      (fn [value exp-dur]
        (let [{:keys [duration interpolate side-effects]} ((:prepare-motion motion) value exp-dur)]
-         {:interpolate (fn [value T] (interpolate (f value) T))
+         {:interpolate (fn [value t] (f (interpolate value t)))
           :duration duration
           :side-effects side-effects}))
      (fn [] (str "(map-motion " ((:to-string motion)) ")")))))
