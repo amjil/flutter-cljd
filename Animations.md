@@ -144,33 +144,38 @@ Motion controllers manage the lifecycle and playback of animations. Unlike `Anim
        (animated animation opacity)))
 ```
 
-### Simple Animations
+### Motion Primitives
 
-The library provides several basic animation primitives:
+- `to`: Animate to target value(s)
+  ```clojure
+  (to 100)  ; To single value
+  (to 0 50 100)  ; Through multiple values
+  (to 0 100 :duration 1000)  ; With options
+  (to {:x 0 :y 0} {:x 100 :y 50})  ; Complex values
+  ```
 
-#### to
-Animate the current value to a target:
-```clojure
-(to 100)  ; Animate to 100
-(to 0 50 100 200)  ; Animate through multiple values
-(to 0 100 :duration 1000 :curve :ease-in-out)  ; With duration 
-(to {:offset 100 :opacity 0.5} 
-    {:offset 0 :opacity 1.0})  ; Complex values can be animated as well
-```
+- `from-to`: Explicit start and end values
+  ```clojure
+  (from-to 0 100)  ; Simple transition
+  (from-to 0 50 100)  ; Through points
+  ```
 
-#### from-to 
-Explicitly specify start and end values:
-```clojure
-(from-to 0 100)  ; Animate from 0 to 100
-(from-to 0 50 100)  ; From 0 through multiple values
-```
+- `const`: Discrete value changes
+  ```clojure
+  (const 100)  ; Fixed value
+  (const 0 50 100)  ; Step through values
+  ```
 
-#### const
-Create discrete value changes:
-```clojure
-(const 100)  ; Stay at 100
-(const 0 50 100)  ; Step through values
-```
+- `wait`: Pause animation
+  ```clojure
+  (wait 500)  ; Wait 500ms
+  (wait :relative-duration 0.2)  ; Relative to parent
+  ```
+
+- `instant`: Zero-duration change
+  ```clojure
+  (instant 100)  ; Jump to value
+  ```
 
 ### Composition
 
