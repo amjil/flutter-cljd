@@ -1010,27 +1010,29 @@
    (const 0 100 :dur 2000)  ;; Steps over 1 second
    ```"
   [value & values]
-  (let [values (cons value values)
-        {:keys [options items]} (separate-last-options values)
-        prepare (fn [value exp-dur]
-                  (let [cnt (count items)
-                        last-i (- cnt 1)]
-                    (case cnt
-                      0 (const-anim value exp-dur)
-                      1 (const-anim (last items) exp-dur)
-                      {:duration exp-dur
-                       :interpolate (fn [_ T]
-                                      (let [i (min last-i (int (* T cnt)))]
-                                        (nth items i)))})))
-        result  (motion
-                 prepare
-                 (fn [] (str "(const " (str/join " " items) ")")))]
-    (if (empty? options) result (with options result))))
+  (if (fn? value)
+    (apply const (map value values))
+    (let [values (cons value values)
+          {:keys [options items]} (separate-last-options values)
+          prepare (fn [value exp-dur]
+                    (let [cnt (count items)
+                          last-i (- cnt 1)]
+                      (case cnt
+                        0 (const-anim value exp-dur)
+                        1 (const-anim (last items) exp-dur)
+                        {:duration exp-dur
+                         :interpolate (fn [_ T]
+                                        (let [i (min last-i (int (* T cnt)))]
+                                          (nth items i)))})))
+          result  (motion
+                   prepare
+                   (fn [] (str "(const " (str/join " " items) ")")))]
+      (if (empty? options) result (with options result)))))
 
 (defn to
   "Animate to a value.\\
    `to` takes a value and returns an motion that animates from the current value to the provided values eventually.\\
-   If the current value is nil, the first value is used as the initial value.\\
+   If the current value is nil, the first value is used as the initial value.
 
    ```clojure
    (to 5.0 10.0)
@@ -1039,7 +1041,7 @@
    (to Colors.blue Colors.red Colors.green {:delay 10})
    ```
 
-   `to` can accept a transform function as the first argument to map the values.\\
+   `to` can accept a transform function as the first argument to map the values.
    ```clojure
    (to t/color :red :blue :green) ;; equivalent to (apply to (map t/color [:red :blue :green]))
    ```
@@ -1052,33 +1054,34 @@
     - `:curve` - Curve of the animation.
     - `:lerp` - Interpolation function that takes two values and returns a new value."
   [value & values]
-  (let [{:keys [options items]} (separate-last-options (cons value values))
-        values (if (fn? (first values)) (map (first items) (rest items)) items)
-        lerp (:lerp options #(ut/lerp %1 %2))
-        options (assoc options :lerp nil)
-        prepare (fn [from exp-dur]
-                  {:interpolate
-                   (fn [initial T]
-                     (let [values (if (some? initial) (cons initial values) values)
-                           int-cnt (dec (count values))]
-                       (condp = T
-                         0.0 (first values)
-                         1.0 (last values)
-                         (let [k (* T int-cnt)
-                               i (int k)
-                               t (- k i)]
-                           (if (< i int-cnt)
-                             ((lerp (nth values i) (nth values (inc i))) t)
-                             (last values))))))
-                   :duration (if (< (+ (if (nil? from) 0 1) (count values)) 2)
-                               (t/duration 0)
-                               exp-dur)})
-        result (motion
-                prepare
-                (fn [] (str "(to " (str/join " " values) ")")))]
-     (if (empty? options)
-       result
-       (with options result))))
+  (if (fn? value)
+    (apply to (map value values))
+    (let [{:keys [options items]} (separate-last-options (cons value values))
+          lerp (:lerp options #(ut/lerp %1 %2))
+          options (assoc options :lerp nil)
+          prepare (fn [from exp-dur]
+                    {:interpolate
+                     (fn [initial T]
+                       (let [values (if (some? initial) (cons initial items) items)
+                             int-cnt (dec (count values))]
+                         (condp = T
+                           0.0 (first values)
+                           1.0 (last values)
+                           (let [k (* T int-cnt)
+                                 i (int k)
+                                 t (- k i)]
+                             (if (< i int-cnt)
+                               ((lerp (nth values i) (nth values (inc i))) t)
+                               (last values))))))
+                     :duration (if (< (+ (if (nil? from) 0 1) (count items)) 2)
+                                 (t/duration 0)
+                                 exp-dur)})
+          result (motion
+                  prepare
+                  (fn [] (str "(to " (str/join " " items) ")")))]
+      (if (empty? options)
+        result
+        (with options result)))))
 
 (defn from
   "Set the initial value of the motion.\\
@@ -1098,15 +1101,17 @@
      (fn [] (str "(from " from " " ((:to-string motion)) ")")))))
 
 (defn from-to
-  "Animate from an initial value to final values. It's a shorthand for `(from (to values))`.\\
+  "Animate from an initial value to final values. It's a shorthand for `(from value (to values))`.\\
    `from-to` takes an initial value and final values and returns a new motion that animates between them.\\
    Can accept animation options map or key-value pairs after the values.
    ```clojure
    (from-to 0 100)
    (from-to 0 100 :dur 1000)
    ```"
-  [initial & values]
-  (from initial (apply to values)))
+  [value0 value1 & values]
+  (if (fn? value0)
+    (from value1 (apply to (map value0 values)))
+    (from value0 (apply to (cons value1 values)))))
 
 (defn wait
   "Do nothing for a given duration. Duration is optional.
