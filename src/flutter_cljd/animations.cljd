@@ -641,16 +641,18 @@
   Arguments:
     - vsync: A `TickerProvider` that drives the animation (usually obtained from a widget's state)
     - `:duration` or `:dur`: Duration of the animation
+    - `:reverse-duration` or `:reverse-dur`: Duration of the reverse animation
     - `:value`: Initial value of the animation. Defaults to 0.0
     - `:debug-label`: Label for debugging (optional)
     - `:animation-behavior`: Animation behavior on hot reload (default: :preserve)
     - `:lower-bound`: Lower bound of the animation (default: 0.0)
     - `:upper-bound`: Upper bound of the animation (default: 1.0)"
-  [vsync & {:keys [duration dur value debug-label animation-behavior lower-bound upper-bound] 
+  [vsync & {:keys [duration dur reverse-duration reverse-dur value debug-label animation-behavior lower-bound upper-bound] 
             :or {value 0.0 animation-behavior a/AnimationBehavior.preserve lower-bound 0.0 upper-bound 1.0}}]
   (a/AnimationController
    .value (double value)
    .duration (some-> (or duration dur) t/duration)
+   .reverseDuration (some-> (or reverse-duration reverse-dur) t/duration)
    .debugLabel (some-> debug-label str)
    .vsync vsync
    .lowerBound (or (some-> lower-bound double) dc/double.negativeInfinity)
