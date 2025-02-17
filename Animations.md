@@ -2,6 +2,26 @@
 
 A powerful animation system for Flutter that combines declarative motion descriptions with flexible widget animations.
 
+## Main goals
+
+### Complex animations
+First of all now it's possible to animate maps and vectors!
+
+Additional to native `Tween` and `TweenSequence` now there a lot of way to describe a values changes in the timeline.
+- `to`, `from` `from-to`, `const`: simple value changes
+- `seq` and `par`: composition of changes for sequeantial and parallel animations
+- `with`, `duration`, `curve`, `delay`, `relative-duration`, `relative-delay`: configure your animation with options both in absolute or relative timing
+- `instant`, `wait`, `action!`: ...
+- `repeat`, `autoreverse`, `synced`, `tile`: ...
+
+Also `flutter-cljd/curves` provides ... 
+Also since now a complex values like maps can animated, there some extensions for `Animation`, 
+such as `map-anim`. And `Animation` now is `ILookup` thats
+
+### `animated` widget
+`animated` widget provides elegant way to animate any widget based on input changes, eliminating the need of special implicity animated widgets like `AnimatedPadding`, `AnimatedSize`, `AnimatedOpacity`, etc.
+Also it can be used as `AnimatedBuilder` widget.
+
 ## Showcase Examples
 
 ### Hero Card Animation
@@ -38,7 +58,7 @@ A powerful animation system for Flutter that combines declarative motion descrip
                         (seq
                           :duration 2000
                           ;; Initial value
-                          (to :dots [0 0 0] :scale 1 :rotation 0)
+                          (to {:dots [0 0 0] :scale 1 :rotation 0})
                           ;; Dots appear one by one
                           (par :dots
                                (par (map #(to 1 :curve :ease-out :delay (* % 100)) (range 3))))
