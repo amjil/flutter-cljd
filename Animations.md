@@ -49,14 +49,7 @@ Seamless integration with Flutter ecosystem:
 
 ### 5. `animated` widget
 `animated` widget provides elegant way to animate any widget based on input changes, eliminating the need of special implicity animated widgets like `AnimatedPadding`, `AnimatedSize`, `AnimatedOpacity`, etc.
-```clojure
-(->> child
-  (opacity value))
 
-;; To animate the widget just insert `animated` in the desired place:
-(->> child
-  (animated opacity value))
-```
 Also it can be driven with an `Animation` instance and used as `AnimatedBuilder` widget.
 
 ## Showcase Examples
@@ -206,14 +199,21 @@ Motion controllers manage the lifecycle and playback of animations. Unlike `Anim
 
 The `animated` widget can be used in two ways to create animations in Flutter:
 
+
 ### 1. Implicit Animations
 
 Implicit animations automatically animate between property changes using a tween animation. This is the simpler way to create animations:
 
+To animate a widget property, simply wrap the modifier with `animated`:
+
 ```clojure
-;; Basic implicit animation
-(->> (text "Hello")
-     (animated opacity opacity-value))
+;; Static opacity
+(->> child
+  (opacity 0.5))
+
+;; Animated opacity
+(->> child
+  (animated opacity 0.5))
 
 ;; With options
 (->> (text "Hello")
