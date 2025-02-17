@@ -26,20 +26,9 @@ Configuration:
 - `action!`: Side effect triggers during animation
 
 ### 2. Complex Value Animation
-Full support for animating complex data structures:
-- Maps: Animate multiple properties simultaneously
-- Vectors: Coordinate-based animations
-- Nested structures: Deep property animation
-- Custom types: Extensible interpolation system
+Full support for animating complex data structures like maps and vectors
 
-### 3. Enhanced Animation Control
-Improved animation management through:
-- Relative timing: Parent-child duration relationships
-- Synchronized animations: Time-based coordination
-- Side effects: Integrated feedback triggers
-- Progress control: Fine-grained animation state management
-
-### 4. Declarative API
+### 3. Declarative API
 A clean, functional approach to animation definition:
 ```clojure
 (seq
@@ -51,14 +40,14 @@ A clean, functional approach to animation definition:
   (action! :feedback HapticFeedback.mediumImpact))
 ```
 
-### 5. Integration Features
+### 4. Integration Features
 Seamless integration with Flutter ecosystem:
 - `Animation` implements `ILookup` for property access
 - `map-anim` for custom animation transformations
 - Compatible with Flutter's animation widgets
 - Built-in curve library via `flutter-cljd/curves`
 
-### `animated` widget
+### 5. `animated` widget
 `animated` widget provides elegant way to animate any widget based on input changes, eliminating the need of special implicity animated widgets like `AnimatedPadding`, `AnimatedSize`, `AnimatedOpacity`, etc.
 Also it can be used as `AnimatedBuilder` widget.
 
