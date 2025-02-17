@@ -1,0 +1,87 @@
+(ns flutter-cljd.internal.on-state-actions
+  (:require
+   ["package:flutter/widgets.dart" :as w]))
+
+(declare ^:private OnStateActionsState)
+
+(deftype ^:private OnStateActions
+         [^:mutable onDispose
+          ^:mutable onInitState
+          ^:mutable onUpdate
+          ^:mutable onDidChangeDependencies
+          ^:mutable onDeactivate
+          ^:mutable onReassemble
+          ^w/Widget child]
+  :extends (w/StatefulWidget .key nil)
+
+  (^#/(w/State OnStateActions) createState [_]
+    (OnStateActionsState)))
+
+(deftype ^:private OnStateActionsState []
+  :extends (#/(w/State OnStateActions))
+
+  (initState [^OnStateActions this]
+    (.initState ^super this)
+    (w/WidgetsBinding.instance.addPostFrameCallback
+     (fn [_]
+       (when-let [onInitState (-> this .-widget .-onInitState)]
+         (onInitState))
+       (when-let [onUpdate (-> this .-widget .-onUpdate)]
+         (onUpdate)))))
+
+  (didUpdateWidget [^OnStateActions this _]
+    (when-let [onUpdate (-> this .-widget .-onUpdate)]
+      (w/WidgetsBinding.instance.addPostFrameCallback
+       (fn [_] (onUpdate)))))
+
+  (dispose [^OnStateActions this]
+    (.dispose ^super this)
+    (when-let [onDispose (-> this .-widget .-onDispose)]
+      (onDispose)))
+
+  (didChangeDependencies [^OnStateActions this]
+    (.didChangeDependencies ^super this)
+    (when-let [onDidChangeDependencies (-> this .-widget .-onDidChangeDependencies)]
+      (onDidChangeDependencies)))
+
+  (deactivate [^OnStateActions this]
+    (.deactivate ^super this)
+    (when-let [onDeactivate (-> this .-widget .-onDeactivate)]
+      (onDeactivate)))
+
+  (reassemble [^OnStateActions this]
+    (.reassemble ^super this)
+    (when-let [action (some-> this .-widget .-onReassemble)]
+      (action)))
+
+  (build [^OnStateActions this _]
+    (-> this .-widget .-child)))
+
+(defn- merge-fns [fn0 fn1]
+  (when (or fn0 fn1)
+    (fn []
+      (when fn0 (fn0))
+      (when fn1 (fn1)))))
+
+(defn on-state-actions* [{:keys [on-dispose
+                                 on-create
+                                 on-update
+                                 on-did-change-dependencies
+                                 on-deactivate
+                                 on-reassemble]}
+                         child]
+  (if (instance? OnStateActions child)
+    (doto child
+      (.-onDispose! (merge-fns on-dispose (.-onDispose child)))
+      (.-onInitState! (merge-fns on-create (.-onInitState child)))
+      (.-onUpdate! (merge-fns on-update (.-onUpdate child)))
+      (.-onDidChangeDependencies! (merge-fns on-did-change-dependencies (.-onDidChangeDependencies child)))
+      (.-onDeactivate! (merge-fns on-deactivate (.-onDeactivate child)))
+      (.-onReassemble! (merge-fns on-reassemble (.-onReassemble child))))
+    (OnStateActions on-dispose
+                    on-create
+                    on-update
+                    on-did-change-dependencies
+                    on-deactivate
+                    on-reassemble
+                    child)))

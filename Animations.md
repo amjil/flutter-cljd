@@ -311,15 +311,6 @@ Repeat to fill parent duration:
   (tile (to 0 360 :duration 500))) ; Rotates 4 times
 ```
 
-### Value Transformation
-
-#### map-motion
-Transform animated values:
-```clojure
-(map-motion inc (to 0 10))  ; Animates 1->11
-(map-motion int (to 0.0 10.0))  ; Discrete steps
-```
-
 ### Side Effects
 
 Trigger actions during animation:
