@@ -333,6 +333,12 @@
       (is (= (anim 0.5) [50 50]))
       (is (= (anim 1) [100 100]))))
   
+  (testing "With indecies"
+    (let [anim (unwrap (a/from [0 0] (a/par 1 percents)))]
+      (is (= (anim 0) [0 0]))
+      (is (= (anim 0.5) [0 50]))
+      (is (= (anim 1) [0 100]))))
+  
   (testing "Nested parallel animations"
     (let [anim (unwrap (a/par
                         :outer (a/to 0 100)

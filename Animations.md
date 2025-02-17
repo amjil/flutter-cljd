@@ -38,26 +38,25 @@ A powerful animation system for Flutter that combines declarative motion descrip
                         vsync
                         (seq 
                           :duration 2000
+                          ;; Initial value
+                          (to :dots [0 0 0] :scale 1 :rotation 0)
                           ;; Dots appear one by one
-                          (par
-                            :dot1 (delay 0 (to 1.0 :curve :ease-out))
-                            :dot2 (delay 200 (to 1.0 :curve :ease-out))
-                            :dot3 (delay 400 (to 1.0 :curve :ease-out)))
+                          (par :dots
+                               (par (map #(to 1 :curve :ease-out :delay (* % 100)) (range 3))))
                           ;; Dots pulse and rotate together
                           (par
                             ;; Scale pulses
-                            :scale (tile (to 1.0 1.2 1.0 
+                            :scale (tile (to 1.2 1.0 
                                           :duration 600 
                                           :curve :ease-in-out))
                             ;; Continuous rotation
-                            :rotation (tile (to 0 (* 2 pi) 
+                            :rotation (tile (to (* 2 pi) 
                                               :duration 1500 
                                               :curve :linear)))))]
   (stack
     (for [i (range 3)]
       (->> (circle :radius 8 :color Colors.blue)
-           (animated (get controller (keyword (str "dot" (inc i)))) 
-                    opacity)
+           (animated (get-in controller [:dots i]) opacity)
            (animated (:scale controller) scale)
            (animated (:rotation controller) rotate)))))
 ```

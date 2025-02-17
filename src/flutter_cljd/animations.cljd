@@ -194,7 +194,7 @@
              .duration dur
              .debugLabel dl
              .vsync vs
-             .lowerBound lb 
+             .lowerBound lb
              .upperBound ub
              .animationBehavior ab)
 
@@ -609,8 +609,8 @@
    (let [^MotionAnimationController animation-controller (MotionAnimationController
                                                           nil
                                                           (double progress)
-                                                          nil 
-                                                          (or (some-> lower-bound double) dc/double.negativeInfinity) 
+                                                          nil
+                                                          (or (some-> lower-bound double) dc/double.negativeInfinity)
                                                           (or (some-> upper-bound double) dc/double.infinity)
                                                           (some-> debug-label str)
                                                           vsync
@@ -630,7 +630,7 @@
      (set-motion! motion-controller motion)
      motion-controller)))
 
-(defn animation-controller 
+(defn animation-controller
   "Creates an animation controller that manages animations.
   
   Arguments:
@@ -642,7 +642,7 @@
     - `:animation-behavior`: Animation behavior on hot reload (default: :preserve)
     - `:lower-bound`: Lower bound of the animation (default: 0.0)
     - `:upper-bound`: Upper bound of the animation (default: 1.0)"
-  [vsync & {:keys [duration dur reverse-duration reverse-dur value debug-label animation-behavior lower-bound upper-bound] 
+  [vsync & {:keys [duration dur reverse-duration reverse-dur value debug-label animation-behavior lower-bound upper-bound]
             :or {value 0.0 animation-behavior a/AnimationBehavior.preserve lower-bound 0.0 upper-bound 1.0}}]
   (a/AnimationController
    .value (double value)
@@ -774,8 +774,8 @@
   (let [is-map? (seq? (first motions))
         default (if is-map? {} (vec (c/repeat (count motions) nil)))
         motions (if is-map?
-                 (map (fn [[k v]] [k (motion-to-map v)]) motions)
-                 (map-indexed (fn [i v] [i (motion-to-map v)]) motions))]
+                  (map (fn [[k v]] [k (motion-to-map v)]) motions)
+                  (map-indexed (fn [i v] [i (motion-to-map v)]) motions))]
     (motion
      (fn [value exp-dur]
        (let [value (or value default)
@@ -813,7 +813,7 @@
          {:duration (some-> (or (from-mcs full-dur) exp-dur) t/duration)
           :interpolate (fn [initial T]
                          (let [from (or initial default)
-                               results (map
+                               results (mapcat
                                         (fn [[k {:keys [interpolate rel-dur]}]]
                                           (let [transform-t #(cond
                                                                (zero? rel-dur) (if (= % 0.0) 0.0 1.0)
@@ -822,9 +822,7 @@
                                                 t (transform-t T)]
                                             [k (interpolate (get from k) t)]))
                                         items)]
-                           (if is-map?
-                             (into from results)
-                             (->> from count range (map #(last (get results %))) vec))))
+                           (apply assoc (cons from results))))
           :side-effects (when (< 0 side-effects-cnt)
                           (let [effects
                                 (filter
@@ -1059,29 +1057,80 @@
     (if (empty? options) result (with options result))))
 
 (defn to
-  "Animate to a value.\\
-   `to` takes a value and returns an motion that animates from the current value to the provided values eventually.\\
-   If the current value is nil, the first value is used as the initial value.
+ "Animate to Target Values
+ 
+ `to` creates a motion that animates from the current value to one or more target values. It handles value interpolation and timing.
 
-   ```clojure
-   (to 5.0 10.0)
-   (to 5.0 10.0 5.0 1.0 10.0)
-   (to 10.0 :dur 100)
-   (to Colors.blue Colors.red Colors.green {:delay 10})
-   ```
+  Basic Usage:
+  ```clojure
+  (to 5.0 10.0) ;; Single transition
+  (to 5.0 10.0 5.0 1.0 10.0) ;; Multiple transitions
+  (to 10.0 :dur 100) ;; With duration
+  (to Colors.blue Colors.red Colors.green {:delay 10}) ;; With colors and delay
+  ```
 
-   `to` can accept a transform function as the first argument to map the values.
-   ```clojure
-   (to t/color :red :blue :green) ;; equivalent to (apply to (map t/color [:red :blue :green]))
-   ```
+  Advantages over Tween:
 
-   Also, `to` can take key-value pairs or a map of options after the values:
-    - `:duration` or `:dur` - Duration of the motion in milliseconds, or Duration object or map.
-    - `:delay` - Start time of the motion in milliseconds or Duration object or map.
-    - `:relative-duration` or `:rel-dur` - Duration of the motion relative to the parent animation.
-    - `:relative-delay` or `:rel-delay` - Start time ratio of the motion relative to the duration.
-    - `:curve` - Curve of the animation.
-    - `:lerp` - Interpolation function that takes two values and returns a new value."
+  to respects the current value and works seamlessly in animation sequences:
+  ```clojure
+  ;; Traditional tween approach (verbose)
+  (seq (tween 0 1) (tween 1 2) (tween 2 3))
+
+  ;; Simplified with to (avoids value duplication)
+  (seq (to 0 1) (to 2) (to 3))
+
+  ;; Multiple values in one call  
+  (to 0 1 2)
+  ```
+
+  Initial Value Behavior:
+  
+  When to is the first animation step, its first value becomes the initial value:
+  ```clojure
+  ;; Animate: 0 -> 1
+  (seq (to 0 1))
+  
+  ;; No animation: 1 is initial value
+  (seq (to 1))
+  
+  ;; Animate: 0 -> 1
+  (seq (to 0) (to 1))
+  
+  ;; Animate: 0 -> 1 -> 2
+  (seq (to 0) (to 1 2))
+  ```
+
+  Setting Initial Values:
+  
+  To explicitly set initial values, use either:
+  ```clojure
+  ;; Using from
+  (from 0 (to 1))
+  
+  ;; Using from-to
+  (from-to 0 1)
+  ```
+  
+  Value Transformation:
+  
+  to accepts a transform function as its first argument:
+  ```clojure
+  ;; Transform color names to color values
+  (to t/color :red :blue :green)  
+  
+  ;; Equivalent to:
+  (apply to (map t/color [:red :blue :green]))
+  ```
+
+  Configuration Options:
+  
+  to accepts options as key-value pairs or a map after the values:
+  - `:duration`, `:dur` - Animation duration in milliseconds or Duration object/map
+  - `:delay` - Start time in milliseconds or Duration object/map
+  - `:relative-duration`, `:rel-dur` - Duration relative to parent animation 
+  - `:relative-delay`, `:rel-delay` - Start time ratio relative to duration
+  - `:curve` - Animation easing curve
+  - `:lerp` - Custom interpolation function for value transitions"
   [value & values]
   (let [{:keys [options items]} (separate-last-options (cons value values))
         values (if (fn? (first items)) (map (first items) (rest items)) items)
@@ -1173,28 +1222,49 @@
      (if (empty? options) result (with options result)))))
 
 (defn seq
-  "Sequential motions of the value.\\
-   `seq` takes a list of motions and applies them one after the other.
+  "Sequential Animation of Values.
    
-   If `seq` has a duration, the duration is partitioned between the motions according to their options or evenly if not provided.\\
-   If `seq` has a curve, the curve is partitioned between the motions and merged with the motion's curve if provided.\\
-   `seq` can accept key-value pairs or a map of options before the motions.
+   `seq` applies a list of motions (or `Animatable` objects) in sequential order.
+   
+   Duration and Timing:
+   - When seq has a duration, it's distributed among motions based on their options or evenly if not specified
+   - When seq has a curve, it's distributed across motions and combined with individual motion curves if present
+   - seq accepts options as key-value pairs or a map before the motion list
+   
+   Examples:
+   
    ```clojure
    (seq
      (with {:duration 50} w/Colors.blue)
      (with {:duration 100} w/Colors.red))
-  
-   (seq {:duration 200 :curve :ease-in-out}
+
+   (seq {:duration 200 :curve :ease-in-out}   
      (par :color (with {:duration 50} w/Colors.blue)
           :offset (with {:duration 100} 10.0))
      (par :color (with {:duration 50} w/Colors.red)))
    
-    (seq :duration 200 :delay 10
-      (to w/Colors.blue :relative-duration 0.7)
-      w/Colors.red)
+   (seq :duration 200 :delay 10
+     (to w/Colors.blue :relative-duration 0.7)
+     (to w/Colors.red))
    ```
    
-   If you need to animate evenly spaced values, you can use `to` instead."
+   Value Consistency:
+   
+   All seq children must animate the same value type. To animate different values sequentially, use a map and par with keys to target nested values:
+   
+   ```clojure
+   ;; ❌ Incorrect: Mixed value types
+   (seq (to 0 100) (to Colors.red Colors.blue))
+   (seq (to 0 100) (par :color (to Colors.red Colors.blue)))
+   
+   ;; ✅ Correct: Map with multiple keys animated sequentially
+   (from {:value 0 :color Colors.red} ;; initial value
+         (seq 
+            (par :value (to 100)) 
+            (par :color (to Colors.blue))))
+   ```
+   
+   Note: For evenly spaced value animations, consider using `to` instead of `seq`."
   [& motions]
   (let [{:keys [options items]} (separate-options motions)]
     (if-not (empty? options)
@@ -1202,29 +1272,89 @@
       (-sequential items))))
 
 (defn par
-  "Parallel motions of multiple properties of the value.\\
-   `par` takes either a list of key-value pairs or a fixed length sequence of motions.
+  "Parallel Animation of Multiple Properties
+  
+   `par` enables simultaneous animation of multiple properties, accepting either key-value pairs or a sequence of motions (or Animatable objects). It can animate both maps and vectors.
+  
+   Basic Usage with Maps:
+  
    ```clojure
+   ;; Animate a value to {:color w/Colors.blue :offset 10}
    (par
-      :color (to w/Colors.blue :duration 50)
-      :offset (to 10.0 :duration 100))
+     :color (to w/Colors.blue :duration 50)
+     :offset (to 10.0 :duration 100))
    ```
-   It's possible to nest `par` calls to animate nested properties:
+  
+   Nested Value Animation:
+  
+   `par` merges animated key-value pairs into the initial value, allowing animation of nested properties in maps or vectors:
+  
    ```clojure
-   (par :offset (par :dx (with {:duration 100} 10.0)))
+   ;; Sequential animation of map properties
+   (from {:color Colors.red :offset 0}
+        (seq
+          (par :color (to Colors.blue))
+          (par :offset (to 10))))
+  
+   ;; Sequential animation of vector elements
+   (from [Colors.blue 0]
+        (seq
+          (par 0 (to Colors.blue))
+          (par 1 (to 10))))
    ```
-   
-   `par` can accept a map of options as the first argument:
+  
+   Nested Properties:
+  
+   `par` calls can be nested to animate deeply nested properties:
+  
+   ```clojure
+   (par :offset (par :dx (to 10.0)))
+   ```
+  
+   Vector Animation:
+  
+   When par receives a list of motions, it produces a vector result:
+  
+   ```clojure
+   ;; Animates from [0 0] to [100 30]
+   (par (to 0 100) (to 0 30))
+
+   ;; Animates from [0 0 0] to [1 1 1] with staggered delays
+   (par (map #(to 0 1 :delay (* 10 %)) (range 3)))
+   ```
+  
+   Configuration Options:
+  
+   par accepts options as either key-value pairs or a map before the motion list:
+  
    ```clojure
    (par {:duration 200 :curve :ease-in-out}
      :color (to w/Colors.blue)
      :offset (to 10.0 :duration 100))
+   ```
+  
+   Simplification with to:
+  
+   For simple cases, prefer using to directly:
+  
+   ```clojure
+   ;; With par
+   (par :first (to 0) :second (to 100))
+  
+   ;; Simplified with to
+   (to {:first 0 :second 100})
+  
+   ;; With par
+   (par (to 0) (to 100))
+  
+   ;; Simplified with to
+   (to [0 100])
    ```"
   [& kvs]
   (let [{:keys [options items]} (separate-options kvs)
         values (->> items flatten (filter some?))
         result  (if (instance? w/Animatable (first values))
-                  (-parallel values) 
+                  (-parallel values)
                   (-parallel (partition 2 values)))]
     (if-not (empty? options)
       (with options result)
