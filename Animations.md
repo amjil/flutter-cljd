@@ -364,55 +364,6 @@ Both implicit and explicit animations can accept a child widget, making them mor
     (animated {:duration 200} opacity opacity-value))
 ```
 
-## Common Patterns
-
-### Fade In/Out
-```clojure
-(seq
-  (to {:opacity 0.0 :scale 0.8})  ; Initial state
-  (par {:duration 300}
-    :opacity (to 1.0)
-    :scale (to 1.0 :curve :ease-out)))
-```
-
-### Loading Spinner
-```clojure
-(widget
-  :managed [rotation (motion-controller
-                      vsync
-                      (synced (to 0 360 :duration 1000)))]
-  (->> (circular-progress-indicator)
-       (animated rotation rotate)
-       (on-appear #(.repeat rotation))))
-```
-
-### Sequence with Feedback
-```clojure
-(seq
-  (to 0 100 :duration 300)
-  (action! :feedback HapticFeedback.selectionClick)
-  (wait 200)
-  (to 100 0 :duration 300))
-```
-
-### Staggered List Items
-```clojure
-(widget
-  :let [make-item (fn [i]
-          (->> (list-item)
-               (animated
-                 (delay (* i 100)
-                   (seq
-                     {:opacity 0.0 :offset 50.0}
-                     (par :opacity (to 1.0)
-                          :offset (to 0.0 :curve :ease-out))))
-                 (fn [opacity offset]
-                   (-> (opacity opacity)
-                       (offset 0 offset))))))]
-  (list-view
-    (for [i (range 10)]
-      (make-item i))))
-```
 
 ## Tips & Best Practices
 

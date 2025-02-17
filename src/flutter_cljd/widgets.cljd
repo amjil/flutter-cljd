@@ -1356,7 +1356,7 @@
      4. An optional child widget that is passed to the builder function as the last argument.
    
    Or:
-     1. An `Animation` or `ValueListenable`.
+     1. An `Animation` or `ValueListenable` or `Atom`.
      2. A builder function that creates the child widget. (fn [value Widget?])
      3. An optional child widget that is passed to the builder function.
 
