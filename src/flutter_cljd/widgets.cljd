@@ -46,7 +46,7 @@
    [flutter-cljd.internal.with-text-style :as wts]
    [flutter-cljd.internal.on-change :as oc]
    [flutter-cljd.internal.animated :as an]
-   [flutter-cljd.internal.on-reassembly :as rsm]
+   [flutter-cljd.internal.on-state-actions :as osa]
    [flutter-cljd.internal.with-managed :as wm]
    [flutter-cljd.utils :as ut]
    [flutter-cljd.animations :as a]
@@ -1158,7 +1158,7 @@
     (image \"background.jpg\"))
   ```
 
-  [Flutter docs](https://api.flutter.dev/flutter/widgets/DecoratedBox-class.html)" 
+  [Flutter docs](https://api.flutter.dev/flutter/widgets/DecoratedBox-class.html)"
   ([] (dec/decorated* {} nil))
   ([& args]
    (let [[args children] (ut/key-values-args-and-children args)
@@ -1418,9 +1418,54 @@
     - `on-reassamble`: The function to call. Note that anonymous functions are not updated during hot reload, use a named function instead.
     - `child`: The child widget."
   [on-reassemble child]
-  (rsm/ReassembleListener on-reassemble child))
+  (osa/on-state-actions* {:on-reassemble on-reassemble} child))
 
-(defn with-managed 
+(defn on-create 
+  "A widget that calls a function when the widget is created and inserted into the tree.
+
+   Args:
+    - `on-create`: The function to call.
+    - `child`: The child widget."
+  [on-create child]
+  (osa/on-state-actions* {:on-create on-create} child))
+
+(defn on-dispose
+  "A widget that calls a function when the widget is removed from the tree and destroyed.
+
+   Args:
+    - `on-dispose`: The function to call.
+    - `child`: The child widget."
+  [on-dispose child]
+  (osa/on-state-actions* {:on-dispose on-dispose} child))
+
+(defn on-update 
+  "A widget that calls a function when the widget is updated.
+
+   Args:
+    - `on-update`: The function to call.
+    - `child`: The child widget."
+  [on-update child]
+  (osa/on-state-actions* {:on-update on-update} child))
+
+(defn on-did-change-dependencies 
+  "A widget that calls a function when the widget's dependencies change.
+
+   Args:
+    - `on-did-change-dependencies`: The function to call.
+    - `child`: The child widget."
+  [on-did-change-dependencies child]
+  (osa/on-state-actions* {:on-did-change-dependencies on-did-change-dependencies} child))
+
+(defn on-deactivate
+  "A widget that calls a function when the widget is removed from the tree, but can be reinserted.
+
+   Args:
+    - `on-deactivate`: The function to call.
+    - `child`: The child widget."
+  [on-deactivate child]
+  (osa/on-state-actions* {:on-deactivate on-deactivate} child))
+
+(defn with-managed
   "A widget that keeps, updates and disposes objects.
    
    Args:
@@ -1433,16 +1478,22 @@
   (let [[values builder] (if (empty? more-and-builder)
                            [[first] second]
                            [(concat [first second] (drop-last more-and-builder)) (last more-and-builder)])]
-    (wm/WithManaged (map 
+    (wm/WithManaged (map
                      (fn [{:keys [state create update]}]
-                       [state create update]) 
-                     values) 
+                       [state create update])
+                     values)
                     builder)))
 
 (defn with-motion
-  "Use this function when your motion animation may change.\\
-   For example, when you initial state of animation depends on some values.\\
-   Otherwise, `:managed` key in `widget` or `widget->>` macro is more convenient.
+  "Wraps a widget with motion animations that may change dynamically.
+  
+   Use this when the initial animation state depends on external values, requiring recomputation.
+   If the animation state is static, prefer using the `:managed` key in `widget`
+   or the `widget->>` macro for a more concise approach.
+
+   The `builder` function receives context and motion controllers for each motion and returns a widget.
+
+   ### Example:
    ```clojure
    (with-motion 
      vsync
@@ -1455,7 +1506,7 @@
   (let [[motions builder] (if (empty? more-and-builder)
                             [[motion0] motion1]
                             [(concat [motion0 motion1] (drop-last more-and-builder)) (last more-and-builder)])]
-    (apply 
+    (apply
      with-managed
      (conj
       (map
