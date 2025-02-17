@@ -49,7 +49,15 @@ Seamless integration with Flutter ecosystem:
 
 ### 5. `animated` widget
 `animated` widget provides elegant way to animate any widget based on input changes, eliminating the need of special implicity animated widgets like `AnimatedPadding`, `AnimatedSize`, `AnimatedOpacity`, etc.
-Also it can be used as `AnimatedBuilder` widget.
+```clojure
+(->> child
+  (opacity value))
+
+;; To animate the widget just insert `animated` in the desired place:
+(->> child
+  (animated opacity value))
+```
+Also it can be driven with an `Animation` instance and used as `AnimatedBuilder` widget.
 
 ## Showcase Examples
 
