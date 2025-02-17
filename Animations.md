@@ -64,7 +64,7 @@ A powerful animation system for Flutter that combines declarative motion descrip
 ```clojure
 (widget
   :managed [controller (motion-controller 
-                        vsync}
+                        vsync
                         (par
                           ;; Background  dim
                           :overlay (to 1.0 0.5 :curve :ease-in)
