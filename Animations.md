@@ -2,21 +2,61 @@
 
 A powerful animation system for Flutter that combines declarative motion descriptions with flexible widget animations.
 
-## Main goals
+## Main Goals
 
-### Complex animations
-First of all now it's possible to animate maps and vectors!
+### 1. Rich Animation Primitives
+The library provides a comprehensive set of animation primitives that go beyond Flutter's built-in `Tween` and `TweenSequence`:
 
-Additional to native `Tween` and `TweenSequence` now there a lot of way to describe a values changes in the timeline.
-- `to`, `from` `from-to`, `const`: simple value changes
-- `seq` and `par`: composition of changes for sequeantial and parallel animations
-- `with`, `duration`, `curve`, `delay`, `relative-duration`, `relative-delay`: configure your animation with options both in absolute or relative timing
-- `instant`, `wait`, `action!`: ...
-- `repeat`, `autoreverse`, `synced`, `tile`: ...
+Value Changes:
+- `to`, `from`, `from-to`: Smooth transitions between values
+- `const`: Discrete value changes without interpolation
+- `instant`: Immediate value changes
+- `wait`: Pause for specified durations
 
-Also `flutter-cljd/curves` provides ... 
-Also since now a complex values like maps can animated, there some extensions for `Animation`, 
-such as `map-anim`. And `Animation` now is `ILookup` thats
+Composition:
+- `seq`: Sequential animations with precise timing control
+- `par`: Parallel animations with synchronized timing
+- `repeat`, `autoreverse`: Animation repetition patterns
+- `synced`, `tile`: Time-based synchronization and tiling
+
+Configuration:
+- `with`: Unified configuration interface
+- `duration`, `curve`: Basic timing and easing
+- `delay`, `relative-duration`, `relative-delay`: Advanced timing control
+- `action!`: Side effect triggers during animation
+
+### 2. Complex Value Animation
+Full support for animating complex data structures:
+- Maps: Animate multiple properties simultaneously
+- Vectors: Coordinate-based animations
+- Nested structures: Deep property animation
+- Custom types: Extensible interpolation system
+
+### 3. Enhanced Animation Control
+Improved animation management through:
+- Relative timing: Parent-child duration relationships
+- Synchronized animations: Time-based coordination
+- Side effects: Integrated feedback triggers
+- Progress control: Fine-grained animation state management
+
+### 4. Declarative API
+A clean, functional approach to animation definition:
+```clojure
+(seq
+  (from {:scale 0.8 :opacity 0.0}
+    (par {:duration 300}
+      :scale (to 1.0 :curve :spring)
+      :opacity (to 1.0 :curve :ease-in)))
+  (wait 200)
+  (action! :feedback HapticFeedback.mediumImpact))
+```
+
+### 5. Integration Features
+Seamless integration with Flutter ecosystem:
+- `Animation` implements `ILookup` for property access
+- `map-anim` for custom animation transformations
+- Compatible with Flutter's animation widgets
+- Built-in curve library via `flutter-cljd/curves`
 
 ### `animated` widget
 `animated` widget provides elegant way to animate any widget based on input changes, eliminating the need of special implicity animated widgets like `AnimatedPadding`, `AnimatedSize`, `AnimatedOpacity`, etc.
