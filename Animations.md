@@ -9,13 +9,12 @@ A powerful animation system for Flutter that combines declarative motion descrip
 (widget
   :managed [controller (motion-controller
                         vsync 
-                        (seq
+                        (from
                           ;; Start collapsed
-                          (to
-                            {:scale 0.8
-                             :opacity 0.0
-                             :offset-y 50.0
-                             :rotation 0.0})
+                          {:scale 0.8
+                           :opacity 0.0
+                           :offset-y 50.0
+                           :rotation 0.0}
                           ;; Expand with spring effect
                           (par {:duration 800}
                             :scale (to 1.0 1.05 1.0 :curve :spring)
@@ -23,10 +22,10 @@ A powerful animation system for Flutter that combines declarative motion descrip
                             :offset-y (to 0.0 :curve :ease-out)
                             ;; Subtle rotation for style
                             :rotation (to -2.0 2.0 0.0 :curve :ease-in-out))))]
-  (->> (card ...)
+  (->> (card)
        (animated (:scale controller) scale)
        (animated (:opacity controller) opacity)
-       (animated (:offset-y controller) #(offset 0 %))
+       (animated (:offset-y controller) offset :dx 0 :dy)
        (animated (:rotation controller) rotate)
        (on-appear #(.forward controller))))
 ```
@@ -36,7 +35,7 @@ A powerful animation system for Flutter that combines declarative motion descrip
 (widget
   :managed [controller (motion-controller 
                         vsync
-                        (seq 
+                        (seq
                           :duration 2000
                           ;; Initial value
                           (to :dots [0 0 0] :scale 1 :rotation 0)
@@ -65,7 +64,7 @@ A powerful animation system for Flutter that combines declarative motion descrip
 ```clojure
 (widget
   :managed [controller (motion-controller 
-                        vsync
+                        vsync}
                         (par
                           ;; Background  dim
                           :overlay (to 1.0 0.5 :curve :ease-in)
@@ -78,12 +77,12 @@ A powerful animation system for Flutter that combines declarative motion descrip
                                          :curve :ease-out))
                                  ;; Items fade in sequentially
                                  (par :fade
-                                      (par
+                                      (seq
                                         (map
-                                          #(to 0.0 1.0 
-                                               :curve :ease-out
-                                               :duration 100
-                                               :delay (+ 100 (* % 100)))
+                                          #(par % 
+                                                (to 1.0
+                                                    :curve :ease-out
+                                                    :duration 100))
                                           (range 3)))))))]
   (stack
     ;; Dimming overlay

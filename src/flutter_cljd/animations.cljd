@@ -1179,6 +1179,7 @@
 
 (defn from-to
   "Animate from an initial value to final values. It's a shorthand for `(from value (to values))`.\\
+   Same as Tween but accepts any number of values.\\
    `from-to` takes an initial value and final values and returns a new motion that animates between them.\\
    Can accept animation options map or key-value pairs after the values.
    ```clojure
