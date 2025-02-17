@@ -42,7 +42,7 @@ A clean, functional approach to animation definition:
 
 ### 4. Integration Features
 Seamless integration with Flutter ecosystem:
-- `Animation` implements `ILookup` for property access
+- `Animation` implements `ILookup` for creating child animations with native Clojure functions like `get`, `get-in`, etc.
 - `map-anim` for custom animation transformations
 - Compatible with Flutter's animation widgets
 - Built-in curve library via `flutter-cljd/curves`
