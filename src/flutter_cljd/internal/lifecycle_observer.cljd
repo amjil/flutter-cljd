@@ -1,0 +1,47 @@
+(ns flutter-cljd.internal.lifecycle-observer
+  (:require
+   ["package:flutter/widgets.dart" :as w]
+   ["dart:ui" :as ui]))
+
+(declare LifeCycleObserverState)
+
+(deftype LifeCycleObserver [onStateChange
+                            ^w/Widget? child]
+  :extends w/StatefulWidget
+
+  (createState [^LifeCycleObserver this]
+    (LifeCycleObserverState)))
+
+(defn- state-kw [^ui/AppLifecycleState state]
+  (condp = state
+    ui/AppLifecycleState.detached :detached
+    ui/AppLifecycleState.resumed :resumed
+    ui/AppLifecycleState.inactive :inactive
+    ui/AppLifecycleState.hidden :hidden
+    ui/AppLifecycleState.paused :paused))
+
+(deftype LifeCycleObserverState []
+  :extends #/(w/State LifeCycleObserver)
+  :with w/WidgetsBindingObserver
+
+  (initState [^LifeCycleObserverState this]
+    (.initState ^super this)
+    (when-let [instance w/WidgetsBinding.instance]
+      (.addObserver instance this)
+      (when-let [state (.-lifecycleState instance)]
+        (.addPostFrameCallback
+         instance
+         (fn [_]
+           ((-> this .-widget .-onStateChange) (state-kw state)))))))
+
+  (dispose [^LifeCycleObserverState this]
+    (when-let [instance w/WidgetsBinding.instance]
+      (.removeObserver instance this))
+    (.dispose ^super this))
+
+  (build [^LifeCycleObserverState this _]
+    (-> this .-widget .-child))
+
+  w/WidgetsBindingObserver
+  (didChangeAppLifecycleState [^LifeCycleObserverState this ^w/AppLifecycleState state]
+    ((-> this .-widget .-onStateChange) (state-kw state))))
