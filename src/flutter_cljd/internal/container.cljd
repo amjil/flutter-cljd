@@ -5,6 +5,8 @@
    [flutter-cljd.drawing :as dr]))
 
 (defn container*
+  "Internal implementation of container widget.
+  See flutter-cljd.widgets/container for public API documentation."
   ([] (container* {} nil))
   ([child] (if (instance? m/Widget child) (container* {} child) (container* child nil)))
   ([args child]

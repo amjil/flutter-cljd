@@ -866,8 +866,53 @@
     (ctr/constraints-transformed* args (last children))))
 
 
-(defn container 
-  ""
+(defn container
+  "A convenience widget that combines common painting, positioning, and sizing widgets.
+
+  A container can be used to add padding, margins, borders, background color, or other decorations to a widget.
+  
+  Args:
+   - args: A map of arguments for the container widget
+     - `:key` An identifier for the container
+     - `:alignment` (Alignment) How to align the child
+     - `:padding` (EdgeInsets) Empty space inside the container
+     - `:color` (Color) Background color
+     - `:decoration` (BoxDecoration) Background decoration
+     - `:foreground-decoration` (BoxDecoration) Foreground decoration
+     - `:width`, `:w` (number) Container width
+     - `:height`, `:h` (number) Container height  
+     - `:size` (Size or :hug) Container size. Use :hug to fit content
+     - `:constraints` (BoxConstraints) Size constraints
+     - `:margin` (EdgeInsets) Empty space around the container
+     - `:transform` (Matrix4) Transform to apply
+     - `:transform-alignment` (AlignmentGeometry) Origin of transform
+     - `:clip`, `:clip-behavior` (Clip) How to clip content
+     - `:animation` (map) Animation options for changes
+       - `:duration` (Duration) Length of animation
+       - `:curve` (Curve) Animation curve
+       - `:on-end` (function) Called when animation completes
+   - child: The widget below this container in the tree
+
+  Examples:
+  ```clojure
+  (container)  ; Empty container
+  
+  (container (text \"Hello\"))  ; Container with child
+  
+  (container 
+    {:padding 10
+     :color :blue
+     :margin 5}
+    (text \"Hello\"))
+    
+  (container
+    {:decoration {:color :blue
+                 :border-radius 8}
+     :animation {:duration 0.3}}
+    (text \"Animated\"))
+  ```
+
+  [Flutter docs](https://api.flutter.dev/flutter/widgets/Container-class.html)"
   ([] (cnt/container*))
   ([child] (cnt/container* child))
   ([& args]
