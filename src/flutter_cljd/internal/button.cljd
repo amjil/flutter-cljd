@@ -13,12 +13,12 @@
 (declare ^:private ButtonState)
 
 ;; Button widget
-(deftype ^:private Button [key child is-enabled on-tap on-tap-down on-tap-up
-                 on-tap-cancel on-double-tap on-long-press on-secondary-tap
-                 on-secondary-tap-up on-secondary-tap-down on-secondary-tap-cancel
-                 on-highlight-changed on-hover mouse-cursor enable-feedback
-                 exclude-from-semantics focus-node can-request-focus
-                 on-focus-change autofocus]
+(deftype Button [key child is-enabled on-tap on-tap-down on-tap-up
+                           on-tap-cancel on-double-tap on-long-press on-secondary-tap
+                           on-secondary-tap-up on-secondary-tap-down on-secondary-tap-cancel
+                           on-highlight-changed on-hover mouse-cursor enable-feedback
+                           exclude-from-semantics focus-node can-request-focus
+                           on-focus-change autofocus]
   :extends (w/StatefulWidget .key key)
 
   (createState [_] (ButtonState false false nil nil nil nil nil #{}))
@@ -43,9 +43,9 @@
   ([this value add]
    (let [notifier (.-internalStatesController this)
          current (.-value notifier)]
-   (set! (.-oldStates this) current)
+     (set! (.-oldStates this) current)
      (if add
-       (set! (.-value notifier) (conj current value)) 
+       (set! (.-value notifier) (conj current value))
        (set! (.-value notifier) (disj current value))))))
 
 (defn- activate-on-intent [this _]
@@ -54,8 +54,8 @@
       (w/Feedback.forTap (.-context this)))
     (on-tap)))
 
- (defn- states-controller [this]
-   (.-internalStatesController this))
+(defn- states-controller [this]
+  (.-internalStatesController this))
 
 (defn- primary-button-enabled? [_ ^Button widget]
   (and (.-is-enabled widget)
@@ -70,14 +70,14 @@
        (or (.-on-secondary-tap widget)
            (.-on-secondary-tap-up widget)
            (.-on-secondary-tap-down widget))))
- 
+
 (defn- widget-enabled? [this ^Button widget]
   (or (primary-button-enabled? this widget)
       (secondary-button-enabled? this widget)))
 
 (defn- enabled? [this]
   (widget-enabled? this (.-widget this)))
- 
+
 (defn- handle-states-controller-change [this]
   ;; Force a rebuild to resolve widget.mouseCursor
   (.setState this (fn [])))
@@ -100,7 +100,7 @@
      :hovered
      (when call-on-hover
        (update-states this :hovered value))
-     
+
      nil)
 
    ;; Call event handlers
@@ -118,14 +118,14 @@
 
 (defn- should-show-focus? [this]
   (condp = (w/MediaQuery.maybeNavigationModeOf (.-context this))
-     w/NavigationMode.directional (.-hasFocus this) 
+    w/NavigationMode.directional (.-hasFocus this)
     (and (enabled? this) (.-hasFocus this))))
 
 (defn- update-focus-highlights [this]
-   (let [show-focus (condp = (.-highlightMode (.-instance w/FocusManager))
-                      w/FocusHighlightMode.traditional (should-show-focus? this)
-                      false)]
-     (update-highlight this :focused show-focus)))
+  (let [show-focus (condp = (.-highlightMode (.-instance w/FocusManager))
+                     w/FocusHighlightMode.traditional (should-show-focus? this)
+                     false)]
+    (update-highlight this :focused show-focus)))
 
 (defn- clear-offsets [this]
   (set! (.-cursorLocalOffset this) nil)
@@ -245,13 +245,13 @@
 
 ;; Button State
 (deftype ^:private ButtonState [^:mutable hovering
-                      ^:mutable hasFocus
-                      ^:mutable cursorLocalOffset
-                      ^:mutable cursorGlobalOffset
-                      ^:mutable internalStatesController
-                       ^:mutable handleFocusHighlightModeChange
-                       ^:mutable handleStatesControllerChange
-                       ^:mutable oldStates]
+                                ^:mutable hasFocus
+                                ^:mutable cursorLocalOffset
+                                ^:mutable cursorGlobalOffset
+                                ^:mutable internalStatesController
+                                ^:mutable handleFocusHighlightModeChange
+                                ^:mutable handleStatesControllerChange
+                                ^:mutable oldStates]
   :extends (#/(w/State Button))
   :with #/(w/AutomaticKeepAliveClientMixin Button)
 
@@ -295,9 +295,9 @@
   (build [this context]
     (let [^Button widget (.-widget this)
           ^w/MouseCursor effective-mouse-cursor (w/WidgetStateProperty.resolveAs
-                                  (or (.-mouse-cursor widget)
-                                      w/WidgetStateMouseCursor.clickable)
-                                  (.-value (states-controller this)))
+                                                 (or (.-mouse-cursor widget)
+                                                     w/WidgetStateMouseCursor.clickable)
+                                                 (.-value (states-controller this)))
           primary-enabled? (primary-button-enabled? this widget)
           secondary-enabled? (secondary-button-enabled? this widget)
           action-map {w/ActivateIntent (w/CallbackAction.

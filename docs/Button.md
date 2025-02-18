@@ -82,7 +82,7 @@ You can access this context in child widgets:
 Button styling is handled through a modifier function that can be injected anywhere in the widget tree using `with-button-modifier`. The modifier is a simple function that takes a child widget and button context, and returns a modified widget:
 
 ```clojure
-(defn my-style [child ctx]
+(defn my-style [child button-context]
   ;; Return modified child widget
   child)
 ```
@@ -182,7 +182,7 @@ Sets the `:enabled` inherited value to false:
        (button on-tap)))
 ```
 
-3. Use `without-button-modifier` when creating reusable button components to avoid style conflicts:
+3. Use `without-button-modifier` when creating custom button components to avoid style conflicts:
 
 ```clojure
 (defn my-button [label on-tap]
