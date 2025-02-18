@@ -48,7 +48,7 @@ Also it can be driven with an `Animation` instance and used as `AnimatedBuilder`
                            :offset-y 50.0
                            :rotation 0.0}
                           ;; Expand with spring effect
-                          (parallel {:duration 800}
+                          (par {:duration 800}
                             :scale (to 1.0 1.05 1.0 :curve :spring)
                             :opacity (to 1.0 :relative-duration 0.5)
                             :offset-y (to 0.0 :curve :ease-out)
