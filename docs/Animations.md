@@ -199,6 +199,20 @@ Configuration:
 - `delay`, `relative-duration`, `relative-delay`: Advanced timing control
 - `action!`: Side effect triggers during animation
 
+## `with-motion` widget
+While it's easy to use `:managed` key in `widget` macro to hold a `motion-controller`, `:managed` doesn't rebuild motions automatically when some values changes, that's why here is `with-motion` widget:
+```clojure
+(widget
+  :watch [transparent? (atom false)]
+  (with-motion
+    (duration 200
+      (from-to 1 (if transparent? 0 1)))
+    (fn [_ cntr]
+      (->> some-widget
+           (animated cntr opacity)))))
+```
+`with-motion` supports multiple motions.
+
 ## `animated` Widget
 
 The `animated` widget can be used in two ways to create animations in Flutter:
