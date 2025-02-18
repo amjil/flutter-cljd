@@ -1,6 +1,7 @@
 # Button Widget
 
 The `button` widget provides a universal, customizable button implementation that responds to various touch and hover events.
+The main difference to native Flutter button is styling - 
 
 ## Basic Usage
 
@@ -81,9 +82,8 @@ You can access this context in child widgets:
 Buttons can be styled using the `with-button-modifier` widget, which accepts a function:
 
 ```clojure
-(defn custom-style [button ctx]
-  (let [state (:state ctx)
-        disabled? (contains? state :disabled)
+(defn custom-style [button {:keys [state]}]
+  (let [disabled? (contains? state :disabled)
         pressed? (contains? state :pressed)]
     (->> button
          (opacity (cond 
