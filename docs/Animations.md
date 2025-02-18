@@ -200,18 +200,41 @@ Configuration:
 - `action!`: Side effect triggers during animation
 
 ## `with-motion` widget
-While it's easy to use `:managed` key in `widget` macro to hold a `motion-controller`, `:managed` doesn't rebuild motions automatically when some values changes, that's why here is `with-motion` widget:
+The `with-motion` widget provides dynamic motion creation and management. While using the `:managed` key in the `widget` macro can hold a `motion-controller`, it won't automatically rebuild motions when dependent values change. `with-motion` solves this by recreating motions when their definitions change:
+
 ```clojure
+;; Single motion example
 (widget
   :watch [transparent? (atom false)]
-  (with-motion
+  (with-motion vsync
     (duration 200
       (from-to 1 (if transparent? 0 1)))
-    (fn [_ cntr]
+    (fn [ctx controller]
       (->> some-widget
-           (animated cntr opacity)))))
+           (animated controller opacity)))))
+
+;; Multiple motions
+(widget
+  :watch [expanded? (atom false)]
+  (with-motion vsync
+    (from-to 0 (if expanded? 1 0))  ; opacity motion
+    (from-to 0 (if expanded? 100 0)) ; offset motion 
+    (fn [ctx opacity-ctrl offset-ctrl]
+      (->> some-widget
+           (animated opacity-ctrl opacity)
+           (animated offset-ctrl offset)))))
 ```
-`with-motion` supports multiple motions.
+
+The widget takes:
+1. A vsync source (usually from widget's :vsync)
+2. One or more motion definitions
+3. A builder function that receives the context and motion controllers
+
+Key features:
+- Automatically recreates motions when their definitions change
+- Manages motion controller lifecycle
+- Supports multiple synchronized motions
+- Provides context and controllers to the builder function
 
 ## `animated` Widget
 
