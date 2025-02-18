@@ -75,7 +75,7 @@ Also it can be driven with an `Animation` instance and used as `AnimatedBuilder`
   (->> (card)
        (animated (:scale controller) scale)
        (animated (:opacity controller) opacity)
-       (animated (:offset-y controller) offset :dx 0 :dy)
+       (animated (:offset-y controller) offset :dy)
        (animated (:rotation controller) rotate)
        (on-appear #(.forward controller))))
 ```
