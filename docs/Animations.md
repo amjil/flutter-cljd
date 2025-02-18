@@ -215,7 +215,7 @@ To animate a widget property, simply wrap the modifier with `animated`:
 
 ;; Animated opacity
 (->> child
-  (animated opacity 0.5))
+  (animated opacity (if transparent? 0.5 1)))
 
 ;; With options
 (->> (text "Hello")
