@@ -199,6 +199,6 @@ Sets the `:enabled` inherited value to false:
     :get {:button-context ctx}
     :let [pressed? (contains? (:state ctx) :pressed)]
     child
-    (scale (if pressed? 0.95 1.0))
+    (animated scale (if pressed? 0.95 1.0))
     (button on-tap)))
 ```

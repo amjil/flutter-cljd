@@ -244,7 +244,6 @@ Key features:
 
 The `animated` widget can be used in two ways to create animations in Flutter:
 
-
 ### 1. Implicit Animations
 
 Implicit animations automatically animate between property changes using a tween animation. This is the simpler way to create animations:
