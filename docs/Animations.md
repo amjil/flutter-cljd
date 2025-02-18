@@ -2,7 +2,7 @@
 
 A powerful animation system for Flutter that combines declarative motion descriptions with flexible widget animations.
 
-## Main Goals
+## Main Features
 
 ### 1. Rich Animation Primitives
 The library provides a comprehensive set of animation primitives (motions) that go beyond Flutter's built-in `Tween` and `TweenSequence`.

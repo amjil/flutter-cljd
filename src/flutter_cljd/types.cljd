@@ -1376,3 +1376,19 @@
   (if (instance? a/AlwaysStoppedAnimation value)
     value
     (a/AlwaysStoppedAnimation. value)))
+
+(defn app-lifecycle-state 
+  "Converts the specified `state` value to an `AppLifecycleState` object.\\
+   If `state` is already an `AppLifecycleState` object, it is returned as-is.\\
+   If `state` is a keyword (`:detached`, `:resumed`, `:inactive`, `:hidden`, or `:paused`), it is converted to an `AppLifecycleState` object.\\
+   If `state` is not recognized, an exception is thrown."
+  [state]
+  (if (instance? ui/AppLifecycleState state) 
+    state
+    (case state
+      :detached ui/AppLifecycleState.detached 
+      :resumed ui/AppLifecycleState.resumed 
+      :inactive ui/AppLifecycleState.inactive 
+      :hidden ui/AppLifecycleState.hidden 
+      :paused ui/AppLifecycleState.paused 
+      (throw (Exception. (str "Invalid app lifecycle state: " state " (expected :detached, :resumed, :inactive, :hidden, or :paused)"))))))

@@ -50,7 +50,8 @@
    [flutter-cljd.internal.with-managed :as wm]
    [flutter-cljd.utils :as ut]
    [flutter-cljd.animations :as a]
-   [flutter-cljd.internal.transformed :as tr]))
+   [flutter-cljd.internal.transformed :as tr]
+   [flutter-cljd.internal.lifecycle-observer :as lco]))
 
 (defn absorb-pointer
   "A widget that absorbs pointers during hit testing. 
@@ -1523,7 +1524,7 @@
   The transform matrix is a 4x4 transformation matrix that determines how to map the child's coordinate system.
   
   Args:
-   - transform: A Matrix4 transformation matrix
+   - transform: A Matrix4 transformation matrix. Base transforms functions are available in `flutter-cljd.drawing` namespace.
    - args: Optional map of arguments:
      - :key - Widget key
      - :origin - The origin of the coordinate system (Offset)
@@ -1534,10 +1535,10 @@
 
   Example:
   ```clojure
-  (transform (Matrix4.rotationZ 0.5)
+  (transform (mat4-rotation-z 0.5)
     (text \"Rotated text\"))
   
-  (transform (Matrix4.skewX 0.3)
+  (transform (mat4-skew-x 0.3)
             {:alignment :center
              :origin (offset 100 100)}
     (container {:width 200 :height 100}
@@ -1725,3 +1726,38 @@
   [Flutter docs](https://api.flutter.dev/flutter/widgets/RotatedBox-class.html)"
   [quarter-turns child]
   (tr/rotate-layout* quarter-turns child))
+
+(defn life-cycle-observer
+  "A widget that calls a function when the widget's lifecycle state changes.
+
+   Args:
+    - `on-change`: The function to call. (fn [state]). State can be one of `:detached`, `:resumed`, `:inactive`, `:hidden`, `:paused`
+    - `child`: The child widget."
+  [observer child]
+  (lco/LifeCycleObserver observer child))
+
+(defn on-app-became-active 
+  "A widget that calls a function when the app becomes active.
+
+   Args:
+    - `action`: The function to call.
+    - `child`: The child widget."
+  [action child]
+  (life-cycle-observer
+   (fn [state]
+     (when (= :resumed state)
+       (action)))
+   child))
+
+(defn on-app-became-inactive
+  "A widget that calls a function when the app becomes inactive.
+
+   Args:
+    - `action`: The function to call.
+    - `child`: The child widget."
+  [action child]
+  (life-cycle-observer
+   (fn [state]
+     (when (not= :resumed state)
+       (action)))
+   child))

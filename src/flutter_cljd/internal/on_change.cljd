@@ -31,7 +31,7 @@
           old (.-value oldWidget)
           new (.-value widget)
           on-change (.-onChange widget)]
-      (when-not (equal? this old new) 
+      (when-not (equal? this old new)
         (w/WidgetsBinding.instance.addPostFrameCallback
          (fn [_] (on-change old new (.-context this)))))))
   
