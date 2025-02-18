@@ -1,7 +1,7 @@
 # Button Widget
 
 The `button` widget provides a universal, customizable button implementation that responds to various touch and hover events.
-The main difference to native Flutter button is styling - while Flutter's Material buttons come with predefined styles and themes, this button is completely unstyled by default. This gives you full control over the button's appearance through modifiers and the button context, making it easier to create custom button designs without fighting against existing styles.
+The main difference to native Flutter button is styling - while Flutter's Material buttons come with predefined styles and themes, this button comes with minimal default styling (hover/press/disabled state animations) that can be easily replaced or removed. This gives you full control over the button's appearance through modifiers and the button context, making it easier to create custom button designs without fighting against existing styles.
 
 ## Basic Usage
 
