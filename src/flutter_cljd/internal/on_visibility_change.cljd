@@ -1,5 +1,58 @@
 (ns flutter-cljd.internal.on-visibility-change
   (:require
-   ["package:flutter/foundation.dart" :as f]
-   ["package:flutter/widgets.dart" :as w]))
+   ["package:flutter/widgets.dart" :as w]
+   ["package:visibility_detector/visibility_detector.dart"] :as vd))
 
+(declare VisibilityObserverState)
+
+(deftype VisibilityObserver [onEnter
+                             onFirstEnter
+                             onExit
+                             onVisibilityChange
+                             ^w/Widget? child]
+  :extends w/StatefulWidget
+
+  (createState [^VisibilityObserver this]
+    (VisibilityObserverState false true false nil)))
+
+(defn- on-visibility-info [^VisibilityObserverState this ^vd/VisibilityInfo info]
+  (when-let [on-visibility-change (some-> this .-widget .-onVisibilityChange)]
+    (on-visibility-change info))
+  (let [visible-fraction (.-visibleFraction info)
+        is-full-visible? (>= visible-fraction 1)
+        is-full-invisible? (<= visible-fraction 0)
+        prev-is-full-visible? (.-prevIsFullVisible this)
+        prev-is-full-invisible? (.-prevIsFullInvisible this)]
+    (when (and is-full-visible? (not prev-is-full-visible?))
+      (when-let [on-enter (some-> this .-widget .-onEnter)]
+        (on-enter))
+      (when-let [on-first-enter (some-> this .-widget .-onFirstEnter)]
+        (when-not (.-onEnterWasCalled this)
+          (.-onEnterWasCalled! this true)
+          (on-first-enter))))
+    (when (and is-full-invisible? (not prev-is-full-invisible?))
+      (when-let [on-exit (some-> this .-widget .-onExit)]
+        (on-exit)))
+    (.-prevIsFullVisible! this is-full-visible?)
+    (.-prevIsFullInvisible! this is-full-invisible?)))
+
+(deftype VisibilityObserverState [^:mutable prevIsFullVisible
+                                  ^:mutable prevIsFullInvisible
+                                  ^:mutable onEnterWasCalled
+                                  ^:mutable lifecycleState]
+  :extends #/(w/State VisibilityObserver)
+
+  (dispose [^VisibilityObserverState this]
+    (when-let [instance w/WidgetsBinding.instance]
+      (.removeObserver instance this))
+    (.dispose ^super this))
+
+  (build [^VisibilityObserverState this _]
+    (vd/VisibilityDetector
+     .onVisibilityChanged (fn [^vd/VisibilityInfo info]
+                            (on-visibility-info this info))
+     .child (-> this .-widget .-child))))
+
+(defn observe-visibility*
+  [{:keys [on-enter on-first-enter on-exit on-change]} child]
+  (VisibilityObserver on-enter on-first-enter on-exit on-change child))

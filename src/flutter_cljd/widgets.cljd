@@ -51,7 +51,8 @@
    [flutter-cljd.utils :as ut]
    [flutter-cljd.animations :as a]
    [flutter-cljd.internal.transformed :as tr]
-   [flutter-cljd.internal.lifecycle-observer :as lco]))
+   [flutter-cljd.internal.lifecycle-observer :as lco]
+   [flutter-cljd.internal.on-visibility-change :as ovc]))
 
 (defn absorb-pointer
   "A widget that absorbs pointers during hit testing. 
@@ -1761,3 +1762,16 @@
      (when (not= :resumed state)
        (action)))
    child))
+
+(defn observe-visibility
+  "A widget that calls a function when the widget's visibility changes.
+
+   Args:
+    - `:on-enter`: The function to call when the widget becomes fully visible.
+    - `:on-first-enter`: The function to call when the widget becomes fully visible for the first time.
+    - `:on-exit`: The function to call when the widget becomes fully invisible.
+    - `:on-change`: The function to call. (fn [VisibilityInfo]).
+    - `child`: The child widget."
+  [& args]
+  (let [[args children] (ut/key-values-args-and-children args)]
+    (ovc/observe-visibility* args (last children))))

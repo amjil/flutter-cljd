@@ -59,7 +59,7 @@ Also it can be driven with an `Animation` instance and used as `AnimatedBuilder`
        (animated (:opacity controller) opacity)
        (animated (:offset-y controller) offset :dy)
        (animated (:rotation controller) rotate)
-       (on-appear #(.forward controller))))
+       (on-create #(.forward controller))))
 ```
 
 ### Interactive Loading Animation

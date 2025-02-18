@@ -1441,7 +1441,7 @@
    (->> (image \"loader.png\")
         (animated rotation-cntr rotated)
         (center)
-        (on-appear #(.repeat rotation-cntr))))
+        (on-create #(.repeat rotation-cntr))))
   ```"
   [motion]
   (let [motion (motion-to-map motion)]
@@ -1483,7 +1483,7 @@
                              (tile (to 0 360 :duration 1000))))]
      (->> (image \"spinner.png\")
           (animated controller rotate)
-          (on-appear #(.repeat controller))))
+          (on-create #(.repeat controller))))
    ```
    
    See also:
