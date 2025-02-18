@@ -13,9 +13,9 @@ Full support for animating complex data structures like maps and vectors
 ### 3. Declarative API
 A clean, functional approach to animation definition:
 ```clojure
-(seq  ;; sequential
+(seq ; sequential
   (from {:scale 0.8 :opacity 0.0}
-    (par {:duration 300} ;; parallel
+    (par {:duration 300} ; parallel
       :scale (to 1.0 :curve :spring)
       :opacity (to 1.0 :curve :ease-in)))
   (wait 200)
@@ -205,8 +205,10 @@ The `with-motion` widget provides dynamic motion creation and management. While 
 ```clojure
 ;; Single motion example
 (widget
+  :vsync vsync
   :watch [transparent? (atom false)]
-  (with-motion vsync
+  (with-motion 
+    vsync
     (duration 200
       (from-to 1 (if transparent? 0 1)))
     (fn [ctx controller]
@@ -215,8 +217,10 @@ The `with-motion` widget provides dynamic motion creation and management. While 
 
 ;; Multiple motions
 (widget
+  :vsync vsync
   :watch [expanded? (atom false)]
-  (with-motion vsync
+  (with-motion 
+    vsync
     (from-to 0 (if expanded? 1 0))  ; opacity motion
     (from-to 0 (if expanded? 100 0)) ; offset motion 
     (fn [ctx opacity-ctrl offset-ctrl]
