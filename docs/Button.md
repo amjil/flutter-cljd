@@ -79,28 +79,72 @@ You can access this context in child widgets:
 
 ## Styling
 
-Buttons can be styled using the `with-button-modifier` widget, which accepts a function:
+Button styling is handled through a modifier function that can be injected anywhere in the widget tree using `with-button-modifier`. The modifier is a simple function that takes a child widget and button context, and returns a modified widget:
 
 ```clojure
-(defn custom-style [button {:keys [state]}]
+(defn my-style [child ctx]
+  ;; Return modified child widget
+  child)
+```
+
+This approach provides maximum flexibility since the modifier:
+- Can apply any widget transformations
+- Has access to the full button context
+- Can be composed with other modifiers
+- Can be injected at any level in the widget tree
+- Affects all descendant buttons unless overridden
+
+Example of a basic style:
+
+```clojure
+(defn basic-style [child {:keys [state]}]
   (let [disabled? (contains? state :disabled)
         pressed? (contains? state :pressed)]
-    (->> button
+    (->> child
          (opacity (cond 
                    disabled? 0.5
                    pressed? 0.8 
                    :else 1.0)))))
 
+;; Apply to a single button
 (->> (text "Styled Button")
      (button #(println "Clicked!"))
-     (with-button-modifier custom-style))
+     (with-button-modifier basic-style))
+
+;; Or inject into widget tree to affect all descendant buttons
+(->> (column
+       (button #(println "Button 1") 
+         (text "Button 1"))
+       (button #(println "Button 2")
+         (text "Button 2")))
+     (with-button-modifier basic-style))
+```
+
+More complex styling:
+
+```clojure
+(defn fancy-style [child {:keys [state]}]
+  (let [pressed? (contains? state :pressed)
+        hovered? (contains? state :hovered)]
+    (->> child
+         (decorated 
+           {:color (if pressed? :blue-700 :blue-500)
+            :border-radius 8
+            :box-shadow (when-not pressed?
+                         [{:color :black
+                           :blur-radius (if hovered? 10 5)}])})
+         (padding {:h 16 :v 8})
+         (animated 
+           {:duration 200}
+           opacity 
+           (if (contains? state :disabled) 0.5 1.0)))))
 ```
 
 The modifier function receives:
 1. The button child widget
-2. The button context map
+2. The button context map (see Button Context section above)
 
-To remove button styling, use `without-button-modifier`.
+To remove button styling, use `without-button-modifier`. This is useful when creating reusable button components that shouldn't inherit styling from parent widgets.
 
 ## Helper Functions
 
