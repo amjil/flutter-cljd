@@ -16,6 +16,7 @@
    [flutter-cljd.internal.center :as cntr]
    [flutter-cljd.internal.clip-oval :as co]
    [flutter-cljd.internal.clip-rect :as cr]
+   [flutter-cljd.internal.container :as cnt]
    [flutter-cljd.internal.colored :as cd]
    [flutter-cljd.internal.color-filtered :as cf]
    [flutter-cljd.internal.composited-transform :as ct]
@@ -863,6 +864,15 @@
   [arg0 & args]
   (let [[args children] (ut/key-values-args-and-children (cons arg0 args))]
     (ctr/constraints-transformed* args (last children))))
+
+
+(defn container 
+  ""
+  ([] (cnt/container*))
+  ([child] (cnt/container* child))
+  ([& args]
+   (let [[args children] (ut/key-values-args-and-children args)]
+     (cnt/container* args (last children)))))
 
 (defn custom-multi-child-layout
   "A widget that uses a delegate to size and position multiple children.
