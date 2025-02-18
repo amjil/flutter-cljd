@@ -28,7 +28,7 @@
     (.initState ^super this)
     (when-let [instance w/WidgetsBinding.instance]
       (.addObserver instance this)
-      (when-let [state (.-lifecycleState instance)]
+      (when-let [^ui/AppLifecycleState state (.-lifecycleState instance)]
         (.addPostFrameCallback
          instance
          (fn [_]
@@ -43,5 +43,5 @@
     (-> this .-widget .-child))
 
   w/WidgetsBindingObserver
-  (didChangeAppLifecycleState [^LifeCycleObserverState this ^w/AppLifecycleState state]
+  (didChangeAppLifecycleState [^LifeCycleObserverState this ^ui/AppLifecycleState state]
     ((-> this .-widget .-onStateChange) (state-kw state))))

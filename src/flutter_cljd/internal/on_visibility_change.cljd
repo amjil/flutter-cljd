@@ -1,7 +1,7 @@
 (ns flutter-cljd.internal.on-visibility-change
   (:require
    ["package:flutter/widgets.dart" :as w]
-   ["package:visibility_detector/visibility_detector.dart"] :as vd))
+   ["package:visibility_detector/visibility_detector.dart" :as vd]))
 
 (declare VisibilityObserverState)
 
