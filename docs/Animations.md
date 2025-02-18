@@ -120,6 +120,8 @@ Also it can be driven with an `Animation` instance and used as `AnimatedBuilder`
                           :overlay (to 1.0 0.5 :curve :ease-in)
                           ;; Menu slides in with items
                           :menu (seq
+                                 ;; Initial value
+                                 (to {:offset 0 :fade [0 0 0]})
                                  ;; Slide in from left
                                  (par :offset
                                       (to -300 0
