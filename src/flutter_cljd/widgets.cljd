@@ -875,7 +875,7 @@
    - args: A map of arguments for the container widget
      - `:key` An identifier for the container
      - `:alignment` (Alignment) How to align the child
-     - `:padding` (EdgeInsets) Empty space inside the container
+     - `:padding` (EdgeInsets) Empty space inside the container. Cannot be negative.
      - `:color` (Color) Background color
      - `:decoration` (BoxDecoration) Background decoration
      - `:foreground-decoration` (BoxDecoration) Foreground decoration
@@ -883,7 +883,7 @@
      - `:height`, `:h` (number) Container height  
      - `:size` (Size or :hug) Container size. Use :hug to fit content
      - `:constraints` (BoxConstraints) Size constraints
-     - `:margin` (EdgeInsets) Empty space around the container
+     - `:margin` (EdgeInsets) Empty space around the container. Cannot be negative.
      - `:transform` (Matrix4) Transform to apply
      - `:transform-alignment` (AlignmentGeometry) Origin of transform
      - `:clip`, `:clip-behavior` (Clip) How to clip content

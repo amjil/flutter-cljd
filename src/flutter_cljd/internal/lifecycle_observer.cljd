@@ -6,7 +6,7 @@
 (declare LifeCycleObserverState)
 
 (deftype LifeCycleObserver [onStateChange
-                            ^w/Widget? child]
+                            child]
   :extends w/StatefulWidget
 
   (createState [^LifeCycleObserver this]

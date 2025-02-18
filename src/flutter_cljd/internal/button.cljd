@@ -386,10 +386,10 @@
        (t/widget-key (args :key))
        (fn [btn-ctx]
          (let [ctx (:context btn-ctx ctx)
-               modifier (c/get-inherited ctx inh/button-modifier)]
-           (modifier
-            (wi/with-inherited* inh/button-context btn-ctx child)
-            btn-ctx)))
+               label (wi/with-inherited* inh/button-context btn-ctx child)]
+           (if-let [modifier (c/get-inherited ctx inh/button-modifier)]
+             (modifier label btn-ctx)
+             label)))
        (c/get-inherited ctx inh/enabled (:enabled args))
        on-tap
        (:on-tap-down args)

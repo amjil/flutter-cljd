@@ -171,9 +171,12 @@
                        acc)))
                  {}
                  all-keys)))
+     
+     (= from to)
+     (constantly to)
 
      :else
-     (do 
+     (do
        (fd/FlutterError.reportError
         (fd/FlutterErrorDetails
          .exception (str "Warning: Tween '" from "' -> '" to "' is not animatable. " 

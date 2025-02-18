@@ -1,11 +1,13 @@
 (ns flutter-cljd.internal.on-visibility-change
   (:require
+   [flutter-cljd.types :as t]
    ["package:flutter/widgets.dart" :as w]
    ["package:visibility_detector/visibility_detector.dart" :as vd]))
 
 (declare VisibilityObserverState)
 
-(deftype VisibilityObserver [onEnter
+(deftype VisibilityObserver [key
+                             onEnter
                              onFirstEnter
                              onExit
                              onVisibilityChange
@@ -13,7 +15,7 @@
   :extends w/StatefulWidget
 
   (createState [^VisibilityObserver this]
-    (VisibilityObserverState false true false nil)))
+    (VisibilityObserverState false true false nil (or key (w/GlobalKey)))))
 
 (defn- on-visibility-info [^VisibilityObserverState this ^vd/VisibilityInfo info]
   (when-let [on-visibility-change (some-> this .-widget .-onVisibilityChange)]
@@ -39,7 +41,8 @@
 (deftype VisibilityObserverState [^:mutable prevIsFullVisible
                                   ^:mutable prevIsFullInvisible
                                   ^:mutable onEnterWasCalled
-                                  ^:mutable lifecycleState]
+                                  ^:mutable lifecycleState
+                                  key]
   :extends #/(w/State VisibilityObserver)
 
   (dispose [^VisibilityObserverState this]
@@ -49,10 +52,11 @@
 
   (build [^VisibilityObserverState this _]
     (vd/VisibilityDetector
+     .key (or (some-> this .-widget .-key) (-> this .-key))
      .onVisibilityChanged (fn [^vd/VisibilityInfo info]
                             (on-visibility-info this info))
      .child (-> this .-widget .-child))))
 
 (defn observe-visibility*
-  [{:keys [on-enter on-first-enter on-exit on-change]} child]
-  (VisibilityObserver on-enter on-first-enter on-exit on-change child))
+  [{:keys [key on-enter on-first-enter on-exit on-change]} child]
+  (VisibilityObserver (t/widget-key key) on-enter on-first-enter on-exit on-change child))
