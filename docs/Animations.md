@@ -5,25 +5,7 @@ A powerful animation system for Flutter that combines declarative motion descrip
 ## Main Goals
 
 ### 1. Rich Animation Primitives
-The library provides a comprehensive set of animation primitives (motions) that go beyond Flutter's built-in `Tween` and `TweenSequence`:
-
-Value Changes:
-- `to`, `from`, `from-to`: Smooth transitions between values
-- `const`: Discrete value changes without interpolation
-- `instant`: Immediate value changes
-- `wait`: Pause for specified durations
-
-Composition:
-- `seq`: Sequential animations with precise timing control
-- `par`: Parallel animations with synchronized timing
-- `repeat`, `autoreverse`: Animation repetition patterns
-- `synced`, `tile`: Time-based synchronization and tiling
-
-Configuration:
-- `with`: Unified configuration interface
-- `duration`, `curve`: Basic timing and easing
-- `delay`, `relative-duration`, `relative-delay`: Advanced timing control
-- `action!`: Side effect triggers during animation
+The library provides a comprehensive set of animation primitives (motions) that go beyond Flutter's built-in `Tween` and `TweenSequence`.
 
 ### 2. Complex Value Animation
 Full support for animating complex data structures like maps and vectors
@@ -31,9 +13,9 @@ Full support for animating complex data structures like maps and vectors
 ### 3. Declarative API
 A clean, functional approach to animation definition:
 ```clojure
-(seq
+(seq  ;; sequential
   (from {:scale 0.8 :opacity 0.0}
-    (par {:duration 300}
+    (par {:duration 300} ;; parallel
       :scale (to 1.0 :curve :spring)
       :opacity (to 1.0 :curve :ease-in)))
   (wait 200)
@@ -66,7 +48,7 @@ Also it can be driven with an `Animation` instance and used as `AnimatedBuilder`
                            :offset-y 50.0
                            :rotation 0.0}
                           ;; Expand with spring effect
-                          (par {:duration 800}
+                          (parallel {:duration 800}
                             :scale (to 1.0 1.05 1.0 :curve :spring)
                             :opacity (to 1.0 :relative-duration 0.5)
                             :offset-y (to 0.0 :curve :ease-out)
@@ -196,6 +178,26 @@ Motion controllers manage the lifecycle and playback of animations. Unlike `Anim
   (->> (text "Animated")
        (animated animation opacity)))
 ```
+
+### Motions
+
+Value Changes:
+- `to`, `from`, `from-to`: Smooth transitions between values
+- `const`: Discrete value changes without interpolation
+- `instant`: Immediate value changes
+- `wait`: Pause for specified durations
+
+Composition:
+- `seq`: Sequential animations with precise timing control
+- `par`: Parallel animations with synchronized timing
+- `repeat`, `autoreverse`: Animation repetition patterns
+- `synced`, `tile`: Time-based synchronization and tiling
+
+Configuration:
+- `with`: Unified configuration interface
+- `duration`, `curve`: Basic timing and easing
+- `delay`, `relative-duration`, `relative-delay`: Advanced timing control
+- `action!`: Side effect triggers during animation
 
 ## `animated` Widget
 
