@@ -1,0 +1,14 @@
+(ns flutter-cljd.internal.unconstrained
+  (:require
+   ["package:flutter/widgets.dart" :as w]
+   [flutter-cljd.types :as t]))
+
+(defn unconstrained*
+  [args child]
+  (w/UnconstrainedBox
+   .key (t/widget-key (:key args))
+   .textDirection (some-> args :text-direction t/text-direction)
+   .alignment (t/alignment (:alignment args :center))
+   .constrainedAxis (some-> args :axis t/axis)
+   .clipBehavior (t/clip (:clip args :none))
+   .child child))

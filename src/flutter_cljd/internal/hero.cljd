@@ -1,0 +1,14 @@
+(ns flutter-cljd.internal.hero
+  (:require
+   [flutter-cljd.types :as t]
+   ["package:flutter/material.dart" :as m]))
+
+(defn hero* [tag args child]
+  (m/Hero
+   .key (t/widget-key (:key args))
+   .tag tag
+   .createRectTween (:create-rect-tween args)
+   .flightShuttleBuilder (:flight-shuttle-builder args)
+   .placeholderBuilder (:placeholder-builder args)
+   .transitionOnUserGestures (boolean (:transition-on-user-gestures args))
+   .child child))
