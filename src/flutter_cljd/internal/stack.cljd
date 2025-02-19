@@ -6,12 +6,10 @@
 
 (defn stack*
   [children]
-  (let [params (if (map? (first children)) (first children) {})
-        children (ut/flatten-children  
-                  (if (map? (first children)) (rest children) children))]
+  (let [[params children] (ut/key-values-args-and-children children)]
     (m/Stack
      .key (t/widget-key (:key params))
-     .alignment (t/alignment-geometry (:alignment params m/AlignmentDirectional.topStart))
+     .alignment (t/alignment-geometry (:alignment params m/AlignmentDirectional.center))
      .textDirection (some-> (:text-direction params) t/text-direction)
      .fit (t/stack-fit (:fit params m/StackFit.loose))
      .clipBehavior (t/clip (:clip params m/Clip.hardEdge))

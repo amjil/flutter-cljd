@@ -12,5 +12,5 @@
      .textDirection (t/text-direction (:text-direction args))
      .alignment (t/alignment-geometry (:alignment args :center))
      .constraintsTransform transform
-     .clipBehavior (t/clip (or (some args [:clip :clip-behavior]) w/Clip.none))
+     .clipBehavior (t/clip (:clip args w/Clip.none))
      .debugTransformType (:debug-transform-type args ""))))

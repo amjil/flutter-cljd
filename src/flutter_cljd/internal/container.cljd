@@ -29,12 +29,12 @@
          hug-height (= (some args [:height :h :size]) :hug) 
          hug-width (= (some args [:width :w :size]) :hug)
          constraints (some-> (:constraints args args)
-                             t/some-box-constraints
+                             t/box-constraints
                              .normalize)
          margin (some-> args :margin t/insets)
          transform (some-> args :transform dr/mat4)
          transform-alignment (some-> args :transform-alignment t/alignment-geometry)
-         clip-behavior (t/clip (or (some args [:clip :clip-behavior]) m/Clip.none))
+         clip-behavior (t/clip (args :clip m/Clip.none))
          container (if
                     (contains? args :animation)
                      (let [animation (t/animation-options (:animation args {}))]

@@ -53,7 +53,9 @@
    [flutter-cljd.animations :as a]
    [flutter-cljd.internal.transformed :as tr]
    [flutter-cljd.internal.lifecycle-observer :as lco]
-   [flutter-cljd.internal.on-visibility-change :as ovc]))
+   [flutter-cljd.internal.on-visibility-change :as ovc]
+   [flutter-cljd.internal.unconstrained :as uc]
+   [flutter-cljd.internal.hero :as hr]))
 
 (defn absorb-pointer
   "A widget that absorbs pointers during hit testing. 
@@ -886,7 +888,8 @@
      - `:margin` (EdgeInsets) Empty space around the container. Cannot be negative.
      - `:transform` (Matrix4) Transform to apply
      - `:transform-alignment` (AlignmentGeometry) Origin of transform
-     - `:clip`, `:clip-behavior` (Clip) How to clip content
+     - `:clip` (Clip) How to clip content
+        Possible values: `:none`, `:hard-edge`, `:anti-alias`, `:anti-alias-with-save-layer`.
      - `:animation` (map) Animation options for changes
        - `:duration` (Duration) Length of animation
        - `:curve` (Curve) Animation curve
@@ -1002,7 +1005,8 @@
       Possible values: `:alphabetic`, `:ideographic`.
     - `:vertical-direction` (keyword or VerticalDirection, default: `:down`): The direction in which the children are placed vertically.
       Possible values: `:top`, `:down`.
-    - `:clip-behavior` (keyword or Clip, default: `:none`): The clip
+    - `:clip` (keyword or Clip, default: `:none`): The clip
+      Possible values: `:none`, `:hard-edge`, `:anti-alias`, `:anti-alias-with-save-layer`.
    
    [Flutter docs](https://api.flutter.dev/flutter/widgets/Flex-class.html)"
   ([direction] (crf/flex* direction {} []))
@@ -1149,9 +1153,20 @@
    
    This class is useful if you want to overlap several children in a simple way, for example having some text and an image, overlaid with a gradient and a button attached to the bottom.
    
+   Args:
+    - `:key` An identifier for the stack.
+    - `:alignment` (Alignment, default: AlignmentDirectional.center): How to align the non-positioned and partially-positioned children in the stack.
+    - `:text-direction` (TextDirection, default: TextDirection.ltr): The text direction to use for the children.
+    - `:fit` (StackFit, default: StackFit.loose): How to size the non-positioned children in the stack.
+      Possible values: `:loose`, `:expand`.
+    - `:clip` (Clip, default: Clip.hardEdge): How to clip the children.
+      Possible values: `:none`, `:hard-edge`, `:anti-alias`, `:anti-alias-with-save-layer`.
+   
+   Children: The widgets below this widget in the tree. Can contain nested lists of children and null values.
+
    [Flutter doc](https://api.flutter.dev/flutter/widgets/Stack-class.html)"
   ([] (st/stack* []))
-  ([& children] (st/stack* children)))
+  ([& args] (st/stack* args)))
 
 (defn opacity
   "A widget that makes its child partially transparent.
@@ -1830,3 +1845,64 @@
   [& args]
   (let [[args children] (ut/key-values-args-and-children args)]
     (ovc/observe-visibility* args (last children))))
+
+(defn unconstrained
+  "A widget that imposes no constraints on its child, allowing it to render at its \"natural\" size.
+
+   This allows a child to render at the size it would render if it were alone on an infinite canvas with no constraints.
+   This container will then attempt to adopt the same size, within the limits of its own constraints.
+   If it ends up with a different size, it will align the child based on alignment.
+   If the box cannot expand enough to accommodate the entire child, the child will be clipped.
+
+   Args:
+      - `args`: Optional map of arguments:
+        - `:key` - Widget key
+        - `:text-direction` - The text direction to use for the child.
+        - `:alignment` - The alignment of the child.
+        - `:axis` - The axis to retain constraints on, if any.
+        - `:clip` - The clip behavior to use when painting the child.
+          Possible values: `:none`, `:hard-edge`, `:anti-alias`, `:anti-alias-with-save-layer`.
+      - `child`: The child widget.
+
+   [Flutter docs](https://api.flutter.dev/flutter/widgets/UnconstrainedBox-class.html)"
+  ([child] (uc/unconstrained* {} child))
+  ([& args]
+   (let [[args children] (ut/key-values-args-and-children args)]
+     (uc/unconstrained* args (last children)))))
+
+(defn hero
+  "A widget that marks its child as being a candidate for hero animations.
+
+   When a PageRoute is pushed or popped with the Navigator, the entire screen's content is replaced.
+   An old route disappears and a new route appears.
+   If there's a common visual feature on both routes then it can be helpful for orienting the user for the feature to physically move from one page to the other during the routes' transition.
+   Such an animation is called a hero animation. The hero widgets \"fly\" in the Navigator's overlay during the transition and while they're in-flight they're, by default, not shown in their original locations in the old and new routes.
+   
+   Args:
+    - `tag`: A tag to identify the hero. Tags must be unique within the same route.
+    - args: Optional map of arguments:
+      - `:key` - Widget key
+      - `:create-rect-tween` - Defines how the destination hero's bounds change as it flies from the starting route to the destination route.
+        ```clojure
+        (fn [^Rect? begin, ^Rect? end])])
+        ```
+      - `:flight-shuttle-builder` - Optional override to supply a widget that's shown during the hero's flight.
+         ```clojure
+         (fn [^BuildContext flightContext
+              ^Animation<double> animation
+              ^HeroFlightDirection flightDirection
+              ^BuildContext fromHeroContext
+              ^BuildContext toHeroContext])])
+          ```
+      - `:placeholder-builder` - Placeholder widget left in place as the Hero's child once the flight takes off.
+         ```clojure
+         (fn [^BuildContext flightContext
+              ^Size heroSize
+              ^Widget child])])
+          ```
+      - `:transition-on-user-gestures` - Whether to perform the hero transition if the PageRoute transition was triggered by a user gesture, such as a back swipe on iOS. Default is false.
+    - `child`: The child widget to animate."
+  ([tag child] (hr/hero* tag {} child))
+  ([tag arg0 & args]
+   (let [[args children] (ut/key-values-args-and-children (cons arg0 args))]
+     (hr/hero* tag args (last children)))))

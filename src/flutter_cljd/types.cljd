@@ -1258,9 +1258,11 @@
     (cond
       (instance? m/BoxConstraints value) value
       (instance? ui/ViewConstraints value) (m/BoxConstraints.fromViewConstraints value)
+      (and (map? value) (:size value)) (box-constraints (:size value))
+
       (map? value)
-      (let [w (some value [:width :w :size])
-            h (some value [:height :h :size])
+      (let [w (some value [:width :w])
+            h (some value [:height :h])
             get-cnstrt (fn [value type] (cond
                                           (map? value) (get value type)
                                           (number? value) value
@@ -1289,19 +1291,6 @@
 
       :else
       (throw (Exception. (str "Invalid box constraints: " value))))))
-
-(defn some-box-constraints
-  "Creates a BoxConstraints object from the specified constraints.
-   If the constraints do not have bounded height or width, returns nil."
-  [& constraints]
-  (let [constr (apply box-constraints constraints)]
-    (if (or
-         (.-hasBoundedHeight constr)
-         (.-hasBoundedWidth constr)
-         (> (.-minHeight constr) 0.0)
-         (> (.-minWidth constr) 0.0))
-      constr
-      nil)))
 
 (defn flex-fit
   "Converts the specified `fit` value to a `FlexFit` object.\\

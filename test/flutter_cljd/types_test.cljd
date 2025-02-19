@@ -209,4 +209,11 @@
       (is (= (.-minWidth constraints) 100.0))
       (is (= (.-maxWidth constraints) 200.0))
       (is (= (.-minHeight constraints) 150.0))
-      (is (= (.-maxHeight constraints) 300.0)))))
+      (is (= (.-maxHeight constraints) 300.0))))
+  
+  (testing "Vector constraints"
+    (let [constraints (t/box-constraints [100 200])]
+      (is (= (.-minWidth constraints) 100.0))
+      (is (= (.-maxWidth constraints) 100.0))
+      (is (= (.-minHeight constraints) 200.0))
+      (is (= (.-maxHeight constraints) 200.0)))))

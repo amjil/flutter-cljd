@@ -176,17 +176,7 @@
      (constantly to)
 
      :else
-     (do
-       (fd/FlutterError.reportError
-        (fd/FlutterErrorDetails
-         .exception (str "Warning: Tween '" from "' -> '" to "' is not animatable. " 
-                         "Only numbers, maps, vectors, colors, and other animatable types are supported. "
-                         "Make sure to use same types for 'from' and 'to' values. "
-                         "If you're using vectors or maps, ensure that they have the same structure and length. "
-                         "Convert your values to a consistent type before animating, for example: (t/color :red) instead of :red.")
-         .library "flutter-cljd"
-         .context (fd/ErrorDescription "during animation setup")))
-       #(if (> % 0.5) to from)))))
+     #(if (> % 0.5) to from))))
 
 (defn flatten-children
   "Flattens a nested collection of children and filters out non-Widget elements.
