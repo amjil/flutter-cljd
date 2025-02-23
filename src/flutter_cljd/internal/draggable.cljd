@@ -103,10 +103,11 @@
       (w/Listener
        .behavior (.-hitTestBehavior widget)
        .onPointerDown (when can-drag #(.routePointer this %))
-       .child (if show-child
-                (.-child widget)
-                (or (.-childWhenDragging widget)
-                    (w/Opacity .opacity 0.0 .child (.-child widget)))))))
+       .child (w/Opacity 
+               .opacity (if (or show-child (some? (.-childWhenDragging widget))) 1.0 0.0)
+               .child (if show-child
+                        (.-child widget)
+                        (or (.-childWhenDragging widget) (.-child widget)))))))
 
   DraggableState
   (disposeRecognizerIfInactive [^DraggableState this]
@@ -126,7 +127,7 @@
     (let [^Draggable widget (.-widget this)]
       (when (or (nil? (.-maxSimultaneousDrags widget))
                 (< activeCount (.-maxSimultaneousDrags widget)))
-        (let [^w/Offset drag-start-point (child-drag-anchor-strategy widget (.-context this) position)
+        (let [^w/Offset drag-start-point ((.-dragAnchorStrategy widget) widget (.-context this) position)
               _ (.setState this (fn []
                                   (set! (.-activeCount this) (inc (.-activeCount this)))
                                   nil))
@@ -414,7 +415,7 @@
                           hit-test-behavior
                           allowed-buttons-filter]
                    :or {feedback-offset w/Offset.zero
-                        drag-anchor-strategy w/childDragAnchorStrategy
+                        drag-anchor-strategy child-drag-anchor-strategy
                         hit-test-behavior w/HitTestBehavior.deferToChild
                         ignoring-feedback-semantics true
                         ignoring-feedback-pointer true
@@ -429,7 +430,7 @@
      (some-> (or axis affinity) t/axis)
      placeholder
      (d/offset feedback-offset)
-     (or drag-anchor-strategy child-drag-anchor-strategy)
+     drag-anchor-strategy
      (some-> (or affinity axis) t/axis)
      (some-> max-simultaneous-drags int)
      on-drag-started
