@@ -1917,3 +1917,6 @@
 (defn drag-target
   [builder & {:keys [key on-will-accept on-accept on-leave on-move hit-test-behavior] :as args}]
   (drg/drag-target* (assoc args :builder builder)))
+
+(defn drag-boundary [child]
+  (w/DragBoundary .child child))

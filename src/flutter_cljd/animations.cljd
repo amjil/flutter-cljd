@@ -170,12 +170,12 @@
       (.-effectsStatusListener! object nil))))
 
 (defn- compute-motion [^MotionController controller]
-  (when (or (.-needCompute controller) (nil? (.-interpolate controller)))
+  (when (or (.-needCompute controller) (nil? (.-interpolate controller)) (nil? (.-duration (.-parent controller))))
     (.-needCompute! controller false)
     (reset-cached-value controller)
     (let [{:keys [prepare-motion]} (.-motion controller)
           {:keys [duration interpolate side-effects]} (prepare-motion nil nil)
-          {:keys [duration]} (t/animation-options {:duration duration})]
+          duration (t/duration (or duration (get-in t/*anim-ctx* [:animation :duration])))]
       (.-interpolate! controller interpolate)
       (.-duration! (.-parent controller) duration)
       (set-side-effects side-effects controller (.-parent controller)))))
