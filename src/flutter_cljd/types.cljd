@@ -4,6 +4,7 @@
    ["package:flutter/services.dart" :as s]
    ["package:flutter/widgets.dart" :as w]
    ["package:flutter/animation.dart" :as a]
+   ["package:flutter/rendering.dart" :as r]
    ["dart:core" :as dc]
    ["dart:ui" :as ui]
    [cljd.string :as str]
@@ -170,6 +171,7 @@
       :end m/MainAxisAlignment.end
       :space-between m/MainAxisAlignment.spaceBetween
       :space-around m/MainAxisAlignment.spaceAround
+      :space-evenly m/MainAxisAlignment.spaceEvenly
       (throw (Exception. (str "Invalid main-axis-alignment: " alignment))))))
 
 (defn main-axis-size [size]
@@ -1370,7 +1372,33 @@
   "Converts the specified `state` value to an `AppLifecycleState` object.\\
    If `state` is already an `AppLifecycleState` object, it is returned as-is.\\
    If `state` is a keyword (`:detached`, `:resumed`, `:inactive`, `:hidden`, or `:paused`), it is converted to an `AppLifecycleState` object.\\
-   If `state` is not recognized, an exception is thrown."
+   If `state` is not recognized, an exception is thrown.
+   
+   Possible values:
+     - instance of `AppLifecycleState`
+     - `:detached` The application is still hosted by a Flutter engine but is detached from any host views.\\ 
+       The application defaults to this state before it initializes, and can be in this state (applicable on Android, iOS, and web) after all views have been detached.\\
+       When the application is in this state, the engine is running without a view.\\
+       This state is only entered on iOS, Android, and web, although on all platforms it is the default state before the application begins running.
+     - `:resumed` On all platforms, this state indicates that the application is in the default running mode for a running application that has input focus and is visible.\\
+       On Android, this state corresponds to the Flutter host view having focus (Activity.onWindowFocusChanged was called with true) while in Android's \"resumed\" state.\\
+       It is possible for the Flutter app to be in the inactive state while still being in Android's \"onResume\" state if the app has lost focus (Activity.onWindowFocusChanged was called with false), but hasn't had Activity.onPause called on it.\\
+       On iOS and macOS, this corresponds to the app running in the foreground active state.
+     - `:inactive` At least one view of the application is visible, but none have input focus. The application is otherwise running normally.\\
+       On non-web desktop platforms, this corresponds to an application that is not in the foreground, but still has visible windows.\\
+       On the web, this corresponds to an application that is running in a window or tab that does not have input focus.'\\
+       On iOS and macOS, this state corresponds to the Flutter host view running in the foreground inactive state.\\
+       Apps transition to this state when in a phone call, when responding to a TouchID request, when entering the app switcher or the control center, or when the UIViewController hosting the Flutter app is transitioning.\\
+       On Android, this corresponds to the Flutter host view running in Android's paused state (i.e. Activity.onPause has been called), or in Android's \"resumed\" state (i.e. Activity.onResume has been called) but does not have window focus.\\
+       Examples of when apps transition to this state include when the app is partially obscured or another activity is focused, a app running in a split screen that isn't the current app, an app interrupted by a phone call, a picture-in-picture app, a system dialog, another view.\\
+       It will also be inactive when the notification window shade is down, or the application switcher is visible.\\
+       On Android and iOS, apps in this state should assume that they may be hidden and paused at any time.
+     - `:hidden` All views of an application are hidden, either because the application is about to be paused (on iOS and Android), or because it has been minimized or placed on a desktop that is no longer visible (on non-web desktop), or is running in a window or tab that is no longer visible (on the web).\\
+       On iOS and Android, in order to keep the state machine the same on all platforms, a transition to this state is synthesized before the paused state is entered when coming from inactive, and before the inactive state is entered when coming from paused.
+       This allows cross-platform implementations that want to know when an app is conceptually \"hidden\" to only write one handler.
+     - `:paused` The application is not currently visible to the user, and not responding to user input.\\
+        When the application is in this state, the engine will not call the PlatformDispatcher.onBeginFrame and PlatformDispatcher.onDrawFrame callbacks.\\
+       This state is only entered on iOS and Android."
   [state]
   (if (instance? ui/AppLifecycleState state) 
     state
@@ -1381,3 +1409,20 @@
       :hidden ui/AppLifecycleState.hidden 
       :paused ui/AppLifecycleState.paused 
       (throw (Exception. (str "Invalid app lifecycle state: " state " (expected :detached, :resumed, :inactive, :hidden, or :paused)"))))))
+
+(defn hit-test-behavior 
+  "Converts the specified value to an `HitTestBehavior` object.
+   
+   Possible values:
+     - instance of `HitTestBehavior`
+     - `:defer-to-child` Targets that defer to their children receive events within their bounds only if one of their children is hit by the hit test.
+     - `:opaque` Opaque targets can be hit by hit tests, causing them to both receive events within their bounds and prevent targets visually behind them from also receiving events.
+     - `:translucent` Translucent targets both receive events within their bounds and permit targets visually behind them to also receive events."
+  [value]
+  (if (instance? r/HitTestBehavior value)
+    value
+    (case value
+      :defer-to-child r/HitTestBehavior.deferToChild
+      :opaque r/HitTestBehavior.opaque
+      :translucent r/HitTestBehavior.translucent
+      (throw (Exception. (str "Invalid hit test behavior: " value " (expected :defer-to-child, :opaque, :inactive, :translucent)"))))))

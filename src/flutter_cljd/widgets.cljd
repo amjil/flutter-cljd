@@ -55,7 +55,8 @@
    [flutter-cljd.internal.lifecycle-observer :as lco]
    [flutter-cljd.internal.on-visibility-change :as ovc]
    [flutter-cljd.internal.unconstrained :as uc]
-   [flutter-cljd.internal.hero :as hr]))
+   [flutter-cljd.internal.hero :as hr]
+   [flutter-cljd.internal.draggable :as drg]))
 
 (defn absorb-pointer
   "A widget that absorbs pointers during hit testing. 
@@ -764,7 +765,7 @@
     - `:key` An identifier for the column. 
     - `:spacing` (number, default: 0): The spacing between each child widget.
     - `:main-axis-alignment` (keyword, default: :start): The alignment of the children along the main axis.
-      Possible values: :center, :start, :end, :space-between, :space-around.
+      Possible values: :center, :start, :end, :space-between, :space-around, :space-evenly.
     - `:main-axis-size` (keyword, default: :min): The size of the column in the main axis.
       Possible values: :max, :min.
     - `:cross-axis-alignment` (keyword, default: :center): The alignment of the children along the cross axis.
@@ -994,7 +995,7 @@
     - `:spacing` (number, default: 0): The spacing between each child widget.
     - `:direction` (Axis, default: Axis.horizontal): The axis along which the children are placed.
     - `:main-axis-alignment` (keyword or MainAxisAlignment, default: `:start`): The alignment of the children along the main axis.
-      Possible values: `:center`, `:start`, `:end`, `:space-between`, `:space-around`.
+      Possible values: `:center`, `:start`, `:end`, `:space-between`, `:space-around`, `:space-evenly`.
     - `:main-axis-size` (keyword or MainAxisSize, default: `:min`): The size of the flex in the main axis.
       Possible values: `:max`, `:min`.
     - `:cross-axis-alignment` (keyword or CrossAxisAlignment, default: `:center`): The alignment of the children along the cross axis.
@@ -1036,6 +1037,8 @@
 
 (defn layout-builder
   "Builds a widget tree that can depend on the parent widget's size.
+   
+   - builder: (fn [context constraints])
 
    Similar to the `builder` except that the framework calls the builder function at layout time and provides the parent widget's constraints. This is useful when the parent constrains the child's size and doesn't depend on the child's intrinsic size. The LayoutBuilder's final size will match its child's size.
 
@@ -1068,7 +1071,7 @@
     - `:key` An identifier for the row.
     - `:spacing` (number, default: 0): The spacing between each child widget.
     - `:main-axis-alignment` (keyword or MainAxisAlignment, default: `:start`): The alignment of the children along the main axis.
-      Possible values: `:center`, `:start`, `:end`, `:space-between`, `:space-around`.
+      Possible values: `:center`, `:start`, `:end`, `:space-between`, `:space-around`, `:space-evenly`.
     - `:main-axis-size` (keyword or MainAxisSize, default: :min): The size of the row in the main axis.
       Possible values: :max, :min.
     - `:cross-axis-alignment` (keyword or CrossAxisAlignment, default: `:center`): The alignment of the children along the cross axis.
@@ -1899,10 +1902,18 @@
          (fn [^BuildContext flightContext
               ^Size heroSize
               ^Widget child])])
-          ```
+         ```
       - `:transition-on-user-gestures` - Whether to perform the hero transition if the PageRoute transition was triggered by a user gesture, such as a back swipe on iOS. Default is false.
     - `child`: The child widget to animate."
   ([tag child] (hr/hero* tag {} child))
   ([tag arg0 & args]
    (let [[args children] (ut/key-values-args-and-children (cons arg0 args))]
      (hr/hero* tag args (last children)))))
+
+(defn draggable [& args]
+  (let [[args children] (ut/key-values-args-and-children args)]
+    (drg/draggable* args (last children))))
+
+(defn drag-target
+  [builder & {:keys [key on-will-accept on-accept on-leave on-move hit-test-behavior] :as args}]
+  (drg/drag-target* (assoc args :builder builder)))
