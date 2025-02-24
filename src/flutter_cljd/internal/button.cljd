@@ -253,7 +253,6 @@
                                 ^:mutable handleStatesControllerChange
                                 ^:mutable oldStates]
   :extends (#/(w/State Button))
-  :with #/(w/AutomaticKeepAliveClientMixin Button)
 
   (initState [this]
     (.initState ^super this)
@@ -369,7 +368,7 @@
               :local-offset (.-cursorLocalOffset this)
               :global-offset (.-cursorGlobalOffset this)})))))))))
 
-  #/(w/AutomaticKeepAliveClientMixin Button)
+  ^:mixin #/(w/AutomaticKeepAliveClientMixin Button)
   (wantKeepAlive [_] false))
 
 (defn button*

@@ -6,6 +6,7 @@
    ["package:flutter/painting.dart" :as p]
    ["package:flutter/rendering.dart" :as r]
    ["package:flutter/widgets.dart" :as w]
+   ["package:flutter/animation.dart" :as a]
    ["package:flutter/gestures.dart" :as g]
    ["package:flutter/services.dart" :as s]))
 
@@ -16,8 +17,8 @@
 
 ;; Draggable widget
 (deftype Draggable [^w/Key? k
-                    ^core/Duration? delay 
-                     feedback
+                    ^core/Duration? delay
+                    feedback
                     data
                     ^p/Axis? axis
                     ^w/Widget? childWhenDragging
@@ -28,9 +29,7 @@
                     onDragStarted
                     onDragUpdate
                     onDragWillEnd
-                    onDraggableCanceled
                     onDragEnd
-                    onDragCompleted
                     ^bool hapticFeedbackOnStart
                     ^bool ignoringFeedbackSemantics
                     ^bool ignoringFeedbackPointer
@@ -40,7 +39,7 @@
                     ^w/Widget child]
   :extends (w/StatefulWidget .key k)
 
-  (createState [^Draggable _] (DraggableState nil 0))
+  (createState [^Draggable _] (DraggableState nil 0 w/Offset.zero nil))
 
    ;; Creates a gesture recognizer that recognizes the start of the drag  
   Draggable
@@ -77,9 +76,12 @@
 
 ;; DraggableState class
 (deftype DraggableState [^:mutable ^g/GestureRecognizer? recognizer
-                         ^:mutable ^int activeCount]
+                         ^:mutable ^int activeCount
+                         ^:mutable ^w/Offset offset
+                         ^:mutable ^a/Tween? tween]
   :extends (#/(w/State Draggable))
 
+  ^:mixin #/(w/TickerProviderStateMixin Draggable)
   (initState [^DraggableState this]
     (.initState ^super this)
     (set! (.-recognizer this) (.createRecognizer (.-widget this) #(.startDrag this %)))
@@ -102,12 +104,19 @@
           ^bool can-drag (or (nil? (.-maxSimultaneousDrags widget)) (< activeCount (.-maxSimultaneousDrags widget)))
           ^bool show-child (zero? activeCount)
           ^w/Size? size (some-> context .findRenderObject .-size)]
-      (w/Listener
-       .behavior (.-hitTestBehavior widget)
-       .onPointerDown (when can-drag #(.routePointer this %))
-       .child (if show-child 
-                (.-child widget)
-                (or (.-childWhenDragging widget) (w/SizedBox.fromSize .size size))))))
+      (w/Transform.translate
+       .offset (-> this .-offset)
+       .child (w/Listener
+               .behavior (.-hitTestBehavior widget)
+               .onPointerDown (when can-drag #(.routePointer this %))
+               .child (if show-child
+                        (.-child widget)
+                        (or (.-childWhenDragging widget) (w/SizedBox.fromSize .size size)))))))
+
+  (setState [^DraggableState this modify]
+    (if (.-mounted this)
+      (.setState ^super this (fn [] (modify) nil))
+      (modify)))
 
   DraggableState
   (disposeRecognizerIfInactive [^DraggableState this]
@@ -128,11 +137,9 @@
       (when (or (nil? (.-maxSimultaneousDrags widget))
                 (< activeCount (.-maxSimultaneousDrags widget)))
         (let [^w/Offset drag-start-point ((.-dragAnchorStrategy widget) widget (.-context this) position)
-              _ (.setState this (fn []
-                                  (set! (.-activeCount this) (inc (.-activeCount this)))
-                                  nil))
+              _ (.setState this #(set! (.-activeCount this) (inc (.-activeCount this))))
               ^w/Widget feedback (if (instance? w/Widget (.-feedback widget))
-                                   (.-feedback widget) 
+                                   (.-feedback widget)
                                    ((.-feedback widget) (.-child widget)))
               ^DragAvatar avatar (DragAvatar
                                   (w/Overlay.of
@@ -141,39 +148,17 @@
                                    .rootOverlay (.-rootOverlay widget))
                                   (.-data widget)
                                   (.-axis widget)
-                                  position
+                                  (.+ position (.-offset this))
                                   drag-start-point
                                   feedback
                                   (.-feedbackOffset widget)
-                                  (fn [details offset]
+                                  (fn [details ^w/Offset offset]
                                     (when (and (.-mounted this) (.-onDragUpdate widget))
                                       ((.-onDragUpdate widget) details)))
+                                  (fn [^w/Velocity velocity ^w/Offset offset ^w/Offset final-offset ^bool was-accepted]
+                                    (.willEndDrag this velocity offset final-offset was-accepted))
                                   (fn [^w/Velocity velocity ^w/Offset offset ^bool was-accepted]
-                                    (if (.-mounted this)
-                                      (.setState this (fn []
-                                                        (set! (.-activeCount this) (dec (.-activeCount this)))
-                                                        nil))
-                                      (do
-                                        (set! (.-activeCount this) (dec (.-activeCount this)))
-                                        (.disposeRecognizerIfInactive this)))
-                                    (when (and (.-mounted this) (.-onDragWillEnd widget))
-                                      ((.-onDragWillEnd widget)
-                                       {:was-accepted was-accepted
-                                        :velocity velocity
-                                        :offset offset})))
-                                  (fn [^w/Velocity velocity ^w/Offset offset ^bool was-accepted]
-                                    (when (and (.-mounted this) (.-onDragEnd widget))
-                                      ((.-onDragEnd widget)
-                                       {:was-accepted was-accepted
-                                        :velocity velocity
-                                        :offset offset}))
-                                    (cond
-                                      (and was-accepted (.-onDragCompleted widget))
-                                      ((.-onDragCompleted widget))
-
-                                      (and (not was-accepted) (.-onDraggableCanceled widget))
-                                      ((.-onDraggableCanceled widget) velocity offset)))
-
+                                    (.didEndDrag this velocity offset was-accepted))
                                   (.-ignoringFeedbackSemantics widget)
                                   (.-ignoringFeedbackPointer widget)
                                   (-> this .-context w/View.of .-viewId)
@@ -182,86 +167,41 @@
                                   w/Offset.zero
                                   nil
                                   w/Offset.zero
+                                  w/Offset.zero
                                   nil
                                   nil
-                                  (.-context this))]
+                                  (.-context this)
+                                  (a/AnimationController .vsync this))]
           (.prepare avatar)
           (when-let [on-drag-started (.-onDragStarted widget)]
             (on-drag-started))
-          avatar)))))
+          avatar))))
 
-;; DragTarget widget
-(deftype DragTarget [^w/Key? k
-                     builder
-                     onWillAccept
-                     onAccept
-                     onLeave
-                     onMove
-                     ^w/HitTestBehavior hitTestBehavior]
-  :extends (w/StatefulWidget .key k)
+  (willEndDrag [^DraggableState this
+                ^w/Velocity velocity
+                ^w/Offset offset
+                ^w/Offset final-offset
+                ^bool was-accepted]
+    (when (and (.-mounted this) (.-onDragWillEnd (.-widget this)))
+      ((.-onDragWillEnd (.-widget this))
+       {:was-accepted was-accepted
+        :velocity velocity
+        :offset offset})))
 
-  (createState [^DragTarget _] (DragTargetState #{} #{})))
-
-;; DragTargetState class
-(deftype DragTargetState [^:mutable candidateAvatars
-                          ^:mutable rejectedAvatars]
-  :extends (#/(w/State DragTarget))
-
-  (^w/Widget build [^DragTargetState this ^w/BuildContext context]
-    (w/MetaData
-     .metaData this
-     .behavior (-> this .-widget .-hitTestBehavior)
-     .child ((-> this .-widget .-builder)
-             context
-             (map #(.-data %) (.-candidateAvatars this)))))
-
-  DragTargetState
-  (^bool didEnter [^DragTargetState this ^DragAvatar avatar]
-    (assert (not (-> this .-candidateAvatars (contains? avatar))))
-    (assert (not (-> this .-rejectedAvatars (contains? avatar))))
-    (let [^DragTarget widget (.-widget this)
-          ^bool resolved-will-accept (or (nil? (.-onWillAccept widget))
-                                         ((.-onWillAccept widget) (.-data avatar) (.-lastOffset avatar)))]
-      (if resolved-will-accept
-        (do
-          (.setState this (fn []
-                            (.-candidateAvatars! this (conj (.-candidateAvatars this) avatar))
-                            nil))
-          true)
-        (do
-          (.setState this (fn []
-                            (.-rejectedAvatars! this (conj (.-rejectedAvatars this) avatar))
-                            nil))
-          false))))
-
-  (didLeave [^DragTargetState this ^DragAvatar avatar]
-    (assert (or (-> this .-candidateAvatars (contains? avatar))
-                (-> this .-rejectedAvatars (contains? avatar))))
-    (when (.-mounted this)
-      (.setState this (fn []
-                        (.-rejectedAvatars! this (disj (.-rejectedAvatars this) avatar))
-                        (.-candidateAvatars! this (disj (.-candidateAvatars this) avatar))
-                        nil))
-      (when-let [on-leave (-> this .-widget .-onLeave)]
-        (on-leave (.-data avatar))))
-    nil)
-
-  (didDrop [^DragTargetState this ^DragAvatar avatar]
-    (assert (-> this .-candidateAvatars (contains? avatar)))
-    (when (.-mounted this)
-      (.setState this (fn []
-                        (.-candidateAvatars! this (disj (.-candidateAvatars this) avatar))
-                        nil))
-      (when-let [on-accept (-> this .-widget .-onAccept)]
-        (when (some? (.-data avatar))
-          (on-accept (.-data avatar) (.-lastOffset avatar)))))
-    nil)
-
-  (didMove [^DragTargetState this ^DragAvatar avatar]
-    (when (and (.-mounted this) (some? (.-data avatar)))
-      (when-let [on-move (-> this .-widget .-onMove)]
-        (on-move (.-data avatar) (.-lastOffset avatar))))
-    nil))
+  (didEndDrag [^DraggableState this
+               ^w/Velocity velocity
+               ^w/Offset offset
+               ^bool was-accepted]
+    (.setState this (fn []
+                      (.-offset! this offset)
+                      (.-activeCount! this (dec (.-activeCount this)))))
+    (when-not (.-mounted this)
+      (.disposeRecognizerIfInactive this))
+    (when (and (.-mounted this) (.-onDragEnd (.-widget this)))
+      ((.-onDragEnd (.-widget this))
+       {:was-accepted was-accepted
+        :velocity velocity
+        :offset offset}))))
 
 (deftype DragAvatar [^w/OverlayState overlayState
                      data
@@ -280,10 +220,12 @@
                      ^:mutable enteredTargets
                      ^:mutable ^w/Offset position
                      ^:mutable ^w/Offset? lastOffset
+                     ^:mutable ^w/Offset finalOffset
                      ^:mutable ^w/Offset overlayOffset
                      ^:mutable ^w/OverlayEntry? entry
                      ^:mutable ^w/BuildContext? context
-                     ^:mutable ^w/BuildContext originalContext]
+                     ^:mutable ^w/BuildContext originalContext
+                     ^:mutable ^a/AnimationController controller]
   :extends g/Drag
 
   (update [^DragAvatar this ^g/DragUpdateDetails details]
@@ -305,9 +247,9 @@
       (.updateDrag this (.-initialPosition this) (g/DragUpdateDetails .globalPosition (.-initialPosition this))))
     nil)
 
-  (updateDrag [^DragAvatar this ^w/Offset global-position ^g/DragUpdateDetails details] 
-    (set! (.-position this) global-position)
-    (set! (.-lastOffset this) (.- global-position (.-dragStartPoint this)))
+  (updateDrag [^DragAvatar this ^w/Offset global-position ^g/DragUpdateDetails details]
+    (.-position! this global-position)
+    (.-lastOffset! this (.- global-position (.-dragStartPoint this)))
 
     (when (.-mounted (.-overlayState this))
       (let [^r/RenderBox box (.findRenderObject (.-context (.-overlayState this)))
@@ -319,6 +261,7 @@
             offset (or ((.-onDragUpdate this) details (.-topLeft rect))
                        (.-topLeft rect))]
         (.-overlayOffset! this offset)
+        (.-finalOffset! this offset)
         (.markNeedsBuild (.-entry this))))
 
     (let [^g/HitTestResult result (g/HitTestResult)
@@ -348,7 +291,7 @@
             (doseq [target (.-enteredTargets this)]
               (.didMove target this))
 
-            (set! (.-activeTarget this) new-target))))))
+            (.-activeTarget! this new-target))))))
 
   (getDragTargets [^DragAvatar _ path]
     (for [entry path
@@ -364,38 +307,69 @@
     (.-enteredTargets! this #{}))
 
   (finishDrag [^DragAvatar this end-kind velocity]
-    (let [was-accepted (boolean
-                        (when (and (= end-kind :dropped)
-                                   (.-activeTarget this))
-                          (.didDrop (.-activeTarget this) this)
-                          (.-enteredTargets! this (disj (.-enteredTargets this) (.-activeTarget this)))
+    (let [^r/RenderBox box (.findRenderObject (.-context (.-overlayState this)))
+          target (when (= end-kind :dropped) (.-activeTarget this))
+          target-box (some-> target .-context .findRenderObject)
+          target-size (some-> target-box .-size)
+          child-box (some-> this .-originalContext .findRenderObject)
+          expected-offset (if (and target-box child-box)
+                            (.globalToLocal
+                             child-box
+                             (.- (.localToGlobal target-box (.center target-size w/Offset.zero))
+                                 (.localToGlobal child-box (.center (.-size child-box) w/Offset.zero))))
+                            w/Offset.zero)
+          was-accepted (boolean
+                        (when target
+                          (.didDrop target this)
+                          (.-enteredTargets! this (disj (.-enteredTargets this) target))
                           true))
           last-offset (.-lastOffset this)
           velocity (or velocity w/Velocity.zero)
-          expected-offset 0
-          final-offset (when (.-onDragWillEnd this)
-                         ((.-onDragWillEnd this) velocity last-offset was-accepted))]
-      (.leaveAllEntered this)
-      (set! (.-activeTarget this) nil)
-      (.remove (.-entry this))
-      (.dispose (.-entry this))
-      (set! (.-entry this) nil)
+          final-offset (or ((.-onDragWillEnd this) velocity last-offset expected-offset was-accepted)
+                           expected-offset)
+          duration (t/duration 200)]
+      (if-not (= final-offset last-offset)
+        (do
+          (.-duration! (.-controller this) duration)
+          (.-finalOffset! this (.localToGlobal child-box final-offset))
+          (.addStatusListener (.-controller this)
+                              (fn [status]
+                                (when (= a/AnimationStatus.completed status)
+                                  (.dragCompletion this velocity final-offset was-accepted))
+                                nil))
+          (.forward (.-controller this) .from 0.0))
+        (.dragCompletion this velocity final-offset was-accepted))))
 
-      (when (.-onDragEnd this)
-        ((.-onDragEnd this) velocity last-offset was-accepted))))
+  (dragCompletion [^DragAvatar this
+                   ^w/Velocity velocity
+                   ^w/Offset offset
+                   ^bool was-accepted]
+    (.clearStatusListeners (.-controller this))
+    (.leaveAllEntered this)
+    (.-activeTarget! this nil)
+    (.remove (.-entry this))
+    (.dispose (.-entry this))
+    (.-entry! this nil)
+
+    ((.-onDragEnd this) velocity offset was-accepted))
 
   (buildWidget [^DragAvatar this ^w/BuildContext context]
     (.-context! this context)
-    (w/Positioned
-     .left (.-dx (.-overlayOffset this))
-     .top (.-dy (.-overlayOffset this))
-     .child
-     (w/ExcludeSemantics
-      .excluding (.-ignoringFeedbackSemantics this)
-      .child
-      (w/IgnorePointer
-       .ignoring (.-ignoringFeedbackPointer this)
-       .child (.-feedback this)))))
+    (w/AnimatedBuilder
+     .animation (.-controller this)
+     .child (w/ExcludeSemantics
+             .excluding (.-ignoringFeedbackSemantics this)
+             .child (w/IgnorePointer
+                     .ignoring (.-ignoringFeedbackPointer this)
+                     .child (.-feedback this)))
+     .builder (fn [_ child]
+                (let [offset (w/Offset.lerp (.-overlayOffset this)
+                                            (.-finalOffset this)
+                                            (a/Curves.easeInOut.transform (.-value (.-controller this))))]
+                  (w/Positioned
+                   .left (.-dx offset)
+                   .top (.-dy offset)
+                   .child child)))))
 
   (^w/Velocity restrictVelocityAxis [^DragAvatar this ^w/Velocity velocity]
     (if-not (.-axis this)
@@ -409,6 +383,78 @@
       p/Axis.vertical (w/Offset 0.0 (.-dy offset))
       offset)))
 
+;; DragTarget widget
+(deftype DragTarget [^w/Key? k
+                     builder
+                     onWillAccept
+                     onAccept
+                     onLeave
+                     onMove
+                     ^w/HitTestBehavior hitTestBehavior]
+  :extends (w/StatefulWidget .key k)
+
+  (createState [^DragTarget _] (DragTargetState #{} #{})))
+
+;; DragTargetState class
+(deftype DragTargetState [^:mutable candidateAvatars
+                          ^:mutable rejectedAvatars]
+  :extends (#/(w/State DragTarget))
+
+  (^w/Widget build [^DragTargetState this ^w/BuildContext context]
+    (w/MetaData
+     .metaData this
+     .behavior (-> this .-widget .-hitTestBehavior)
+     .child ((-> this .-widget .-builder)
+             context
+             (map #(.-data %) (.-candidateAvatars this)))))
+
+  (setState [^DraggableState this modify]
+    (if (.-mounted this)
+      (.setState ^super this (fn [] (modify) nil))
+      (modify)))
+
+  DragTargetState
+  (^bool didEnter [^DragTargetState this ^DragAvatar avatar]
+    (assert (not (-> this .-candidateAvatars (contains? avatar))))
+    (assert (not (-> this .-rejectedAvatars (contains? avatar))))
+    (let [^DragTarget widget (.-widget this)
+          ^bool resolved-will-accept (or (nil? (.-onWillAccept widget))
+                                         ((.-onWillAccept widget) (.-data avatar) (.-lastOffset avatar)))]
+      (if resolved-will-accept
+        (do
+          (.setState this #(.-candidateAvatars! this (conj (.-candidateAvatars this) avatar)))
+          true)
+        (do
+          (.setState this #(.-rejectedAvatars! this (conj (.-rejectedAvatars this) avatar)))
+          false))))
+
+  (didLeave [^DragTargetState this ^DragAvatar avatar]
+    (assert (or (-> this .-candidateAvatars (contains? avatar))
+                (-> this .-rejectedAvatars (contains? avatar))))
+    (when (.-mounted this)
+      (.setState this (fn []
+                        (.-rejectedAvatars! this (disj (.-rejectedAvatars this) avatar))
+                        (.-candidateAvatars! this (disj (.-candidateAvatars this) avatar))
+                        nil))
+      (when-let [on-leave (-> this .-widget .-onLeave)]
+        (on-leave (.-data avatar))))
+    nil)
+
+  (didDrop [^DragTargetState this ^DragAvatar avatar]
+    (assert (-> this .-candidateAvatars (contains? avatar)))
+    (when (.-mounted this)
+      (.setState this #(.-candidateAvatars! this (disj (.-candidateAvatars this) avatar)))
+      (when-let [on-accept (-> this .-widget .-onAccept)]
+        (when (some? (.-data avatar))
+          (on-accept (.-data avatar) (.-lastOffset avatar)))))
+    nil)
+
+  (didMove [^DragTargetState this ^DragAvatar avatar]
+    (when (and (.-mounted this) (some? (.-data avatar)))
+      (when-let [on-move (-> this .-widget .-onMove)]
+        (on-move (.-data avatar) (.-lastOffset avatar))))
+    nil))
+
 (defn draggable* [{:keys [key
                           delay
                           feedback
@@ -419,12 +465,10 @@
                           drag-anchor-strategy
                           affinity
                           max-simultaneous-drags
-                          on-drag-started
+                          on-drag-start
                           on-drag-update
                           on-drag-will-end
-                          on-drag-canceled
                           on-drag-end
-                          on-drag-completed
                           haptic-feedback-on-start
                           ignoring-feedback-semantics
                           ignoring-feedback-pointer
@@ -450,12 +494,10 @@
      drag-anchor-strategy
      (some-> (or affinity axis) t/axis)
      (some-> max-simultaneous-drags int)
-     on-drag-started
+     on-drag-start
      on-drag-update
      on-drag-will-end
-     on-drag-canceled
      on-drag-end
-     on-drag-completed
      (boolean
       (if (nil? haptic-feedback-on-start)
         (some-> delay (.> core/Duration.zero))

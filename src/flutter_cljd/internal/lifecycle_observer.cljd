@@ -22,7 +22,6 @@
 
 (deftype LifeCycleObserverState []
   :extends #/(w/State LifeCycleObserver)
-  :with w/WidgetsBindingObserver
 
   (initState [^LifeCycleObserverState this]
     (.initState ^super this)
@@ -42,6 +41,6 @@
   (build [^LifeCycleObserverState this _]
     (-> this .-widget .-child))
 
-  w/WidgetsBindingObserver
+  ^:mixin w/WidgetsBindingObserver
   (didChangeAppLifecycleState [^LifeCycleObserverState this ^ui/AppLifecycleState state]
     ((-> this .-widget .-onStateChange) (state-kw state))))
