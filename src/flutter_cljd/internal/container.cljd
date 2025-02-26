@@ -1,8 +1,7 @@
 (ns flutter-cljd.internal.container
   (:require
    ["package:flutter/material.dart" :as m]
-   [flutter-cljd.types :as t]
-   [flutter-cljd.drawing :as dr]))
+   [flutter-cljd.types :as t]))
 
 (defn container*
   "Internal implementation of container widget.
@@ -32,7 +31,7 @@
                              t/box-constraints
                              .normalize)
          margin (some-> args :margin t/insets)
-         transform (some-> args :transform dr/mat4)
+         transform (some-> args :transform t/mat4)
          transform-alignment (some-> args :transform-alignment t/alignment-geometry)
          clip-behavior (t/clip (args :clip m/Clip.none))
          container (if

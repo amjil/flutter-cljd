@@ -1,8 +1,7 @@
 (ns flutter-cljd.internal.composited-transform
   (:require
    ["package:flutter/widgets.dart" :as w]
-   [flutter-cljd.types :as t]
-   [flutter-cljd.drawing :as dr]))
+   [flutter-cljd.types :as t]))
 
 (defn composited-transform-follower*
   [args child]
@@ -12,7 +11,7 @@
      .key (t/widget-key (args :key))
      .link link
      .showWhenUnlinked (:show-when-unlinked args true)
-     .offset (dr/offset (:offset args 0))
+     .offset (t/offset (:offset args 0))
      .targetAnchor (t/alignment (:target-anchor args w/Alignment.topLeft))
      .followerAnchor (t/alignment (:follower-anchor args w/Alignment.topLeft))
      .child child)))

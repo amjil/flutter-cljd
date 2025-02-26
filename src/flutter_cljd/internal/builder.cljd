@@ -4,4 +4,4 @@
 
 (defn builder*
   ([builder] (m/Builder .builder builder))
-  ([builder child] (m/Builder .builder (fn [ctx] (builder child ctx)))))
+  ([builder child] (m/Builder .builder (fn [ctx] (builder ctx child)))))

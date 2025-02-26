@@ -5,20 +5,18 @@
 
 (def enabled {:key :enabled :default-value true})
 
-(defn- default-button-modifier [button btn-ctx] 
-  (let [states (:state btn-ctx)
-        ctx (:context btn-ctx)
-        text-style (m/DefaultTextStyle.of ctx)
+(defn- default-button-modifier [button {:keys [state context prev-state]}] 
+  (let [text-style (m/DefaultTextStyle.of context)
         color (some-> text-style .-style .-color)
         alpha (some-> color .-a)]
     (->> button
          (m/AnimatedOpacity
-          .opacity (if (states :pressed) 0.5 (if (states :hovered) 0.8 1.0))
-          .duration (core/Duration .milliseconds (if-not (states :hovered) 500 50))
+          .opacity (if (state :pressed) 0.5 (if (state :hovered) 0.8 1.0))
+          .duration (core/Duration .milliseconds (if (and (not (state :hovered)) (prev-state :hovered)) 500 0))
           .child)
          (m/DefaultTextStyle.merge
           .style (when color
-                   (m/TextStyle .color (.withOpacity color (if (states :disabled) (/ alpha 2.0) alpha))))
+                   (m/TextStyle .color (.withOpacity color (if (state :disabled) (/ alpha 2.0) alpha))))
           .child))))
 
 (def button-modifier

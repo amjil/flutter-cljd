@@ -1,7 +1,6 @@
 (ns flutter-cljd.internal.draggable
   (:require
    [flutter-cljd.types :as t]
-   [flutter-cljd.drawing :as d]
    ["dart:core" :as core]
    ["package:flutter/painting.dart" :as p]
    ["package:flutter/rendering.dart" :as r]
@@ -490,7 +489,7 @@
      data
      (some-> axis t/axis)
      placeholder
-     (d/offset feedback-offset)
+     (t/offset feedback-offset)
      drag-anchor-strategy
      (some-> (or affinity axis) t/axis)
      (some-> max-simultaneous-drags int)

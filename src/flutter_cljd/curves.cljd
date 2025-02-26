@@ -3,8 +3,7 @@
    [cljd.string :as str]
    ["dart:core" :as dc]
    ["package:flutter/animation.dart" :as a]
-   [flutter-cljd.drawing :as dr :refer [offset]]
-   [flutter-cljd.types :as t]
+   [flutter-cljd.types :as t :refer [offset]]
    ["package:flutter/physics.dart" :as p]
    [flutter-cljd.curves :as curves]))
 

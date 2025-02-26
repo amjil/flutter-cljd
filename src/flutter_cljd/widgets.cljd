@@ -47,6 +47,7 @@
    [flutter-cljd.internal.with-text-style :as wts]
    [flutter-cljd.internal.on-change :as oc]
    [flutter-cljd.internal.animated :as an]
+   [flutter-cljd.internal.listening :as lstn]
    [flutter-cljd.internal.on-state-actions :as osa]
    [flutter-cljd.internal.with-managed :as wm]
    [flutter-cljd.utils :as ut]
@@ -1440,7 +1441,7 @@
     {:duration 250}
     {:padding pd :color txt-clr}
     #(padding (:padding %1) 
-        (tx/text \"Text\" {:color (:color %1)})))
+        (text \"Text\" {:color (:color %1)})))
   ```
      If your builder function contains a subtree that doesn't depend on the animation,
      it's more efficient to build that subtree once instead of rebuilding it on every animation tick.
@@ -1598,7 +1599,7 @@
   The transform matrix is a 4x4 transformation matrix that determines how to map the child's coordinate system.
   
   Args:
-   - transform: A Matrix4 transformation matrix. Base transforms functions are available in `flutter-cljd.drawing` namespace.
+   - transform: A Matrix4 transformation matrix. Base transforms functions are available in `flutter-cljd.types` namespace.
    - args: Optional map of arguments:
      - :key - Widget key
      - :origin - The origin of the coordinate system (Offset)
@@ -1910,6 +1911,42 @@
    (let [[args children] (ut/key-values-args-and-children (cons arg0 args))]
      (hr/hero* tag args (last children)))))
 
+(defn listening
+  "A widget whose content stays synced with a `ValueListenable` or an atom.
+   
+   Given a `ValueListenable<dynamic>` or an atom, a builder which builds widgets from concrete value
+   this widget will automatically register itself as a listener of the `ValueListenable` and call the builder with updated values when the value changes.
+
+   This widget accepts:
+     1. An `ValueListenable` or `Atom`.
+     2. A builder function that creates the child widget. (fn [value Widget?])
+     3. An optional list of arguments that will be passed before the value to the builder function.
+     4. An optional child widget that is passed to the builder function.
+
+  ```clojure
+  (widget
+    :managed [counter (value 0)]
+    (column
+      (listening counter #(text \"Counter: \" %))
+      (button #(swap! counter inc) (text \"Increase\"))))
+  ```
+     If your builder function contains a subtree that doesn't depend on the value,
+     it's more efficient to build that subtree once instead of rebuilding it on every value changing
+     
+     To achieve this, listening can be inserted before any modifier call:
+     
+  ```clojure
+   (->> (some-widget)
+        (listening counter text))
+   
+  (widget
+    :managed [width (value 10.0)]
+    (->> (some-widget)
+         (listening width size :width)))
+  ```"
+  ([listenable builder & values]
+   (lstn/listening* listenable builder values)))
+
 (defn draggable [& args]
   (let [[args children] (ut/key-values-args-and-children args)]
     (drg/draggable* args (last children))))
@@ -1920,3 +1957,4 @@
 
 (defn drag-boundary [child]
   (w/DragBoundary .child child))
+

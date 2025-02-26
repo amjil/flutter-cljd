@@ -1,15 +1,14 @@
 (ns flutter-cljd.internal.transformed
   (:require
    ["package:flutter/material.dart" :as m]
-   [flutter-cljd.drawing :as d]
    [flutter-cljd.utils :as ut :refer [??]]
    [flutter-cljd.types :as t]))
 
 (defn transform* [transform {:keys [key origin alignment transform-hit-tests filter-quality]} child]
   (m/Transform
     .key (t/widget-key key)
-    .transform (d/mat4 transform)
-    .origin (some-> origin d/offset)
+    .transform (t/mat4 transform)
+    .origin (some-> origin t/offset)
     .alignment (or (some-> alignment t/alignment-geometry) m/Alignment.center)
     .transformHitTests (?? (some-> transform-hit-tests boolean) true)
     .filterQuality filter-quality
@@ -18,7 +17,7 @@
 (defn flip* [axis args child]
   (let [axis (if (coll? axis) (map t/axis axis) [(t/axis axis)])
         axis (set (map #(if (= % m/Axis.vertical) :v :h) axis))]
-       (transform* (d/mat4-diagonal3 
+       (transform* (t/mat4-diagonal3 
                     (if (axis :h) -1 1)
                     (if (axis :v) -1 1)
                     1) 
@@ -29,7 +28,7 @@
   (m/Transform.rotate
    .key (t/widget-key key)
    .angle (double angle)
-   .origin (some-> origin d/offset)
+   .origin (some-> origin t/offset)
    .alignment (or (some-> alignment t/alignment-geometry) m/Alignment.center)
    .transformHitTests (?? (some-> transform-hit-tests boolean) true)
    .filterQuality filter-quality
@@ -47,7 +46,7 @@
         scale-y (cond (map? scale) (:y scale 1)
                       (coll? scale) (or (last scale) 1)
                       :else scale)]
-    (transform* (d/mat4-diagonal3
+    (transform* (t/mat4-diagonal3
                  (double scale-x)
                  (double scale-y)
                  1)
@@ -55,13 +54,13 @@
                 child)))
 
 (defn translate* [offset args child]
-  (let [offset (d/offset offset)]
-    (transform* (d/mat4-translation (.-dx offset) (.-dy offset)) args child)))
+  (let [offset (t/offset offset)]
+    (transform* (t/mat4-translation (.-dx offset) (.-dy offset)) args child)))
 
 (defn fractional-translation* [offset {:keys [key transform-hit-tests]} child]
   (m/FractionalTranslation
    .key (t/widget-key key)
-   .translation (d/offset offset)
+   .translation (t/offset offset)
    .transformHitTests (?? (some-> transform-hit-tests boolean) true)
    .child child))
 

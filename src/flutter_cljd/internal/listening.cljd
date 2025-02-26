@@ -1,0 +1,23 @@
+(ns flutter-cljd.internal.listening
+  (:require
+   [cljd.core :as c]
+   [flutter-cljd.ListenableAtom :as la]
+   ["package:flutter/foundation.dart" :as fd]
+   ["package:flutter/widgets.dart" :as w]))
+
+(defn listening*
+  [listenable builder args]
+  (let [has-child? (instance? w/Widget (last args))
+        [values child] (if has-child?
+                         [(vec (drop-last args)) (last args)]
+                         [(vec args) nil])
+        listenable (if (instance? c/Atom listenable) (la/AtomListenable listenable) listenable)]
+    (if
+     (instance? fd/ValueListenable listenable)
+      (w/ValueListenableBuilder
+       .valueListenable listenable
+       .child child
+       .builder (fn [_ value child]
+                  (apply builder (if has-child? (conj values value child) (conj values value)))))
+      
+      (throw (ex-info "Invalid ValueListenable object" {:listenable listenable})))))
