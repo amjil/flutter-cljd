@@ -2,6 +2,6 @@
   (:require
    ["package:flutter/material.dart" :as m]))
 
-(defn block-semantics*
+(defn ^m/Widget block-semantics*
   [blocking child]
   (m/BlockSemantics .blocking blocking .child child))

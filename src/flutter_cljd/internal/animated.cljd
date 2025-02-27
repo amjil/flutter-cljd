@@ -8,7 +8,7 @@
 
 ;; MARK: Animated
 
-(defn animated*
+(defn ^w/Widget animated*
   [builder values]
   (let [has-child? (instance? w/Widget (last values))
         [animation builder args]
@@ -24,7 +24,7 @@
         [values child] (if has-child?
                          [(vec (drop-last args)) (last args)]
                          [(vec args) nil])
-        animation (if (instance? c/Atom animation) (la/AtomListenable animation) animation)]
+        animation (if (instance? c/Atom animation) (la/atom-listenable animation) animation)]
     (cond
       (map? animation)
       (let [options (t/animation-options animation)

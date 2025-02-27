@@ -3,7 +3,7 @@
    ["package:flutter/widgets.dart" :as w]
    [flutter-cljd.types :as t]))
 
-(defn clip-oval*
+(defn ^w/Widget clip-oval*
   [{:keys [key clipper clip-behavior] :or {clip-behavior :anti-alias}} child]
   (w/ClipOval 
    .key (some-> key t/widget-key)

@@ -3,7 +3,7 @@
    ["package:flutter/material.dart" :as m]
    [flutter-cljd.types :as t]))
 
-(defn banner*
+(defn ^m/Widget banner*
   [args child]
   (let [message (if (string? args) args (:message args ""))]
     (m/Banner 

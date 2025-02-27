@@ -2,6 +2,6 @@
   (:require
    ["package:flutter/material.dart" :as m]))
 
-(defn builder*
+(defn ^m/Widget builder*
   ([builder] (m/Builder .builder builder))
   ([builder child] (m/Builder .builder (fn [ctx] (builder ctx child)))))

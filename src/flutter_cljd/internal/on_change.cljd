@@ -38,6 +38,6 @@
   (build [this _]  
     (-> this .-widget .-child)))
 
-(defn on-change-of*
+(defn ^w/Widget on-change-of*
   [value equal? on-change child]
   (OnChange value on-change equal? nil child))

@@ -2,5 +2,5 @@
   (:require
    ["package:flutter/material.dart" :as m]))
 
-(defn layout-builder* [builder]
+(defn ^m/Widget layout-builder* [builder]
   (m/LayoutBuilder .builder builder))

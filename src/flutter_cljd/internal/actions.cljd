@@ -5,7 +5,7 @@
    [flutter-cljd.types :as t]
    [flutter-cljd.internal.with-inherited :as wi]))
 
-(defn actions*
+(defn ^m/Widget actions*
   ([actions dispatcher child]
    (let [grouped-actions (group-by (fn [[k v]] (and (instance? c/Type k) (instance? m/Action v))) actions)
          flutter-actions (get grouped-actions true {})

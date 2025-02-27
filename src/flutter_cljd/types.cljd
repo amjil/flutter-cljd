@@ -29,7 +29,7 @@
           enabled (.-$1 (.invokeActionIfEnabled ^super action intent context))]
       (list enabled result)))) ;; TODO create a tuple
 
-(defn action-dispatcher
+(defn ^w/ActionDispatcher action-dispatcher
   "An interface for dispatching actions to a `FocusNode`.
    
    This is used with `FocusNode.onKey` to allow the `FocusNode` to handle key events.
@@ -41,7 +41,7 @@
     ;; TODO (fn? dispatcher) (AnyActionDispatcher dispatcher)
     :else (throw (Exception. (str "Invalid dispatcher: " dispatcher ", `ActionDispatcher` was expected.")))))
 
-(defn axis
+(defn ^m/Axis axis
   "Returns the `Axis` enum value for the specified axis.
    
    The two cardinal directions in two dimensions.
@@ -63,7 +63,7 @@
       (:vertical :v) m/Axis.vertical
       (throw (Exception. (str "Invalid axis: " axis))))))
 
-(defn axis-direction
+(defn ^m/AxisDirection axis-direction
   "Returns the `AxisDirection` enum value for the specified axis direction.
    
   A direction along either the horizontal or vertical axis in which the origin, or zero position, is determined.
@@ -90,7 +90,7 @@
       (:right :r) m/AxisDirection.right
       (throw (Exception. (str "Invalid axis-direction: " direction))))))
 
-(defn blend-mode
+(defn ^m/BlendMode blend-mode
   "Returns the `BlendMode` enum value for the specified blend mode.
    
    Algorithms to use when painting on the canvas.
@@ -134,7 +134,7 @@
       :luminosity m/BlendMode.luminosity
       (throw (Exception. (str "Invalid blend-mode: " mode))))))
 
-(defn blur-style
+(defn ^m/BlurStyle blur-style
   "Styles to use for blurs in MaskFilter objects.
    
    Possible values:
@@ -155,7 +155,7 @@
       :inner m/BlurStyle.inner
       (throw (Exception. (str "Invalid blur-style: " style))))))
 
-(defn cross-axis-alignment [alignment]
+(defn ^m/CrossAxisAlignment cross-axis-alignment [alignment]
   (if (instance? m/CrossAxisAlignment alignment)
     alignment
     (case alignment
@@ -166,7 +166,7 @@
       :baseline m/CrossAxisAlignment.baseline
       (throw (Exception. (str "Invalid cross-axis-alignment: " alignment))))))
 
-(defn main-axis-alignment [alignment]
+(defn ^m/MainAxisAlignment main-axis-alignment [alignment]
   (if (instance? m/MainAxisAlignment alignment)
     alignment
     (case alignment
@@ -178,7 +178,7 @@
       :space-evenly m/MainAxisAlignment.spaceEvenly
       (throw (Exception. (str "Invalid main-axis-alignment: " alignment))))))
 
-(defn main-axis-size [size]
+(defn ^m/MainAxisSize main-axis-size [size]
   (if (instance? m/MainAxisSize size)
     size
     (case size
@@ -186,15 +186,15 @@
       :min m/MainAxisSize.min
       (throw (Exception. (str "Invalid main-axis-size: " size))))))
 
-(defn vertical-direction [direction]
+(defn ^m/VerticalDirection vertical-direction [direction]
   (if (instance? m/VerticalDirection direction)
     direction
     (case direction
-      :top m/VerticalDirection.up
+      :up m/VerticalDirection.up
       :down m/VerticalDirection.down
       (throw (Exception. (str "Invalid vertical-direction: " direction))))))
 
-(defn text-direction [direction]
+(defn ^m/TextDirection text-direction [direction]
   (if (instance? m/TextDirection direction)
     direction
     (case direction
@@ -202,7 +202,7 @@
       :rtl m/TextDirection.rtl
       (throw (Exception. (str "Invalid text-direction: " direction))))))
 
-(defn text-baseline [baseline]
+(defn ^m/TextBaseline text-baseline [baseline]
   (if (instance? m/TextBaseline baseline)
     baseline
     (case baseline
@@ -210,7 +210,7 @@
       :ideographic m/TextBaseline.ideographic
       (throw (Exception. (str "Invalid text-baseline: " baseline))))))
 
-(defn autofill-context-action
+(defn ^m/AutofillContextAction autofill-context-action
   "Predefined autofill context clean up actions.
    
    Can be `:commit`, `:cancel` or an `AutofillContextAction`.
@@ -223,7 +223,8 @@
     (= action :cancel) m/AutofillContextAction.cancel
     :else (throw (Exception. (str "Invalid autofill-context-action: " action)))))
 
-(defn banner-location [location]
+(defn ^m/BannerLocation banner-location
+  [location]
   (if (instance? m/BannerLocation location)
     location
     (case location
@@ -237,7 +238,7 @@
       :end-bottom m/BannerLocation.bottomEnd
       (throw (Exception. (str "Invalid banner-location: " location))))))
 
-(defn key-event-result [result]
+(defn ^w/KeyEventResult key-event-result [result]
   (if
    (instance? w/KeyEventResult result)
     result
@@ -247,7 +248,7 @@
       :skip-remaining-handlers w/KeyEventResult.skipRemainingHandlers
       w/KeyEventResult.handled)))
 
-(defn lock-state
+(defn ^w/LockState lock-state
   "Determines how the state of a lock key is used to accept a shortcut.
    
    Possible values:
@@ -266,7 +267,7 @@
       :ignored w/LockState.ignored
       (throw (Exception. (str "Invalid lock-state: " state))))))
 
-(defn clip
+(defn ^m/Clip clip
   "Determines how to clip a widget's content.
    
    Possible values:
@@ -287,7 +288,7 @@
       :anti-alias-with-save-layer m/Clip.antiAliasWithSaveLayer
       (throw (Exception. (str "Invalid clip: " clip))))))
 
-(defn decoration-position [position]
+(defn ^m/DecorationPosition decoration-position [position]
   (if (instance? m/DecorationPosition position)
     position
     (case position
@@ -299,7 +300,7 @@
 ;; ;; MARK: Classes
 ;; ;; -------------------------
 
-(defn alignment [alignment]
+(defn ^m/Alignment alignment [alignment]
   (cond
     (instance? m/Alignment alignment) alignment
 
@@ -334,7 +335,7 @@
 
     :else (throw (Exception. (str "Invalid alignment: " alignment)))))
 
-(defn alignment-geometry [alignment]
+(defn ^m/AlignmentGeometry alignment-geometry [alignment]
   (cond
     (instance? m/AlignmentGeometry alignment) alignment
 
@@ -375,7 +376,7 @@
 
     :else (throw (Exception. (str "Invalid alignment: " alignment)))))
 
-(defn placeholder-alignment [alignment]
+(defn ^m/PlaceholderAlignment placeholder-alignment [alignment]
   (if (instance? m/PlaceholderAlignment alignment)
     alignment
     (case alignment
@@ -387,7 +388,7 @@
       :middle m/PlaceholderAlignment.middle
       (throw (Exception. (str "Invalid placeholder-alignment: " alignment))))))
 
-(defn stack-fit [fit]
+(defn ^m/StackFit stack-fit [fit]
   (if (instance? m/StackFit fit)
     fit
     (case fit
@@ -396,7 +397,7 @@
       :passthrough m/StackFit.passthrough
       (throw (Exception. (str "Invalid stackFit: " fit))))))
 
-(defn insets
+(defn ^m/EdgeInsetsGeometry insets
   "Creates an EdgeInsetsGeometry object from the specified insets.
    Insets can be specified as a number or a map or key-value pairs of edge names to numbers or a STEB sequence.
    Examples:
@@ -446,17 +447,17 @@
          (m/EdgeInsetsDirectional.fromSTEB (get value 0 0) (get value 1 0) (get value 2 0) (get value 3 0))
 
          :else (throw (Exception. (str "Invalid edgeInsets: " value)))))
-     
+
      :else
      (insets (apply hash-map values)))))
 
-(defn merge-insets
+(defn ^m/EdgeInsetsGeometry merge-insets
   "Merges the specified insets with the default insets.
    The insets can be specified as a number or a map of edge names to numbers or a STEB sequence."
   [& value]
   (reduce #(.add %1 %2) (m/EdgeInsets.zero) (map insets value)))
 
-(defn text-align [align]
+(defn ^m/TextAlign text-align [align]
   (if (instance? m/TextAlign align)
     align
     (case align
@@ -468,7 +469,7 @@
       :end m/TextAlign.end
       (throw (Exception. (str "Invalid text-align: " align))))))
 
-(defn font-weight [weight]
+(defn ^m/FontWeight font-weight [weight]
   (cond
     (instance? m/FontWeight weight) weight
 
@@ -503,14 +504,14 @@
     :else
     (throw (Exception. (str "Invalid font-weight: " weight)))))
 
-(defn font-style [style]
+(defn ^m/FontStyle font-style [style]
   (if (instance? m/FontStyle style)
     style
     (case style
       :italic m/FontStyle.italic
       m/FontStyle.normal)))
 
-(defn text-leading-distribution [distribution]
+(defn ^m/TextLeadingDistribution text-leading-distribution [distribution]
   (if (instance? m/TextLeadingDistribution distribution)
     distribution
     (case distribution
@@ -523,7 +524,7 @@
     locale
     (m/Locale locale)))
 
-(defn color
+(defn ^m/Color color
   "Returns a `Color` object for the specified color.
 
    Possible values:
@@ -572,7 +573,7 @@
                         (throw (Exception. (str "Unknown color keyword: " value))))
      :else (m/Color value))))
 
-(defn color-filter
+(defn ^m/ColorFilter color-filter
   "A description of a color filter to apply when drawing a shape or compositing a layer with a particular Paint.
    A color filter is a function that takes two colors, and outputs one color.
    When applied during compositing, it is independently applied to each pixel of the layer being drawn before the entire layer is merged with the destination.
@@ -632,7 +633,7 @@
 
     :else (throw (Exception. (str "Invalid color-filter: " filter)))))
 
-(defn text-style
+(defn ^m/TextStyle text-style
   "An immutable style describing how to format and paint text.
 
    Args:
@@ -664,35 +665,43 @@
     - `:overflow` (TextOverflow, default: nil): How the text should behave when it overflows."
   [arg0 & args]
   (let [args (if (empty? args) arg0 (apply hash-map (cons arg0 args)))]
-    (m/TextStyle
-     .inherit (:inherit args true)
-     .color (some-> (args :color) color)
-     .backgroundColor (some-> (args :background-color) color)
-     .fontSize (args :font-size)
-     .fontWeight (some-> (args :font-weight) font-weight)
-     .fontStyle (some-> (args :font-style) font-style)
-     .letterSpacing (args :letter-spacing)
-     .wordSpacing (args :word-spacing)
-     .textBaseline (some-> (args :text-baseline) text-baseline)
-     .height (get args :height (args :h))
-     .leadingDistribution (some-> (args :leading-distribution) text-leading-distribution)
-     .locale (some-> (args :locale) locale)
-     .foreground (args :foreground)
-     .background (args :background)
-     .shadows (args :shadows)
-     .fontFeatures (args :font-features)
-     .fontVariations (args :font-variations)
-     .decoration (args :decoration)
-     .decorationColor (args :decoration-color)
-     .decorationStyle (args :decoration-style)
-     .decorationThickness (args :decoration-thickness)
-     .debugLabel (args :debug-label)
-     .fontFamily (args :font-family)
-     .fontFamilyFallback (args :font-family-fallback)
-     .package (args :package)
-     .overflow (args :overflow))))
+    (cond
+      (instance? m/TextStyle args)
+      args
 
-(defn text-span
+      (map? args)
+      (m/TextStyle
+       .inherit (:inherit args true)
+       .color (some-> (args :color) color)
+       .backgroundColor (some-> (args :background-color) color)
+       .fontSize (args :font-size)
+       .fontWeight (some-> (args :font-weight) font-weight)
+       .fontStyle (some-> (args :font-style) font-style)
+       .letterSpacing (args :letter-spacing)
+       .wordSpacing (args :word-spacing)
+       .textBaseline (some-> (args :text-baseline) text-baseline)
+       .height (get args :height (args :h))
+       .leadingDistribution (some-> (args :leading-distribution) text-leading-distribution)
+       .locale (some-> (args :locale) locale)
+       .foreground (args :foreground)
+       .background (args :background)
+       .shadows (args :shadows)
+       .fontFeatures (args :font-features)
+       .fontVariations (args :font-variations)
+       .decoration (args :decoration)
+       .decorationColor (args :decoration-color)
+       .decorationStyle (args :decoration-style)
+       .decorationThickness (args :decoration-thickness)
+       .debugLabel (args :debug-label)
+       .fontFamily (args :font-family)
+       .fontFamilyFallback (args :font-family-fallback)
+       .package (args :package)
+       .overflow (args :overflow))
+
+      :else
+      (throw (Exception. (str "Invalid text style: " args))))))
+
+(defn ^m/InlineSpan text-span
   "An immutable span of text.
 
    A TextSpan object can be styled using its style property. The style will be applied to the text and the children.
@@ -759,7 +768,7 @@
        .locale (some-> args :locale locale)
        .spellOut (args :spell-out)))))
 
-(defn widget-span
+(defn ^m/InlineSpan widget-span
   ([child]
    (cond
      (instance? m/InlineSpan child) child
@@ -772,7 +781,7 @@
     .style (some-> args :style text-style)
     .child child)))
 
-(defn tile-mode [mode]
+(defn ^m/TileMode tile-mode [mode]
   (if (instance? m/TileMode mode)
     mode
     (case mode
@@ -796,7 +805,7 @@
     :else
     (map color [colors colors])))
 
-(defn linear-gradient
+(defn ^m/LinearGradient linear-gradient
   "Creates a LinearGradient object from the specified arguments.
    The arguments can be specified as a map with the following keys:
    - `:begin` (alignment, default: :center-start): The alignment of the gradient's start point.
@@ -806,14 +815,22 @@
    - `:tile-mode` (tile-mode, default: :clamp): The tile mode of the gradient."
   [arg0 & args]
   (let [args (if (empty? args) arg0 (apply hash-map (cons arg0 args)))]
-    (m/LinearGradient
-     .begin (alignment-geometry (:begin args m/AlignmentDirectional.centerStart))
-     .end (alignment-geometry (:end args m/AlignmentDirectional.centerEnd))
-     .colors (gradient-colors (:colors args))
-     .stops (args :stops)
-     .tileMode (tile-mode (:tile-mode args :clamp)))))
+    (cond
+      (instance? m/LinearGradient args)
+      args
 
-(defn sweep-gradient
+      (map? args)
+      (m/LinearGradient
+       .begin (alignment-geometry (:begin args m/AlignmentDirectional.centerStart))
+       .end (alignment-geometry (:end args m/AlignmentDirectional.centerEnd))
+       .colors (gradient-colors (:colors args))
+       .stops (args :stops)
+       .tileMode (tile-mode (:tile-mode args :clamp)))
+
+      :else
+      (throw (Exception. (str "Invalid LinearGradient: " args))))))
+
+(defn ^m/SweepGradient sweep-gradient
   "Creates a SweepGradient object from the specified arguments.
    The arguments can be specified as a map with the following keys:
    - `:center` (alignment, default: :center): The alignment of the gradient's center point.
@@ -824,15 +841,23 @@
    - `:tile-mode` (tile-mode, default: :clamp): The tile mode of the gradient."
   [arg0 & args]
   (let [args (if (empty? args) arg0 (apply hash-map (cons arg0 args)))]
-    (m/SweepGradient
-     .center (alignment-geometry (:center args m/Alignment.center))
-     .startAngle (:start-angle args 0)
-     .endAngle (:end-angle args (* 2 (.pi double)))
-     .colors (gradient-colors (args :colors))
-     .stops (args :stops)
-     .tileMode (tile-mode (:tile-mode args :clamp)))))
+    (cond
+      (instance? m/SweepGradient args)
+      args
 
-(defn radial-gradient
+      (map? args)
+      (m/SweepGradient
+       .center (alignment-geometry (:center args m/Alignment.center))
+       .startAngle (:start-angle args 0)
+       .endAngle (:end-angle args (* 2 (.pi double)))
+       .colors (gradient-colors (args :colors))
+       .stops (args :stops)
+       .tileMode (tile-mode (:tile-mode args :clamp)))
+
+      :else
+      (throw (Exception. (str "Invalid SweepGradient: " args))))))
+
+(defn ^m/RadialGradient radial-gradient
   "Creates a RadialGradient object from the specified arguments.
    The arguments can be specified as a map with the following keys:
    - `:center` (alignment, default: Alignment.center): The alignment of the gradient's center point.
@@ -842,15 +867,23 @@
    - `:tile-mode` (tile-mode, default: nil): The tile mode of the gradient."
   [arg0 & args]
   (let [args (if (empty? args) arg0 (apply hash-map (cons arg0 args)))]
-    (m/RadialGradient
-     .center (alignment-geometry (:center args m/Alignment.center))
-     .radius (:radius args 0.5)
-     .colors (gradient-colors (:colors args))
-     .stops (args :stops)
-     .tileMode (tile-mode (:tile-mode args :clamp)))))
+    (cond
+      (instance? m/RadialGradient args)
+      args
 
-(defn gradient 
-"Creates a Gradient object from the specified gradient.
+      (map? args)
+      (m/RadialGradient
+       .center (alignment-geometry (:center args m/Alignment.center))
+       .radius (:radius args 0.5)
+       .colors (gradient-colors (:colors args))
+       .stops (args :stops)
+       .tileMode (tile-mode (:tile-mode args :clamp)))
+
+      :else
+      (throw (Exception. (str "Invalid RadialGradient: " args))))))
+
+(defn ^m/Gradient gradient
+  "Creates a Gradient object from the specified gradient.
    The gradient can be specified as a Gradient object, a map with the following keys:
    - `:begin` (alignment, default: :center-start): The alignment of the linear gradient's start point.
    - `:end` (alignment, default: :center-end): The alignment of the linear gradient's end point.
@@ -865,7 +898,7 @@
     (some #(contains? gradient %) [:radius]) (radial-gradient gradient)
     :else (throw (Exception. (str "Unknown gradient: " gradient)))))
 
-(defn shape 
+(defn shape
   "Creates a Shape object from the specified shape.
    The shape can be specified as a Shape object, a map with the following keys:
    - `:circle` (number, default: nil): The radius of the circle.
@@ -881,7 +914,7 @@
       (:rectangle :rect) m/BoxShape.rectangle
       m/BoxShape.rectangle)))
 
-(defn radius
+(defn ^m/Radius radius
   "Creates a Radius object from the specified radius.
    The radius can be specified as a number, a map of x and y, or a XY sequence.
    Examples:
@@ -902,7 +935,7 @@
       (or (seq? radius) (vector? radius)) (m/Radius.elliptical (get radius 0 0) (get radius 1 0))
       :else (throw (Exception. (str "Invalid radius: " radius))))))
 
-(defn border-radius
+(defn ^m/BorderRadiusGeometry border-radius
   "Creates a BorderRadius object from the specified radius.
    The radius can be specified as a radius. or a map of corner names to a radius.
    Each corner can be specified separately using the keys `:top-left`, `:top-right`, `:bottom-left`, `:bottom-right`, `:left-top`, `:right-top`, `:left-bottom`, `:right-bottom`, `:left`, `:right`, `:top`, `:bottom`, `:start`, `:end`, `:t`, `:b`, `:l`, `:r`, `:s`, `:e`, `:all`.
@@ -918,9 +951,9 @@
    ```"
   [arg0 & args]
   (let [value (cond
-                 (empty? args) arg0
-                 (keyword? arg0) (apply hash-map (cons arg0 args))
-                 :else (vec (cons arg0 args)))]
+                (empty? args) arg0
+                (keyword? arg0) (apply hash-map (cons arg0 args))
+                :else (vec (cons arg0 args)))]
     (cond
       (instance? m/BorderRadiusGeometry value) value
       (or (number? value) (instance? m/Radius value) (seq? value) (vector? value)) (m/BorderRadius.all (radius value))
@@ -945,7 +978,7 @@
 
       :else (throw (Exception. (str "Invalid radius: " value))))))
 
-(defn decoration
+(defn ^m/Decoration decoration
   "Creates a Decoration object from the specified arguments.
    The arguments can be specified as a Decoration objects or a key-values pairs with the following keys:
     - `:shape` (ShapeBorder or BoxShape or a keyword default: nil): The shape of the decoration.
@@ -963,7 +996,7 @@
     (decoration {:shape :circle, :color :red})
     (decoration {:shape :circle, :color :red, :border-radius 4})
     ```"
-  [arg0 & args] 
+  [arg0 & args]
   (let [args (if (empty? args) arg0 (apply hash-map (cons arg0 args)))
         shape (shape (args :shape))]
     (cond
@@ -990,7 +1023,7 @@
 
       :else (throw (Exception. (str "Invalid decoration: " args))))))
 
-(defn duration
+(defn ^dc/Duration duration
   "Creates a Duration object from the specified value.
    The value can be specified as a number, a map of days, hours, minutes, seconds, milliseconds, microseconds, or a Duration object.
    Examples:
@@ -1022,7 +1055,7 @@
   (transform [_ t] (double (curve t)))
   (toString [_] (str (or (when description (description)) "AnyCurve"))))
 
-(defn curve [curve]
+(defn ^m/Curve curve [curve]
   (cond
     (instance? m/Curve curve) curve
 
@@ -1114,7 +1147,7 @@
       :else
       (throw (Exception. (str "Invalid animation options: " value))))))
 
-(defn widget-key
+(defn ^m/Key? widget-key
   "Creates a `WidgetKey` object from the specified key.
    The key can be specified as a string, a keyword, a number, or a `WidgetKey` object.
    If the key is a string or a keyword, it is converted to a `ValueKey` object.
@@ -1134,7 +1167,7 @@
   ([from to]
    (tween nil from to)))
 
-(defn logical-keyboard-key
+(defn ^s/LogicalKeyboardKey logical-keyboard-key
   "Converts a given `key` into a `LogicalKeyboardKey` instance.
    If `key` is already a `LogicalKeyboardKey` instance, it is returned as-is.
    Otherwise, it attempts to resolve the `key` by converting it to a string, 
@@ -1165,7 +1198,7 @@
                           s/LogicalKeyboardKey.alt
                           s/LogicalKeyboardKey.meta])))
 
-(defn shortcut-activator
+(defn ^m/ShortcutActivator shortcut-activator
   "Creates a `ShortcutActivator` based on the given `args`.
    If `args` is already a `ShortcutActivator`, it is returned directly.
    If `args` is a single character, creates a `CharacterActivator`.
@@ -1216,7 +1249,7 @@
     :else
     (throw (Exception. (str "Invalid activator: " args)))))
 
-(defn box-constraints
+(defn ^m/BoxConstraints box-constraints
   "Immutable layout constraints for RenderBox layout.
 
    The functions accepts the following arguments:
@@ -1290,7 +1323,7 @@
       :else
       (throw (Exception. (str "Invalid box constraints: " value))))))
 
-(defn flex-fit
+(defn ^m/FlexFit flex-fit
   "Converts the specified `fit` value to a `FlexFit` object.\\
    If `fit` is already a `FlexFit` object, it is returned as-is.\\
    If `fit` is a keyword (`:tight` or `:loose`), it is converted to a `FlexFit` object.\\
@@ -1304,7 +1337,7 @@
       :loose m/FlexFit.loose
       (throw (Exception. (str "Unknown flex-fit: " fit " (expected :tight or :loose)"))))))
 
-(defn animation-behavior
+(defn ^a/AnimationBehavior animation-behavior
   "Returns the `AnimationBehavior` enum value for the specified animation behavior.
    
    Configures how an `AnimationController` behaves when animations are disabled.
@@ -1330,7 +1363,7 @@
       :preserve a/AnimationBehavior.preserve
       (throw (Exception. (str "Invalid animation behavior: " behavior))))))
 
-(defn animation-status
+(defn ^a/AnimationStatus animation-status
   "Returns the `AnimationStatus` enum value for the specified animation status.
    
    The status of an animation.
@@ -1353,7 +1386,7 @@
       :completed a/AnimationStatus.completed
       (throw (Exception. (str "Invalid animation status: " status))))))
 
-(defn always-stopped-animation
+(defn ^a/AlwaysStoppedAnimation always-stopped-animation
   "An animation that is always stopped at a given value.
 
    The status is always AnimationStatus.forward.
@@ -1364,7 +1397,7 @@
     value
     (a/AlwaysStoppedAnimation. value)))
 
-(defn app-lifecycle-state 
+(defn ^ui/AppLifecycleState app-lifecycle-state
   "Converts the specified `state` value to an `AppLifecycleState` object.\\
    If `state` is already an `AppLifecycleState` object, it is returned as-is.\\
    If `state` is a keyword (`:detached`, `:resumed`, `:inactive`, `:hidden`, or `:paused`), it is converted to an `AppLifecycleState` object.\\
@@ -1396,17 +1429,17 @@
         When the application is in this state, the engine will not call the PlatformDispatcher.onBeginFrame and PlatformDispatcher.onDrawFrame callbacks.\\
        This state is only entered on iOS and Android."
   [state]
-  (if (instance? ui/AppLifecycleState state) 
+  (if (instance? ui/AppLifecycleState state)
     state
     (case state
-      :detached ui/AppLifecycleState.detached 
-      :resumed ui/AppLifecycleState.resumed 
-      :inactive ui/AppLifecycleState.inactive 
-      :hidden ui/AppLifecycleState.hidden 
-      :paused ui/AppLifecycleState.paused 
+      :detached ui/AppLifecycleState.detached
+      :resumed ui/AppLifecycleState.resumed
+      :inactive ui/AppLifecycleState.inactive
+      :hidden ui/AppLifecycleState.hidden
+      :paused ui/AppLifecycleState.paused
       (throw (Exception. (str "Invalid app lifecycle state: " state " (expected :detached, :resumed, :inactive, :hidden, or :paused)"))))))
 
-(defn hit-test-behavior 
+(defn ^r/HitTestBehavior hit-test-behavior
   "Converts the specified value to an `HitTestBehavior` object.
    
    Possible values:
@@ -1423,7 +1456,7 @@
       :translucent r/HitTestBehavior.translucent
       (throw (Exception. (str "Invalid hit test behavior: " value " (expected :defer-to-child, :opaque, :inactive, :translucent)"))))))
 
-(defn size
+(defn ^ui/Size size
   "Creates a new `Size` object with the given width and height.
 
   Arity:
@@ -1450,7 +1483,7 @@
      (instance? math/Point value) (size (.-x value) (.-y value))
      :else (throw (Exception. (str "Invalid size: " value))))))
 
-(defn offset
+(defn ^ui/Offset offset
   "Creates a new `Offset` object with the given dx and dy.
    
    Arity:
@@ -1479,7 +1512,7 @@
      (instance? ui/Size value) (offset (.-width value) (.-height value))
      :else (throw (Exception. (str "Invalid offset: " value))))))
 
-(defn point
+(defn ^math/Point point
   "Creates a new `Point` object with the given dx and dy.
    
    Arity:
@@ -1507,7 +1540,7 @@
      (instance? ui/Size value) (point (.-width value) (.-height value))
      :else (throw (Exception. (str "Invalid point: " value))))))
 
-(defn rect
+(defn ^ui/Rect rect
   "Creates a new `Rect` object with the given center or offset and size.
 
      Arity:
@@ -1547,7 +1580,7 @@
 
      :else (throw (Exception. (str "Invalid rect: " value))))))
 
-(defn vec2
+(defn ^vec-math/Vector2 vec2
   "Creates a new `Vector2` object with the given x and y values.
    
    [Flutter doc](https://api.flutter.dev/flutter/vector_math_64/Vector2-class.html)"
@@ -1560,7 +1593,7 @@
   ([x y]
    (vec-math/Vector2 (double x) (double y))))
 
-(defn vec3
+(defn ^vec-math/Vector3 vec3
   "Creates a new `Vector3` object with the given x, y, and z values.
    
    [Flutter doc](https://api.flutter.dev/flutter/vector_math_64/Vector3-class.html)"
@@ -1573,7 +1606,7 @@
   ([x y z]
    (vec-math/Vector3 (double x) (double y) (double z))))
 
-(defn vec4
+(defn ^vec-math/Vector4 vec4
   "Creates a new `Vector4` object with the given x, y, z, and w values.
    
    [Flutter doc](https://api.flutter.dev/flutter/vector_math_64/Vector4-class.html)"
@@ -1586,7 +1619,7 @@
   ([x y z w]
    (vec-math/Vector4 (double x) (double y) (double z) (double w))))
 
-(defn mat2
+(defn ^vec-math/Matrix2 mat2
   "Creates a 2x2 matrix from the specified arguments.
    The arguments can be specified as a vector with 4 elements, vector of vectors, or a 4 double values.
    
@@ -1599,7 +1632,7 @@
      (vector? value) (vec-math/Matrix2.fromList (map double (flatten value)))
      :else (throw (Exception. (str "Invalid matrix2: " value))))))
 
-(defn mat3
+(defn ^vec-math/Matrix3 mat3
   "Creates a 3x3 matrix from the specified arguments.
    The arguments can be specified as a vector with 9 elements, vector of vectors, or a 9 double values.
    
@@ -1612,7 +1645,7 @@
      (vector? value) (vec-math/Matrix3.fromList (map double (flatten value)))
      :else (throw (Exception. (str "Invalid matrix3: " value))))))
 
-(defn mat4
+(defn ^vec-math/Matrix4 mat4
   "Creates a 4x4 matrix from the specified arguments.
    The arguments can be specified as a vector with 16 elements, vector of vectors, or a 16 double values.
    
@@ -1627,7 +1660,7 @@
      (vector? value) (vec-math/Matrix4.fromList (map double (flatten value)))
      :else (throw (Exception. (str "Invalid matrix4: " value))))))
 
-(defn quat
+(defn ^vec-math/Quaternion quat
   "Creates a new `Quaternion` object with the given x, y, z, and w values.
    
    [Flutter doc](https://api.flutter.dev/flutter/vector_math_64/Quaternion-class.html)"
@@ -1640,57 +1673,57 @@
   ([x y z w]
    (vec-math/Quaternion (double x) (double y) (double z) (double w))))
 
-(defn vec3-zero
+(defn ^vec-math/Vector3 vec3-zero
   "Creates a new `Vector3` object with all values set to zero."
   []
   (vec-math/Vector3.zero))
 
-(defn mat4-zero
+(defn ^vec-math/Matrix4 mat4-zero
   "Creates a new `Matrix4` object with all values set to zero."
   []
   (vec-math/Matrix4.zero))
 
-(defn mat4-identity
+(defn ^vec-math/Matrix4 mat4-identity
   "Creates a new `Matrix4` object with all values set to identity."
   []
   (vec-math/Matrix4.identity))
 
-(defn mat4-outer
+(defn ^vec-math/Matrix4 mat4-outer
   "Creates a new `Matrix4` object with the outer product of the given vectors."
   [u v]
   (vec-math/Matrix4.outer (vec3 u) (vec3 v)))
 
-(defn mat4-rotation-x
+(defn ^vec-math/Matrix4 mat4-rotation-x
   "Creates a new `Matrix4` object with the given x rotation."
   [radians]
   (vec-math/Matrix4.rotationX (double radians)))
 
-(defn mat4-rotation-y
+(defn ^vec-math/Matrix4 mat4-rotation-y
   "Creates a new `Matrix4` object with the given y rotation."
   [radians]
   (vec-math/Matrix4.rotationY (double radians)))
 
-(defn mat4-rotation-z
+(defn ^vec-math/Matrix4 mat4-rotation-z
   "Creates a new `Matrix4` object with the given z rotation."
   [radians]
   (vec-math/Matrix4.rotationZ (double radians)))
 
-(defn mat4-skew
+(defn ^vec-math/Matrix4 mat4-skew
   "Creates a new `Matrix4` object with the given skew values."
   [alpha beta]
   (vec-math/Matrix4.skew (double alpha) (double beta)))
 
-(defn mat4-skew-x
+(defn ^vec-math/Matrix4 mat4-skew-x
   "Creates a new `Matrix4` object with the given x skew value."
   [alpha]
   (vec-math/Matrix4.skewX (double alpha)))
 
-(defn mat4-skew-y
+(defn ^vec-math/Matrix4 mat4-skew-y
   "Creates a new `Matrix4` object with the given y skew value."
   [beta]
   (vec-math/Matrix4.skewY (double beta)))
 
-(defn mat4-translation
+(defn ^vec-math/Matrix4 mat4-translation
   "Creates a new `Matrix4` object with the given translation values."
   ([vector]
    (vec-math/Matrix4.translation (vec3 vector)))
@@ -1699,52 +1732,51 @@
   ([x y]
    (mat4-translation x y 0)))
 
-(defn mat4-diagonal3
+(defn ^vec-math/Matrix4 mat4-diagonal3
   ([x y z]
    (vec-math/Matrix4.diagonal3Values (double x) (double y) (double z)))
   ([scale]
    (vec-math/Matrix4.diagonal3 (vec3 scale))))
 
-(defn quat-axis-angle
+(defn ^vec-math/Quaternion quat-axis-angle
   "Creates a new `Quaternion` object with the given axis and angle."
   [axis angle]
   (vec-math/Quaternion.axisAngle (vec3 axis) (double angle)))
 
-(defn quat-dq
+(defn ^vec-math/Quaternion quat-dq
   "Creates a new `Quaternion` object with the given q and omega values."
   [q omega]
   (vec-math/Quaternion.dq (quat q) (vec3 omega)))
 
-(defn quat-euler
+(defn ^vec-math/Quaternion quat-euler
   "Creates a new `Quaternion` object with the given euler angles."
   [x y z]
   (vec-math/Quaternion.euler (double x) (double y) (double z)))
 
-(defn quat-from-rotation
+(defn ^vec-math/Quaternion quat-from-rotation
   "Creates a new `Quaternion` object with the given rotation matrix."
   [matrix]
   (vec-math/Quaternion.fromRotation (mat3 matrix)))
 
-(defn quat-identity
+(defn ^vec-math/Quaternion quat-identity
   "Creates a new `Quaternion` object with all values set to identity."
   []
   (vec-math/Quaternion.identity))
 
-(defn quat-random
+(defn ^vec-math/Quaternion quat-random
   "Creates a new `Quaternion` object with random values."
   []
   (vec-math/Quaternion.random (math/Random.secure)))
 
-(defn value
+(defn ^fd/ValueNotifier value
   "Creates a `ValueNotifier` that holds a single value and notifies listeners when changed.
      
-   Returns a stateful container that:
+   Also `ValueNotifier`:
      - Implements `IDeref` for @ syntax access to current value
      - Implements`IReset` for updating with reset!
      - Implements `ISwap` for functional updates with swap!
      
-   The underlying ValueNotifier will notify its listeners whenever the value 
-   changes to something not equal to the previous value (using Dart's == operator).
+   `ValueNotifier` will notify its listeners whenever the value changes to something not equal to the previous value.
   
    ```clojure
    (widget
@@ -1767,7 +1799,7 @@
 
 (extend-protocol c/ISwap
   fd/ValueNotifier
-  (-swap! [this f] (.-value! this (f (.-value this))))
-  (-swap! [this f a] (.-value! this (f (.-value this) a)))
-  (-swap! [this f a b] (.-value! this (f (.-value this) a b)))
-  (-swap! [this f a b xs] (.-value! this (apply f (.-value this) a b xs))))
+  (-swap! [^fd/ValueNotifier this f] (.-value! this (f (.-value this))))
+  (-swap! [^fd/ValueNotifier this f a] (.-value! this (f (.-value this) a)))
+  (-swap! [^fd/ValueNotifier this f a b] (.-value! this (f (.-value this) a b)))
+  (-swap! [^fd/ValueNotifier this f a b xs] (.-value! this (apply f (.-value this) a b xs))))

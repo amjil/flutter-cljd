@@ -4,17 +4,28 @@
    ["dart:core" :as dc]
    ["package:flutter/foundation.dart" :as f]))
 
-(deftype AtomListenable [^c/Atom atom]
+(deftype AtomListenable [^c/Atom atom ^:mutable keys]
   :extends f/ValueListenable
 
-  (value [this] (c/deref (.-atom this)))
-  
-  (addListener [this listener]
-    (c/add-watch (.-atom this)
-                 (dc/identityHashCode listener)
-                 (fn [_ _ _ _] (listener))) 
+  (value [^AtomListenable this] (c/deref (.-atom this)))
+
+  (addListener [^AtomListenable this listener]
+    (let [key (dc/identityHashCode listener)]
+      (.-keys! this (conj (.-keys this) key))
+      (c/add-watch (.-atom this) key (fn [_ _ _ _] (listener))))
     nil)
-  
-  (removeListener [this listener]
-    (c/remove-watch (.-atom this) (dc/identityHashCode listener))
+
+  (removeListener [^AtomListenable this listener]
+    (let [key (dc/identityHashCode listener)]
+      (.-keys! this (disj (.-keys this) key))
+      (c/remove-watch (.-atom this) key))
+    nil)
+
+  AtomListenable
+  (dispose [^AtomListenable this]
+    (doseq [key (.-keys this)]
+      (.removeListener this key))
     nil))
+
+(defn ^AtomListenable atom-listenable [^c/Atom atom]
+  (AtomListenable atom #{}))

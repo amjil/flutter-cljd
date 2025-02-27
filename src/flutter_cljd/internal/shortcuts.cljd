@@ -5,7 +5,7 @@
    [flutter-cljd.types :as t]
    [flutter-cljd.core :as c]))
 
-(defn shortcuts*
+(defn ^m/Widget shortcuts*
   [shortcuts args child]
   (let [{:keys [debug-label modal include-semantics]} args]
     (cond

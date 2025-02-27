@@ -5,13 +5,13 @@
    ["package:flutter/foundation.dart" :as fd]
    ["package:flutter/widgets.dart" :as w]))
 
-(defn listening*
+(defn ^w/Widget listening*
   [listenable builder args]
   (let [has-child? (instance? w/Widget (last args))
         [values child] (if has-child?
                          [(vec (drop-last args)) (last args)]
                          [(vec args) nil])
-        listenable (if (instance? c/Atom listenable) (la/AtomListenable listenable) listenable)]
+        listenable (if (instance? c/Atom listenable) (la/atom-listenable listenable) listenable)]
     (if
      (instance? fd/ValueListenable listenable)
       (w/ValueListenableBuilder

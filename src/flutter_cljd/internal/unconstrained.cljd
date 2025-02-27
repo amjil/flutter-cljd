@@ -3,7 +3,7 @@
    ["package:flutter/widgets.dart" :as w]
    [flutter-cljd.types :as t]))
 
-(defn unconstrained*
+(defn ^w/Widget unconstrained*
   [args child]
   (w/UnconstrainedBox
    .key (t/widget-key (:key args))

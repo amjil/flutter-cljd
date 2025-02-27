@@ -2,7 +2,7 @@
   (:require
    ["package:flutter/material.dart" :as m]))
 
-(defn keep-alive*
+(defn ^m/Widget keep-alive*
   ([alive child] 
    (if (= alive :auto)
      (m/AutomaticKeepAlive .child child)

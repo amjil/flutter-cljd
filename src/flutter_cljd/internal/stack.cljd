@@ -4,7 +4,7 @@
    [flutter-cljd.types :as t]
    [flutter-cljd.utils :as ut]))
 
-(defn stack*
+(defn ^m/Widget stack*
   [children]
   (let [[params children] (ut/key-values-args-and-children children)]
     (m/Stack

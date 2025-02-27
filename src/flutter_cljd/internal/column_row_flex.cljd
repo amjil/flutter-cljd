@@ -3,7 +3,7 @@
    ["package:flutter/material.dart" :as m]
    [flutter-cljd.types :as t]))
 
-(defn column* [args children]
+(defn ^m/Widget column* [args children]
   (m/Column
    .key (t/widget-key (args :key))
    .mainAxisAlignment (t/main-axis-alignment (:main-axis-alignment args :start))
@@ -15,7 +15,7 @@
    .spacing (double (or (:spacing args) 0))
    .children children))
 
-(defn row* [args children]
+(defn ^m/Widget row* [args children]
   (m/Row
    .key (t/widget-key (args :key))
    .mainAxisAlignment (t/main-axis-alignment (:main-axis-alignment args :start))
@@ -27,7 +27,7 @@
    .spacing (double (or (:spacing args) 0))
    .children children))
 
-(defn flex*
+(defn ^m/Widget flex*
   [direction args children]
   (m/Flex
    .key (t/widget-key (args :key))

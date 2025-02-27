@@ -371,7 +371,7 @@
   ^:mixin #/(w/AutomaticKeepAliveClientMixin Button)
   (wantKeepAlive [_] false))
 
-(defn button*
+(defn ^w/Widget button*
   ([args child]
    (let [[args on-tap] (cond
                          (map? args) [(assoc args :on-tap nil) (:on-tap args)]
@@ -410,13 +410,13 @@
        (:on-focus-change args)
        (c/get-inherited ctx inh/autofocus (:autofocus args)))))))
 
-(defn with-button-modifier*
+(defn ^w/Widget with-button-modifier*
   [modifier child]
   (wi/with-inherited* inh/button-modifier modifier child))
 
 (defn- no-styled-button [button _] button)
 
-(defn without-button-modifier*
+(defn ^w/Widget without-button-modifier*
   "A widget that removes the button modifier from its descendants."
   [child]
   (with-button-modifier* no-styled-button child))

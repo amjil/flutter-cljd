@@ -3,7 +3,7 @@
    ["package:flutter/material.dart" :as m]
    [flutter-cljd.types :as t]))
 
-(defn with-text-style*
+(defn ^m/Widget with-text-style*
   [args child]
   (m/Builder
    .builder

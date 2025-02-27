@@ -3,7 +3,7 @@
    ["package:flutter/material.dart" :as m]
    [flutter-cljd.types :as t]))
 
-(defn baseline*
+(defn ^m/Widget baseline*
   ([offset type child]
    (m/Baseline 
     .baseline (double offset) 

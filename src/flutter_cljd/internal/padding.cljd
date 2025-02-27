@@ -139,7 +139,7 @@
     (.debugFillProperties ^super this properties)
     (.add properties (f/DiagnosticsProperty. "padding" padding))))
 
-(defn padding*
+(defn ^w/Widget padding*
   "Creates a Padding widget with the specified padding and child.
      The padding can be specified as a number, a map of insets, or four numbers.
      Examples:

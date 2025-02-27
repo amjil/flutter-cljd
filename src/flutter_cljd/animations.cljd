@@ -34,7 +34,7 @@
   (-equiv [o other] (identical? o other))
   ^:mixin a/AnimationWithParentMixin)
 
-(defn map-anim
+(defn ^TransformedAnimation map-anim
   "Transforms an animation using a transform function.\\
      `map-anim` takes an animation and a transform function and returns a new animation.\\
      The transform function takes the value of the parent animation and returns the transformed value.
@@ -388,28 +388,6 @@
      (reverse args))))
 
 (declare Motion)
-(defn motion
-  [prepare to-string]
-  (Motion prepare to-string nil nil nil))
-
-(defn- motion-to-map
-  ([motion]
-   (cond
-     (instance? Motion motion)
-     {:prepare-motion (.-prepare motion)
-      :to-string (.-toStr motion)}
-
-     (instance? w/Animatable motion)
-     {:prepare-motion (fn [_ duration]
-                        {:interpolate (fn [_ t] (.transform motion t))
-                         :duration duration})
-      :to-string #(.toString motion)}
-
-     (nil? motion)
-     nil
-
-     :else
-     (throw (ex-info "Invalid motion" {:motion motion})))))
 
 (deftype ^:private MotionAnimationWrapper
          [^:mutable effectsListener
@@ -460,6 +438,29 @@
   (^bool == [^Motion this ^dc/Object other]
     (= (.toString this) (.toString other))))
 
+(defn ^Motion motion
+  [prepare to-string]
+  (Motion prepare to-string nil nil nil))
+
+(defn- motion-to-map
+  ([motion]
+   (cond
+     (instance? Motion motion)
+     {:prepare-motion (.-prepare motion)
+      :to-string (.-toStr motion)}
+
+     (instance? w/Animatable motion)
+     {:prepare-motion (fn [_ duration]
+                        {:interpolate (fn [_ t] (.transform motion t))
+                         :duration duration})
+      :to-string #(.toString motion)}
+
+     (nil? motion)
+     nil
+
+     :else
+     (throw (ex-info "Invalid motion" {:motion motion})))))
+
 (defn set-motion!
   "Sets the motion of the motion controller.
    
@@ -483,7 +484,7 @@
       (compute-motion controller))
     controller))
 
-(defn motion-controller
+(defn ^MotionController motion-controller
   "Creates a motion controller that manages animations.
 
   Arguments:
@@ -630,7 +631,7 @@
      (set-motion! motion-controller motion)
      motion-controller)))
 
-(defn animation-controller
+(defn ^a/AnimationController animation-controller
   "Creates an animation controller that manages animations.
   
   Arguments:
@@ -654,7 +655,7 @@
    .upperBound (or (some-> upper-bound double) dc/double.infinity)
    .animationBehavior (t/animation-behavior animation-behavior)))
 
-(defn instant
+(defn ^Motion instant
   "Instant motion with zero duration.
    ```clojure
    (instant 10.0)
@@ -685,7 +686,7 @@
       :else (- dc/double.infinity))
     (/ (- t start) rel-dur)))
 
-(defn- -sequential [motions]
+(defn- ^Motion -sequential [motions]
   (let [motions (->> motions flatten (filter some?) (map motion-to-map))
         clamp #(min 1.0 (max 0.0 %))]
     (motion
@@ -770,7 +771,7 @@
                               (apply concat (map #(% range) effects)))))}))
      (fn [] (str "(seq " (str/join " " (map #((:to-string %)) motions)) ")")))))
 
-(defn- -parallel [motions]
+(defn- ^Motion -parallel [motions]
   (let [is-map? (seq? (first motions))
         default (if is-map? {} (vec (c/repeat (count motions) nil)))
         motions (if is-map?
@@ -837,7 +838,7 @@
                               (apply concat (map #(% range) effects)))))}))
      (fn [] (str "(par " (str/join " " (map (fn [[k v]] (if is-map? (str k " " ((:to-string v))) ((:to-string v)))) motions)) ")")))))
 
-(defn action-with!
+(defn ^Motion action-with!
   "Action motion that calls a function with the value.
    ```clojure
    (seq
@@ -855,7 +856,7 @@
                       (if (and (< start 1.0) (<= 1.0 end)) [#(action value)] []))})
    (constantly (str "(action-with! " id ")"))))
 
-(defn action!
+(defn ^Motion action!
   "Action motion that calls a function.
    ```clojure
    (seq
@@ -870,7 +871,7 @@
    (.-prepare (action-with! id (fn [_] (action))))
    (constantly (str "(action! " id ")"))))
 
-(defn duration
+(defn ^Motion duration
   "Set the duration of the motion.\\
    `duration` takes a duration and an motion and returns a new motion with the provided duration.\\
    The duration is applied to the motion.
@@ -899,7 +900,7 @@
                             side-effects))}))
      (fn [] (str "(duration " duration " " ((:to-string motion)) ")")))))
 
-(defn curve
+(defn ^Motion curve
   "Set the curve of the motion.\\
    `curve` takes a curve and an motion and returns a new motion with the provided curve.\\
    The curve is applied to the motion.
@@ -920,7 +921,7 @@
                             (side-effects (map #(.transform curve (double %)) range))))}))
      (fn [] (str "(curve " curve " " ((:to-string motion)) ")")))))
 
-(defn relative-duration
+(defn ^Motion relative-duration
   "Set the duration of the motion relative to the parent animation.\\
    `relative-duration` takes a ratio and an motion and returns a new motion with the provided relative duration.\\
    The duration is applied to the motion.
@@ -938,7 +939,7 @@
           :side-effects side-effects}))
      (fn [] (str "(relative-duration " ratio " " ((:to-string motion)) ")")))))
 
-(defn relative-delay
+(defn ^Motion relative-delay
   "Set the start time of the motion relative to the duration.\\
    `relative-delay` takes a ratio and an motion and returns a new motion with the provided relative delay.\\
    The delay is applied to the motion.
@@ -963,7 +964,7 @@
                             (side-effects (map #(.transform curve (double %)) interval))))}))
      (fn [] (str "(relative-delay " delay " " ((:to-string motion)) ")")))))
 
-(defn delay
+(defn ^Motion delay
   "Set the start time of the motion.\\
    `delay` takes a duration and an motion and returns a new motion with the provided delay.\\
    The delay is applied to the motion.
@@ -999,7 +1000,7 @@
                             side-effects))}))
      (fn [] (str "(delay " delay " " ((:to-string motion)) ")")))))
 
-(defn with
+(defn ^Motion with
   "Add options to an animation.\\
    `with` takes a map or key value pairs of options and an motion and returns a new motion with the provided options.\\
    The options are merged with the existing options of the animation.\\
@@ -1027,7 +1028,7 @@
        delay (flutter-cljd.animations/delay delay)
        relative-delay (flutter-cljd.animations/relative-delay relative-delay)))))
 
-(defn const
+(defn ^Motion const
   "Creates a motion that steps through constant values.\\
    Takes one or more values and returns a motion that changes discretely between them.\\
    If only one value is provided, creates a constant motion with that value.\\
@@ -1056,7 +1057,7 @@
                  (fn [] (str "(const " (str/join " " values) ")")))]
     (if (empty? options) result (with options result))))
 
-(defn to
+(defn ^Motion to
  "Animate to Target Values
  
  `to` creates a motion that animates from the current value to one or more target values. It handles value interpolation and timing.
@@ -1160,7 +1161,7 @@
       result
       (with options result))))
 
-(defn from
+(defn ^Motion from
   "Set the initial value of the motion.\\
    `from` takes a value and an motion and returns a new motion with the provided initial value.\\
    The initial value is applied to the motion.
@@ -1177,7 +1178,7 @@
            :side-effects side-effects}))
       (fn [] (str "(from " from " " ((:to-string motion)) ")"))))))
 
-(defn from-to
+(defn ^Motion from-to
   "Animate from an initial value to final values. It's a shorthand for `(from value (to values))`.\\
    Same as Tween but accepts any number of values.\\
    `from-to` takes an initial value and final values and returns a new motion that animates between them.\\
@@ -1191,7 +1192,7 @@
     (from (value0 value1) (apply to (cons value0 values)))
     (from value0 (apply to (cons value1 values)))))
 
-(defn wait
+(defn ^Motion wait
   "Do nothing for a given duration. Duration is optional.
    ```clojure
    (wait 100)
@@ -1222,7 +1223,7 @@
           (fn [] (str "(wait " duration ")")))]
      (if (empty? options) result (with options result)))))
 
-(defn seq
+(defn ^Motion seq
   "Sequential Animation of Values.
    
    `seq` applies a list of motions (or `Animatable` objects) in sequential order.
@@ -1272,7 +1273,7 @@
       (with options (-sequential items))
       (-sequential items))))
 
-(defn par
+(defn ^Motion par
   "Parallel Animation of Multiple Properties
   
    `par` enables simultaneous animation of multiple properties, accepting either key-value pairs or a sequence of motions (or Animatable objects). It can animate both maps and vectors.
@@ -1361,7 +1362,7 @@
       (with options result)
       result)))
 
-(defn repeat
+(defn ^Motion repeat
   "Repeats a motion a specified number of times.\\
    Takes a count and a motion, returns a new motion that repeats the input animation.\\
    The total duration will be the motion's duration multiplied by the count.\\
@@ -1396,7 +1397,7 @@
                                      (apply concat (map side-effects ranges)))))))})))
       (fn [] (str "(repeat " cnt " " ((:to-string motion)) ")"))))))
 
-(defn autoreverse
+(defn ^Motion autoreverse
   "Creates a motion that plays forward then reverses.\\
    Takes a motion and returns a new motion that plays the input animation\\
    forward then plays it in reverse.\\
@@ -1427,7 +1428,7 @@
                                (apply concat (map #(side-effects %) ranges)))))}))
       (fn [] (str "(autoreverse " ((:to-string motion)) ")"))))))
 
-(defn synced
+(defn ^Motion synced
   "Creates a motion that syncs with the current time.\\
   Takes a motion and returns a new motion that syncs the input animation with the current time.\\
   The total duration will be the original motion's duration.
@@ -1460,7 +1461,7 @@
                             side-effects))}))
      (fn [] (str "(synced " ((:to-string motion)) ")")))))
 
-(defn tile
+(defn ^Motion tile
   "Creates a motion that tiles/repeats within the parent duration.
    
    Takes a motion and returns a new motion that repeats the input animation to fill
@@ -1507,7 +1508,7 @@
                             (side-effects (map transform range))))}))
      (fn [] (str "(tile " ((:to-string motion)) ")")))))
 
-(defn map-motion
+(defn ^Motion map-motion
   "Creates a motion that maps the value with a function.\\
    Takes a function and a motion and returns a new motion that applies the function to the value.\\
    ```clojure

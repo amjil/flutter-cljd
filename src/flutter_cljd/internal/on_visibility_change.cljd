@@ -57,6 +57,6 @@
                             (on-visibility-info this info))
      .child (-> this .-widget .-child))))
 
-(defn observe-visibility*
+(defn ^w/Widget observe-visibility*
   [{:keys [key on-enter on-first-enter on-exit on-change]} child]
   (VisibilityObserver (t/widget-key key) on-enter on-first-enter on-exit on-change child))

@@ -3,7 +3,7 @@
    ["package:flutter/material.dart" :as m]
    [flutter-cljd.types :as t]))
 
-(defn colored*
+(defn ^m/Widget colored*
   ([value] (if (instance? m/Widget value) 
              (colored* m/Colors.transparent value) 
              (colored* value nil)))

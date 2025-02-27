@@ -2,7 +2,7 @@
   (:require
    ["package:flutter/material.dart" :as m]))
 
-(defn spacer* 
+(defn ^m/Widget spacer* 
   ([] (spacer* 1))
   ([flex]
    (m/Spacer .flex (int (or flex 1)))))

@@ -3,7 +3,7 @@
    ["package:flutter/material.dart" :as m]
    [flutter-cljd.types :as t]))
 
-(defn flexible* [args child]
+(defn ^m/Widget flexible* [args child]
   (let [[flex fit] (cond
                      (number? args) [args m/FlexFit.loose]
                      (map? args) [(:flex args 1) (:fit args m/FlexFit.loose)]

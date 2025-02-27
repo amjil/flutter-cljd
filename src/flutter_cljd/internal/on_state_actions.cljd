@@ -37,7 +37,8 @@
   (dispose [^OnStateActions this]
     (.dispose ^super this)
     (when-let [onDispose (-> this .-widget .-onDispose)]
-      (onDispose)))
+      (onDispose))
+    nil)
 
   (didChangeDependencies [^OnStateActions this]
     (.didChangeDependencies ^super this)
@@ -63,7 +64,7 @@
       (when fn0 (fn0))
       (when fn1 (fn1)))))
 
-(defn on-state-actions* [{:keys [on-dispose
+(defn ^w/Widget on-state-actions* [{:keys [on-dispose
                                  on-create
                                  on-update
                                  on-did-change-dependencies

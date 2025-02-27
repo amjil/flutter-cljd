@@ -2,6 +2,6 @@
   (:require
    ["package:flutter/material.dart" :as m]))
 
-(defn aspect-ratio*
+(defn ^m/Widget aspect-ratio*
   [ratio child]
   (m/AspectRatio .aspectRatio (double ratio) .child child))

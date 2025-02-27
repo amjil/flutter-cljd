@@ -3,7 +3,7 @@
    ["package:flutter/material.dart" :as m]
    [flutter-cljd.types :as t]))
 
-(defn autofill-group* 
+(defn ^m/Widget autofill-group* 
   ([action child] 
    (m/AutofillGroup .child child .onDisposeAction (t/autofill-context-action action)))
   ([child] 

@@ -3,7 +3,7 @@
    [flutter-cljd.types :as t]
    ["package:flutter/material.dart" :as m]))
 
-(defn hero* [tag args child]
+(defn ^m/Widget hero* [tag args child]
   (m/Hero
    .key (t/widget-key (:key args))
    .tag tag

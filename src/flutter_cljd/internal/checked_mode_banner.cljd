@@ -2,6 +2,6 @@
   (:require
    ["package:flutter/material.dart" :as m]))
 
-(defn checked-mode-banner*
+(defn ^m/Widget checked-mode-banner*
   [child]
   (m/CheckedModeBanner .child child))

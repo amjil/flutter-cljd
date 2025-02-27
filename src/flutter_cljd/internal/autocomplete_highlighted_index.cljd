@@ -2,5 +2,5 @@
   (:require
    ["package:flutter/material.dart" :as m]))
 
-(defn with-autocomplete-highlighted-index* [option child]
+(defn ^m/Widget with-autocomplete-highlighted-index* [option child]
   (m/AutocompleteHighlightedOption .highlightIndexNotifier option .child child))

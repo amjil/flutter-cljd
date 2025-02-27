@@ -3,6 +3,6 @@
    ["package:flutter/material.dart" :as m]
    [flutter-cljd.types :as t]))
 
-(defn color-filtered*
+(defn ^m/Widget color-filtered*
   [filter child]
   (m/ColorFiltered .colorFilter (t/color-filter filter) .child child))

@@ -3,7 +3,7 @@
    ["package:flutter/material.dart" :as m]
    [flutter-cljd.types :as t]))
 
-(defn decorated*
+(defn ^m/Widget decorated*
   ([position with-decoration child]
    (m/DecoratedBox
     .decoration (t/decoration with-decoration)

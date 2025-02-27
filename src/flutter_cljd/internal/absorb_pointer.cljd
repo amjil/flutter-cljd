@@ -2,7 +2,7 @@
   (:require
    ["package:flutter/material.dart" :as m]))
 
-(defn absorb-pointer*
+(defn ^m/AbsorbPointer absorb-pointer*
   [absorbing child]
   (m/AbsorbPointer
    .absorbing (true? absorbing)

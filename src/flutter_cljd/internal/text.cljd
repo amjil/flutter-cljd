@@ -3,7 +3,7 @@
    ["package:flutter/material.dart" :as m]
    [flutter-cljd.types :as t]))
 
-(defn text*
+(defn ^m/Widget text*
   [string args]
   (let [key (t/widget-key (args :key))
         strut-style (args :strut-style)

@@ -3,7 +3,7 @@
    ["package:flutter/material.dart" :as m]
    ["dart:async" :as async]))
 
-(defn on-back-button*
+(defn ^m/Widget on-back-button*
   [action child]
   (m/BackButtonListener 
    .child child 

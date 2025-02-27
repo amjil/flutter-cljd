@@ -3,7 +3,7 @@
    ["package:flutter/material.dart" :as m]
    [flutter-cljd.types :as t]))
 
-(defn clip-corners*
+(defn ^m/Widget clip-corners*
   [radius child]
   (m/ClipRRect
    .borderRadius (t/border-radius radius)

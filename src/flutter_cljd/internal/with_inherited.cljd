@@ -1,9 +1,10 @@
 (ns flutter-cljd.internal.with-inherited 
   (:require
+   ["package:flutter/widgets.dart" :as w]
    [cljd.flutter :as f]
    [flutter-cljd.internal.builder :as bd]))
 
-(defn with-transformed-inherited*
+(defn ^w/Widget with-transformed-inherited*
   ([transform child]
    (bd/builder*
     (fn [context]
@@ -25,7 +26,7 @@
           (->> kts&child butlast (concat [key transform]) (partition 2)))))
      (last kts&child))))
 
-(defn with-merged-inherited*
+(defn ^w/Widget with-merged-inherited*
   [bindings child]
   (with-transformed-inherited* #(merge % bindings) child))
 
@@ -34,7 +35,7 @@
     #((:merge key) % value)
     (constantly value)))
 
-(defn with-inherited*
+(defn ^w/Widget with-inherited*
   ([key child]
    (assert (and (map? key) (contains? key :key)) (str "Expected a map with :key but got " key))
    (with-inherited* key (:default-value key) child))

@@ -3,7 +3,7 @@
    ["package:flutter/widgets.dart" :as w]
    [flutter-cljd.types :as t]))
 
-(defn composited-transform-follower*
+(defn ^w/Widget composited-transform-follower*
   [args child]
   (let [args (if (map? args) args {})
         link (if (instance? w/LayerLink args) args (:link args))]
@@ -16,6 +16,6 @@
      .followerAnchor (t/alignment (:follower-anchor args w/Alignment.topLeft))
      .child child)))
 
-(defn composited-transform-target*
+(defn ^w/Widget composited-transform-target*
   [link child]
   (w/CompositedTransformTarget .link link .child child))

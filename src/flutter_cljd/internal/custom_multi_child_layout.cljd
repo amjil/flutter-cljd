@@ -3,7 +3,7 @@
    ["package:flutter/widgets.dart" :as w]
    [flutter-cljd.utils :as ut]))
 
-(defn custom-multi-child-layout* [delegate & children]
+(defn ^w/Widget custom-multi-child-layout* [delegate & children]
   (w/CustomMultiChildLayout 
    .delegate delegate 
    .children (ut/flatten-children children)))

@@ -3,7 +3,7 @@
    ["package:flutter/widgets.dart" :as w]
    [flutter-cljd.types :as t]))
 
-(defn constraints-transformed*
+(defn ^w/Widget constraints-transformed*
   [args child]
   (let [[args transform] (if (map? args) [args (:transform args)] [{} args])]
     (w/ConstraintsTransformBox

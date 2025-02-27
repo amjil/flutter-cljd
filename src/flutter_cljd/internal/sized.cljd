@@ -3,12 +3,12 @@
    ["package:flutter/material.dart" :as m]
    [flutter-cljd.types :as t]))
 
-(defn sized* [value child]
+(defn ^m/Widget sized* [value child]
   (m/ConstrainedBox
    .constraints (t/box-constraints value)
    .child child))
 
-(defn fractionally-sized* [value child]
+(defn ^m/Widget fractionally-sized* [value child]
   (let [args (cond
                (map? value) value
                (vector? value) (zipmap [:w :h] value)

@@ -2,7 +2,7 @@
   (:require ["package:flutter/material.dart" :as m]
             [flutter-cljd.types :as t]))
 
-(defn align* [args child]
+(defn ^m/Widget align* [args child]
   (let [args (if (map? args) args {:alignment args})
         align-value (get args :alignment m/Alignment.center)
         alignment (if (instance? m/Animation align-value) align-value (t/alignment-geometry align-value))

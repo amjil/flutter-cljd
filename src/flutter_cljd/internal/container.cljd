@@ -3,7 +3,7 @@
    ["package:flutter/material.dart" :as m]
    [flutter-cljd.types :as t]))
 
-(defn container*
+(defn ^m/Widget container*
   "Internal implementation of container widget.
   See flutter-cljd.widgets/container for public API documentation."
   ([] (container* {} nil))
