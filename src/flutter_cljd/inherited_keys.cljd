@@ -1,27 +1,6 @@
-(ns flutter-cljd.inherited-keys
-  (:require 
-   ["package:flutter/material.dart" :as m]
-   ["dart:core" :as core]))
+(ns flutter-cljd.inherited-keys)
 
 (def enabled {:key :enabled :default-value true})
-
-(defn- default-button-modifier [button {:keys [state context prev-state]}] 
-  (let [text-style (m/DefaultTextStyle.of context)
-        color (some-> text-style .-style .-color)
-        alpha (some-> color .-a)]
-    (->> button
-         (m/AnimatedOpacity
-          .opacity (if (state :pressed) 0.5 (if (state :hovered) 0.8 1.0))
-          .duration (core/Duration .milliseconds (if (and (not (state :hovered)) (prev-state :hovered)) 500 0))
-          .child)
-         (m/DefaultTextStyle.merge
-          .style (when color
-                   (m/TextStyle .color (.withOpacity color (if (state :disabled) (/ alpha 2.0) alpha))))
-          .child))))
-
-(def button-modifier
-  {:key :button-modifier :default-value default-button-modifier})
-
 (def button-context {:key :button-context :default-value {}})
 (def enable-feedback {:key :enable-feedback :default-value false})
 (def exclude-from-semantics {:key :exclude-from-semantics :default-value false})

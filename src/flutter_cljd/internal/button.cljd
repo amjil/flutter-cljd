@@ -8,17 +8,18 @@
    [flutter-cljd.types :as t]
    [flutter-cljd.internal.with-inherited :as wi]
    [flutter-cljd.internal.builder :as bd]
+   [flutter-cljd.internal.animated :as an]
    [flutter-cljd.inherited-keys :as inh]))
 
 (declare ^:private ButtonState)
 
 ;; Button widget
 (deftype Button [key child is-enabled on-tap on-tap-down on-tap-up
-                           on-tap-cancel on-double-tap on-long-press on-secondary-tap
-                           on-secondary-tap-up on-secondary-tap-down on-secondary-tap-cancel
-                           on-highlight-changed on-hover mouse-cursor enable-feedback
-                           exclude-from-semantics focus-node can-request-focus
-                           on-focus-change autofocus]
+                 on-tap-cancel on-double-tap on-long-press on-secondary-tap
+                 on-secondary-tap-up on-secondary-tap-down on-secondary-tap-cancel
+                 on-highlight-changed on-hover mouse-cursor enable-feedback
+                 exclude-from-semantics focus-node can-request-focus
+                 on-focus-change autofocus]
   :extends (w/StatefulWidget .key key)
 
   (createState [_] (ButtonState false false nil nil nil nil nil #{}))
@@ -224,14 +225,11 @@
   (set! (.-cursorGlobalOffset this) (.-position event))
   (set! (.-cursorLocalOffset this) (.-localPosition event)))
 
-(defn- handle-mouse-exit [this event]
+(defn- handle-mouse-exit [this _]
   (set! (.-hovering this) false)
   (clear-offsets this)
   ; Still update highlights and run onHover even if disabled
   (handle-hover-change this))
-
-(defn- handle-hover-change [this]
-  (update-highlight this :hovered (.-hovering this)))
 
 (defn- can-request-focus? [this]
   (condp = (w/MediaQuery.maybeNavigationModeOf (.-context this))
@@ -371,6 +369,24 @@
   ^:mixin #/(w/AutomaticKeepAliveClientMixin Button)
   (wantKeepAlive [_] false))
 
+(defn- default-button-modifier [button {:keys [state context prev-state]}]
+  (let [text-style (w/DefaultTextStyle.of context)
+        color (some-> text-style .-style .-color)
+        alpha (some-> color .-a)]
+    (w/DefaultTextStyle.merge
+     .style (when color
+              (w/TextStyle .color (.withOpacity color (if (state :disabled) (/ alpha 2.0) alpha))))
+     .child (an/animated*
+             {:duration (core/Duration .milliseconds (if (and (not (state :hovered)) (prev-state :hovered)) 500 50))
+              :update-strategy (if (and (not (prev-state :hovered)) (state :pressed)) :immediate :on-complete)}
+             [(fn [opacity child]
+                (w/Opacity .opacity opacity .child child))
+              (if (state :pressed) 0.5 (if (state :hovered) 0.8 1.0))
+              button]))))
+
+(def button-modifier
+  {:key :button-modifier :default-value default-button-modifier})
+
 (defn ^w/Widget button*
   ([args child]
    (let [[args on-tap] (cond
@@ -386,7 +402,7 @@
        (fn [btn-ctx]
          (let [ctx (:context btn-ctx ctx)
                label (wi/with-inherited* inh/button-context btn-ctx child)]
-           (if-let [modifier (c/get-inherited ctx inh/button-modifier)]
+           (if-let [modifier (c/get-inherited ctx button-modifier)]
              (modifier label btn-ctx)
              label)))
        (c/get-inherited ctx inh/enabled (:enabled args))
@@ -412,7 +428,7 @@
 
 (defn ^w/Widget with-button-modifier*
   [modifier child]
-  (wi/with-inherited* inh/button-modifier modifier child))
+  (wi/with-inherited* button-modifier modifier child))
 
 (defn- no-styled-button [button _] button)
 

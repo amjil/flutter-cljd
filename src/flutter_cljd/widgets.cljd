@@ -274,7 +274,7 @@
    (bs/block-semantics* blocking child))
   ([child] (block-semantics true child)))
 
-(defn ^w/Widget bottom-navigation-bar-item
+(defn ^w/BottomNavigationBarItem bottom-navigation-bar-item
   "An interactive button within either material's BottomNavigationBar or the iOS themed CupertinoTabBar with an icon and title.
    
    This class is rarely used in isolation. It is typically embedded in one of the bottom navigation widgets.

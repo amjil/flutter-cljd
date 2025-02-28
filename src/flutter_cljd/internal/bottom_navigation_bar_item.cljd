@@ -3,7 +3,7 @@
    ["package:flutter/material.dart" :as m]
    [flutter-cljd.types :as t]))
 
-(defn ^m/Widget bottom-navigation-bar-item*
+(defn ^m/BottomNavigationBarItem bottom-navigation-bar-item*
   [args]
   (m/BottomNavigationBarItem
    .icon (get args :icon (m/SizedBox .width 0 .height 0))

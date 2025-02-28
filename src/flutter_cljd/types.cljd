@@ -475,10 +475,12 @@
 
     (number? weight)
     (let [weight (min 100 (max 900 weight))]
-      (m/FontWeight.lerp
-       m/FontWeight.w100
-       m/FontWeight.w900
-       (/ (- weight 100) 800.0)))
+      (or
+       (m/FontWeight.lerp
+        m/FontWeight.w100
+        m/FontWeight.w900
+        (/ (- weight 100) 800.0))
+       m/FontWeight.normal))
 
     (keyword? weight)
     (case weight
@@ -1329,13 +1331,12 @@
    If `fit` is a keyword (`:tight` or `:loose`), it is converted to a `FlexFit` object.\\
    If `fit` is not recognized, an exception is thrown."
   [fit]
-  (cond
-    (instance? m/FlexFit fit) fit
-    (keyword? fit)
+  (if (instance? m/FlexFit fit) 
+    fit
     (case fit
       :tight m/FlexFit.tight
       :loose m/FlexFit.loose
-      (throw (Exception. (str "Unknown flex-fit: " fit " (expected :tight or :loose)"))))))
+      (throw (Exception. (str "Unknown flex-fit: " fit " (expected FlexFit, :tight, :loose)"))))))
 
 (defn ^a/AnimationBehavior animation-behavior
   "Returns the `AnimationBehavior` enum value for the specified animation behavior.
@@ -1799,7 +1800,7 @@
 
 (extend-protocol c/ISwap
   fd/ValueNotifier
-  (-swap! [^fd/ValueNotifier this f] (.-value! this (f (.-value this))))
-  (-swap! [^fd/ValueNotifier this f a] (.-value! this (f (.-value this) a)))
-  (-swap! [^fd/ValueNotifier this f a b] (.-value! this (f (.-value this) a b)))
-  (-swap! [^fd/ValueNotifier this f a b xs] (.-value! this (apply f (.-value this) a b xs))))
+  (-swap! [this f] (.-value! this (f (.-value this))))
+  (-swap! [this f a] (.-value! this (f (.-value this) a)))
+  (-swap! [this f a b] (.-value! this (f (.-value this) a b)))
+  (-swap! [this f a b xs] (.-value! this (apply f (.-value this) a b xs))))

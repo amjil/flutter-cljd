@@ -26,8 +26,8 @@
   :extends (#/(w/State OnChange))
   
   (didUpdateWidget [this oldWidget] 
-    (.didUpdateWidget ^super this oldWidget)  
-    (let [widget (.-widget this)
+    (.didUpdateWidget ^super this oldWidget)
+    (let [^OnChange widget (.-widget this)
           old (.-value oldWidget)
           new (.-value widget)
           on-change (.-onChange widget)]
