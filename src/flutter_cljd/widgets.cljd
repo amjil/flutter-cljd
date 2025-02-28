@@ -1427,6 +1427,10 @@
         - `:lerp` - The lerp function to interpolate between values. Default is `utils/lerp`.
         - `:on-end` - The callback to be called when the animation ends. Default is nil.
         - `:when` - The condition to trigger the animation. True by default.
+        - `:update-strategy` - Defines how the animation should handle updates when properties like duration, curve, or target value change mid-animation.  
+          - `:immediate` (default) - Recalculates the animation and continues to the new value.  
+          - `:on-complete` - Completes the current animation before starting a new one with the latest options.  
+          - `:sequential` - Completes the current animation and then animates through all intermediate updates in order.
      2. A builder function that creates the child widget. (fn [value Widget?])
      3. Values to animate. Animation is triggered when any value changes and `:when` option is true. All values are passed to the builder function. For a single value, it can optionally be passed before the builder function.
      4. An optional child widget that is passed to the builder function as the last argument.
