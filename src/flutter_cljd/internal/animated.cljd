@@ -53,7 +53,6 @@
   (didUpdateWidget [^ValueAnimationBuilderState this ^ValueAnimationBuilder oldWidget]
     (.didUpdateWidget ^super this oldWidget)
     (let [^ValueAnimationBuilder widget (.-widget this)]
-      (prn "STR" (.-updateStrategy widget))
       (if (-> this .-controller .-isAnimating)
         (case (.-updateStrategy widget)
           :immediate (do

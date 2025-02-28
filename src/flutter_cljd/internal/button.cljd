@@ -372,13 +372,15 @@
 (defn- default-button-modifier [button {:keys [state context prev-state]}]
   (let [text-style (w/DefaultTextStyle.of context)
         color (some-> text-style .-style .-color)
-        alpha (some-> color .-a)]
+        alpha (some-> color .-a)
+        did-unhovered (and (not (state :hovered)) (prev-state :hovered))
+        did #(and (not (prev-state %)) (state %))]
     (w/DefaultTextStyle.merge
      .style (when color
               (w/TextStyle .color (.withOpacity color (if (state :disabled) (/ alpha 2.0) alpha))))
      .child (an/animated*
-             {:duration (core/Duration .milliseconds (if (and (not (state :hovered)) (prev-state :hovered)) 500 50))
-              :update-strategy (if (and (not (prev-state :hovered)) (state :pressed)) :immediate :on-complete)}
+             {:duration (core/Duration .milliseconds (if did-unhovered 500 50))
+              :update-strategy (if (or (did :pressed) (did :hovered)) :immediate :on-complete)}
              [(fn [opacity child]
                 (w/Opacity .opacity opacity .child child))
               (if (state :pressed) 0.5 (if (state :hovered) 0.8 1.0))
