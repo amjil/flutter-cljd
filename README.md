@@ -25,38 +25,38 @@ Besides wrappers the library contains some extensions to Flutter
 ```clojure
 ;; Basic button with styling
 (->> (text "Click me!")
-     (with-text-style {:color :blue, :size 16})
-     (padding {:h 16 :v 8})
+     (with-text-style :color :blue, :size 16)
+     (padding :h 16 :v 8)
      (button #(println "Clicked!")))
 ```
 ```clojure
 ;; Card with multiple elements
-(->> (row {:spacing 10}
-       (text "Title" {:size 20, :weight :bold})
-       (text "Subtitle" {:color :gray}))
+(->> (row :spacing 10
+       (text "Title" :size 20, :weight :bold)
+       (text "Subtitle" :color :gray))
      (padding 16)
-     (card {:elevation 2 :radius 8}))
+     (card :elevation 2 :radius 8))
 ```
 
 ### Styling and Layout
 ```clojure
 ;; Applying styles and layouts
 (->> (text "Styled Text")
-     (with-text-style {:color :blue
-                  :size 20
-                  :weight :bold})
-     (padding {:all 16})
+     (with-text-style :color :blue
+                      :size 20
+                      :weight :bold)
+     (padding 16)
      (center))
 
 ;; Responsive layouts
-(->> (column {:spacing 8}
+(->> (column :spacing 8
        (text "Header")
        (expanded
          (list-view
            (for [i (range 10)]
              (text (str "Item " i)))))
        (text "Footer"))
-     (container {:color :white}))
+     (container :color :white))
 ```
 
 ### Interactive Components
@@ -82,28 +82,28 @@ Besides wrappers the library contains some extensions to Flutter
   (:require [flutter-cljd.widgets :as ui]))
 
 ;; User profile card
-(defn profile-card [{:keys [name role avatar]}]
+(defn profile-card [& {:keys [name role avatar]}]
   (->> (ui/row
          ;; Avatar section
          (->> avatar
-              (ui/circle {:size 40})
-              (ui/padding {:right 12}))
+              (ui/circle :size 40)
+              (ui/padding :right 12))
          
          ;; Text content
-         (ui/column {:spacing 10}
-           (ui/text name {:size 18, :weight :bold})
-           (ui/text role {:size 14})))
-       (ui/with-text-style {:color :gray})
+         (ui/column :spacing 10
+           (ui/text name :size 18, :weight :bold)
+           (ui/text role :size 14)))
+       (ui/with-text-style :color :gray)
        (ui/padding 16)
-       (ui/card {:elevation 4 :radius 12})
+       (ui/card :elevation 4 :radius 12)
        (ui/center)))
 
 ;; Usage example
 (def user-profile
   (profile-card
-    {:name "John Doe"
+     :name "John Doe"
      :role "Senior Developer"
-     :avatar (ui/image "path/to/avatar.png")}))
+     :avatar (ui/image "path/to/avatar.png")))
 ```
 
 ## Contributing
