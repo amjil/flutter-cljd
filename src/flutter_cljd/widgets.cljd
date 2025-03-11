@@ -5,6 +5,8 @@
    [flutter-cljd.inherited-keys :as inh]
    [flutter-cljd.internal.builder :as bd]
    [flutter-cljd.internal.layout-builder :as lbd]
+   [flutter-cljd.internal.future-builder :as fbd]
+   [flutter-cljd.internal.stream-builder :as sbd]
    [flutter-cljd.internal.button :as bt]
    [flutter-cljd.internal.padding :as pd]
    [flutter-cljd.internal.absorb-pointer :as ap]
@@ -1053,6 +1055,42 @@
    The builder function is not called during layout if the parent passes the same constraints repeatedly."
   [builder]
   (lbd/layout-builder* builder))
+
+(defn ^w/Widget future-builder
+  "Builds a widget tree that can depend on the parent widget's size.
+   
+   - builder: (fn [context constraints])
+
+   Similar to the `builder` except that the framework calls the builder function at layout time and provides the parent widget's constraints. This is useful when the parent constrains the child's size and doesn't depend on the child's intrinsic size. The LayoutBuilder's final size will match its child's size.
+
+   The builder function is called in the following situations:
+
+   The first time the widget is laid out.
+    - When the parent widget passes different layout constraints.
+    - When the parent widget updates this widget. 
+    - When the dependencies that the builder function subscribes to change. 
+   
+   The builder function is not called during layout if the parent passes the same constraints repeatedly."
+  [future builder]
+  (fbd/future-builder* future builder))
+
+(defn ^w/Widget stream-builder
+  "Builds a widget tree that can depend on the parent widget's size.
+   
+   - builder: (fn [context constraints])
+
+   Similar to the `builder` except that the framework calls the builder function at layout time and provides the parent widget's constraints. This is useful when the parent constrains the child's size and doesn't depend on the child's intrinsic size. The LayoutBuilder's final size will match its child's size.
+
+   The builder function is called in the following situations:
+
+   The first time the widget is laid out.
+    - When the parent widget passes different layout constraints.
+    - When the parent widget updates this widget. 
+    - When the dependencies that the builder function subscribes to change. 
+   
+   The builder function is not called during layout if the parent passes the same constraints repeatedly."
+  [stream builder]
+  (sbd/stream-builder* stream builder))
 
 (defn ^w/Widget row
   "A widget that displays its children in a horizontal array.

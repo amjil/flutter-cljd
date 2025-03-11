@@ -1,0 +1,6 @@
+(ns flutter-cljd.internal.future-builder
+  (:require
+   ["package:flutter/material.dart" :as m]))
+
+(defn ^m/Widget future-builder* [future builder]
+  (m/FutureBuilder .future future .builder builder))

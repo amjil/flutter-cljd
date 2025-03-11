@@ -1,0 +1,6 @@
+(ns flutter-cljd.internal.stream-builder
+  (:require
+   ["package:flutter/material.dart" :as m]))
+
+(defn ^m/Widget stream-builder* [stream builder]
+  (m/StreamBuilder .stream stream .builder builder))
