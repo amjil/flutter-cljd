@@ -110,30 +110,13 @@ Besides wrappers the library contains some extensions to Flutter
 
 Contributions are welcome! Please feel free to submit a Pull Request. For major changes, please open an issue first to discuss what you would like to change.
 
-### Development Setup
-
-1. Clone the repository
-```bash
-git clone https://github.com/dankinsoid/flutter-cljd.git
-```
-
-2. Install dependencies
-```bash
-clj -A:dev
-```
-
-3. Run tests
-```bash
-clj -A:test
-```
-
 ### Guidelines
 
 - Follow the existing code style
 - Add tests for new features
 - Update documentation as needed
 - Keep commits focused and atomic
-- Write clear commit messages
+- Write clear commit messages (I recommend Aider to egnerate commit messages)
 
 ## License
 
