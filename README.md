@@ -114,7 +114,7 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 
 1. Clone the repository
 ```bash
-git clone https://github.com/yourusername/flutter-cljd.git
+git clone https://github.com/dankinsoid/flutter-cljd.git
 ```
 
 2. Install dependencies
