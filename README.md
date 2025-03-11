@@ -116,7 +116,7 @@ Contributions are welcome! Please feel free to submit a Pull Request. For major 
 - Add tests for new features
 - Update documentation as needed
 - Keep commits focused and atomic
-- Write clear commit messages (I recommend Aider to egnerate commit messages)
+- Write clear commit messages (I recommend Aider to generate commit messages)
 
 ## License
 
